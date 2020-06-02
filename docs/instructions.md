@@ -16,6 +16,8 @@ Note the following abbreviations:
 - mu16[x], meaning a zero-extended half word in memory in memory at address x.
 - m32[x], meaning a word in memory in memory at address x.
 
+## Instructions
+
 | Code | Mnemonic               | Name                                      | Operation |
 | ---- | ---------------------- | ----------------------------------------- | --------- |
 | 0x00 | \-                     | Missing or invalid instruction            | \- |
@@ -84,6 +86,8 @@ Note the following abbreviations:
 | 0x3f | \-                     | _Reserved_                                | \- |
 | 0x40 | \-                     | _Reserved_, and so on through 0x7F.       | \- |
 
+## Pseudo-instructions
+
 Here is a list of the pseudo-instructions recognized by the
 Capsule assembler.
 Pseudo-instructions are tools of convenience for translating common
@@ -98,7 +102,7 @@ particularly depending on the inputs.
 | nop                   | No operation                          | add Z,Z,Z,0 |
 | mv rd,rs1             | Copy register                         | add rd,rs1,Z,0 |
 | not rd,rs1            | One's complement negation             | xori rd,rs1,-1 |
-| neg rd,rs1            | Two's complement negation             | sub rd,Z,rs1,0 |
+| neg rd,rs1            | Two's complement negation             | sub rd,Z,rs1 |
 | nand rd,rs1,rs2       | Bitwise NOT AND                       | and rd,rs1,rs2 <br> xori rd,rd,-1 |
 | nor rd,rs1,rs2        | Bitwise NOT OR                        | or rd,rs1,rs2 <br> xori rd,rd,-1 |
 | xnor rd,rs1,rs2       | Bitwise NOT XOR                       | xor rd,rs1,rs2 <br> xori rd,rd,-1 |
@@ -121,15 +125,15 @@ particularly depending on the inputs.
 | slez rd,rs1           | Set if less or equal to zero          | slti rd,rs1,1 |
 | sgez rd,rs1           | Set if greater or equal to zero       | slt rd,rs1,Z <br> sltiu rd,rd,1 |
 | li rd,value           | Load immediate                        | lui rd,value[hi] <br> add rd,rd,value[lo] |
-| la rd,address         | Load address                          | auipc rd,address[pcrel_hi] <br> add rd,rd,.pcrel_lo |
-| lba rd,address        | Load signed byte from address         | auipc rd,address[pcrel_hi] <br> lb rd,rd,.pcrel_lo |
-| lbau rd,address       | Load unsigned byte from address       | auipc rd,address[pcrel_hi] <br> lba rd,rd,.pcrel_lo |
-| lha rd,address        | Load signed half word from address    | auipc rd,address[pcrel_hi] <br> lh rd,rd,.pcrel_lo |
-| lhau rd,address       | Load unsigned half word from address  | auipc rd,address[pcrel_hi] <br> lha rd,rd,.pcrel_lo |
-| lwa rd,address        | Load word from address                | auipc rd,address[pcrel_hi] <br> lw rd,rd,.pcrel_lo |
-| sba rs1,address       | Store byte to address                 | auipc rd,address[pcrel_hi] <br> sb rd,rd,rs1,.pcrel_lo |
-| sha rs1,address       | Store half word to address            | auipc rd,address[pcrel_hi] <br> sh rd,rd,rs1,.pcrel_lo |
-| swa rs1,address       | Store word to address                 | auipc rd,address[pcrel_hi] <br> sw rd,rd,rs1,.pcrel_lo |
+| la rd,address         | Load address                          | auipc rd,address[pcrel_hi] <br> add rd,rd,address[pcrel_near_lo] |
+| lba rd,address        | Load signed byte from address         | auipc rd,address[pcrel_hi] <br> lb rd,rd,address[pcrel_near_lo] |
+| lbua rd,address       | Load unsigned byte from address       | auipc rd,address[pcrel_hi] <br> lba rd,rd,address[pcrel_near_lo] |
+| lha rd,address        | Load signed half word from address    | auipc rd,address[pcrel_hi] <br> lh rd,rd,address[pcrel_near_lo] |
+| lhua rd,address       | Load unsigned half word from address  | auipc rd,address[pcrel_hi] <br> lha rd,rd,address[pcrel_near_lo] |
+| lwa rd,address        | Load word from address                | auipc rd,address[pcrel_hi] <br> lw rd,rd,address[pcrel_near_lo] |
+| sba rs1,address       | Store byte to address                 | auipc rd,address[pcrel_hi] <br> sb rd,rd,rs1,address[pcrel_near_lo] |
+| sha rs1,address       | Store half word to address            | auipc rd,address[pcrel_hi] <br> sh rd,rd,rs1,address[pcrel_near_lo] |
+| swa rs1,address       | Store word to address                 | auipc rd,address[pcrel_hi] <br> sw rd,rd,rs1,address[pcrel_near_lo] |
 | beqz rs1,offset       | Branch if equal to zero               | beq rs1,Z,offset |
 | bnez rs1,offset       | Branch if not equal to zero           | bne rs1,Z,offset |
 | blez rs1,offset       | Branch if less or equal to zero       | bge Z,rs1,offset |
@@ -142,6 +146,6 @@ particularly depending on the inputs.
 | bleu rs1,rs2,offset   | Branch if less or equal to signed     | bgeu rs2,rs1,offset |
 | j offset              | Jump                                  | jal Z,offset |
 | jr rs1,offset         | Jump register                         | jalr Z,rs1,offset |
-| call rd,address       | Call subroutine                       | auipc rd,address[pcrel_hi] <br> jalr rd,rd,.pcrel_lo |
+| call rd,address       | Call subroutine                       | auipc rd,address[pcrel_hi] <br> jalr rd,rd,address[pcrel_near_lo] |
 | ret rs1               | Return from subroutine                | jalr Z,rs1 |
 | ecalli rd,rs1,extid   | Extension call immediate              | lui rd,extid[hi] <br> ecall rd,rs1,rd,extid[lo] |
