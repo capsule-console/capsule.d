@@ -29,3 +29,6 @@ bin/
 assets/
 temp.d
 todo.txt
+old_*
+wip_*
+reject_*

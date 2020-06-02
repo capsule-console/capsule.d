@@ -1,0 +1,166 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+name: CASM
+file_extensions: [casm]
+scope: source.casm
+contexts:
+  main:
+    - include: labels
+    - include: directives
+    - include: instructions
+    - include: reference_types
+    - include: registers
+    - include: character_literals
+    - include: string_literals
+    - include: numeric_literals
+    - include: identifiers
+    - include: comments
+
+  # Match label definitions - an identifier with a colon ':' immediately
+  # after indicates a label definition, for example "my_label:"
+  labels:
+    - match: (\b([0-9]+)([a-zA-Z0-9_\.]*))(\:)
+      captures:
+        2: constant.numeric.label.casm
+        3: variable.other.casm
+        4: punctuation.label.colon.casm
+    - match: (\b[a-zA-Z0-9_\.]+)(\:)
+      captures:
+        1: variable.other.casm
+        2: punctuation.label.colon.casm
+
+  # Match directives - an identifier starting with a period '.' indicates
+  # a directive, for example ".text"
+  directives:
+    - match: (\.)(bss|rodata|data|text)\b
+      scope: entity.name.section.casm
+    - match: ((\.)(byte|half|word)\b[ \t]*)
+      scope: support.type.directive.data.casm
+      push: data_directive_arguments
+    - match: (\.)(align|comment|const|data|end|entry|export|extern|pad[bhw]|priority|procedure|res[bhw]|stringz?)\b
+      scope: support.type.directive.casm
+
+  # Match the argument list for a .byte, .half, or .word directive
+  data_directive_arguments:
+    - include: immediate
+    - match: ([ \t]*,[ \t]*)
+      scope: punctuation.separator.instruction.arguments
+    - match: (\s+)
+      pop: true
+
+  # Match the argument list for a directive taking a single identifier
+  # as its argument, such as .export and .extern
+  symbol_directive_arguments:
+    - include: immediate
+    - match: ([ \t]*,[ \t]*)
+      scope: punctuation.separator.instruction.arguments
+    - match: (\s+)
+      pop: true
+
+  # Match a register name, such as "a" or "A" or "r1" or "R1".
+  registers:
+    - match: (\b((?i)[ZABCRSXY]|R[01234567])\b)
+      scope: keyword.register.casm
+
+  # Match an instruction.
+  # An instruction begins with a mnemonic or opcode, is followed by
+  # up to three register arguments, and lastly an optional immediate argument,
+  # with the arguments all separated by commas.
+  instructions:
+    - match: (?i)(\b(andi?|ori?|xori?|andn|s[rl]l|sra|minu?|maxu?|slti?u?|add|sub|lui|auipc|mulh?|mulhs?u|divu?|remu?|rev[bh]|c[lt]z|pcnt)\b[ \t]*)
+      scope: support.function.source.casm
+      push: instruction_arguments
+    - match: (?i)(\b(l[bh]u?|lw|s[bhw])\b[ \t]*)
+      scope: support.function.source.memory.casm
+      push: instruction_arguments
+    - match: (?i)(\b(jalr?|beq|bne|bltu?|bgeu?|ecall|ebreak|rfe)\b[ \t]*)
+      scope: support.function.control.casm
+      push: instruction_arguments
+    - match: (?i)(\b(nop|mv|not|neg|nandi?|nori?|xnori?|andn|orn|xorn|slli|srli|srai|addi|c[lt]o|seqz|snez|sltz|sgtz|l[ia])\b[ \t]*)
+      scope: support.function.source.pseudo.casm
+      push: instruction_arguments
+    - match: (?i)(\b(l[bh]u?a|lwa|s[bhw]a)\b[ \t]*)
+      scope: support.function.source.memory.pseudo.casm
+      push: instruction_arguments
+    - match: (?i)(\b(beqz|bnez|b[lg]ez|b[lg]tz|bgtu?|bleu?|jr?|call|ret|ecalli)\b[ \t]*)
+      scope: support.function.control.pseudo.casm
+      push: instruction_arguments
+    - match: (\b(op|OP)(\[)(0[xX][0-9a-fA-F]{2})(\]))
+      captures:
+        2: support.function.source.casm
+        3: keyword.operator.paren.bracket.casm
+        4: constant.numeric.hexadecimal.casm
+        5: keyword.operator.paren.bracket.casm
+
+  instruction_arguments:
+    - include: registers
+    - include: immediate
+      pop: true
+    - match: ([ \t]*,[ \t]*)
+      scope: punctuation.separator.instruction.arguments
+    - match: (\s+)
+      pop: true
+
+  immediate:
+    - match: \b([0-9]+[fb])\b
+      scope: constant.numeric.reference.casm
+      push: reference_type
+    - match: (\.(bss|data|rodata|text|stack|heap)\.(start|end|length))\b
+      scope: support.type.directive.value.segment.casm
+      push: reference_type
+    - match: \b([a-zA-Z_\.][a-zA-Z0-9_\.]*)\b
+      scope: variable.other.casm
+      push: reference_type
+    - include: character_literals
+    - include: string_literals
+    - include: numeric_literals
+    - include: comments
+      pop: true
+
+  reference_type:
+    - match: ([ \t]*(\[)[ \t]*(byte|half|word|lo|hi|solo_hi|pcrel_half|pcrel_near_lo|pcrel_hi|pcrel_solo_hi|pcrel_lo)[ \t]*(\]))
+      captures:
+        2: keyword.operator.paren.bracket.casm
+        3: support.type.reference.type.casm
+        4: keyword.operator.paren.bracket.casm
+    - match: ''
+      pop: true
+
+  identifiers:
+    - match: (\b[a-zA-Z0-9_\.]+\b)
+      scope: variable.other.casm
+
+  character_literals:
+    - match: (')((\\[^\\]|\\x[0-9a-fA-F]{2})|([^\\])|(\\\\))(')
+      scope: constant.character.casm
+      captures:
+        1: constant.character.begin.casm
+        3: constant.character.escape.casm
+        5: constant.character.escape.casm
+        6: constant.character.end.casm
+
+  numeric_literals:
+    - match: ((0[xX])([0-9a-fA-F]+))
+      scope: constant.numeric.hexadecimal.casm
+    - match: ((0[bB])([01]+))
+      scope: constant.numeric.binary.casm
+    - match: (([+-])?([0-9]+))
+      captures:
+        2: keyword.operator.arithmetic
+        3: constant.numeric.decimal.casm
+
+  string_literals:
+    - match: '"'
+      scope: constant.string.begin.casm
+      push:
+        - meta_scope: constant.string.casm
+        - match: '"'
+          scope: constant.string.end.casm
+          pop: true
+        - match: \\.
+          scope: constant.string.escape.casm
+
+  comments:
+    - match: (;)(.*)
+      scope: comment.line.casm
