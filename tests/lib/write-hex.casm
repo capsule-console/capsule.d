@@ -1,0 +1,46 @@
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.export write_hex
+.export write_hex.digits
+
+.rodata
+    write_hex.digits: .string "0123456789abcdef"
+
+; Write the value of register A to stdout as a hexadecimal value
+; Make sure to ecall stdio.init before calling this function
+; Modifies the registers A, X, and Y. Does not touch the stack.
+.text .procedure
+write_hex:
+    ; Load the memory address where hex digit characters are stored
+    la Y, write_hex.digits
+    ; Determine how many digits to write (don't write leading zeroes)
+    srli X, A, 28 bnez X, 0f
+    srli X, A, 24 bnez X, 1f
+    srli X, A, 20 bnez X, 2f
+    srli X, A, 16 bnez X, 3f
+    srli X, A, 12 bnez X, 4f
+    srli X, A, 8  bnez X, 5f
+    srli X, A, 4  bnez X, 6f
+    j 7f
+    ; Unrolled loop to write digits in order
+0:  mv X, A srli X, X, 28                add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+1:  mv X, A srli X, X, 24 andi X, X, 0xF add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+2:  mv X, A srli X, X, 20 andi X, X, 0xF add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+3:  mv X, A srli X, X, 16 andi X, X, 0xF add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+4:  mv X, A srli X, X, 12 andi X, X, 0xF add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+5:  mv X, A srli X, X, 8  andi X, X, 0xF add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+6:  mv X, A srli X, X, 4  andi X, X, 0xF add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+7:  mv X, A               andi X, X, 0xF add X, X, Y lbu X, X
+    ecalli Z, X, stdio.put_byte
+    ; All done
+    ret R
+.end write_hex

@@ -1,0 +1,65 @@
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.rodata
+; 1 2 3 4 5 6 7 8 9 a b c d e f 80 7f ff 999 abc
+; 1234 8000 8080 ffff 11111 abcde fffff abcdef
+; ffffff fffffff 12345678 80000001 fedcba98 ffffffff 0
+write_values:
+.word 0x1
+.word 0x2
+.word 0x3
+.word 0x4
+.word 0x5
+.word 0x6
+.word 0x7
+.word 0x8
+.word 0x9
+.word 0xa
+.word 0xb
+.word 0xc
+.word 0xd
+.word 0xe
+.word 0xf
+.word 0x80
+.word 0x7f
+.word 0xff
+.word 0x999
+.word 0xabc
+.word 0x1234
+.word 0x8000
+.word 0x8080
+.word 0xffff
+.word 0x11111
+.word 0xabcde
+.word 0xfffff
+.word 0xabcdef
+.word 0xffffff
+.word 0xfffffff
+.word 0x12345678
+.word 0x80000001
+.word 0xfedcba98
+.word 0xffffffff
+.word 0x0
+
+.text
+.entry
+    ; Ensure stdio is active
+    ecalli Z, Z, stdio.init
+    ; Store a pointer to write_values in register B
+    la B, write_values
+loop:
+    ; Enumerate values and write them to stdout in hexadecimal format
+    ; Stop after encountering a zero value
+    lw A, B
+    call R, write_hex
+    beqz A, end
+    li A, ' '
+    ecalli Z, A, stdio.put_byte
+    addi B, B, 4
+    j loop
+end:
+    ecalli Z, Z, meta.exit_ok

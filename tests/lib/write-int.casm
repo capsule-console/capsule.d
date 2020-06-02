@@ -1,0 +1,64 @@
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.export write_int
+
+; Write the value of register A to stdout as a signed decimal value
+; Make sure to ecall stdio.init before calling this function
+; Modifies the registers A, X, and Y.
+; Modifies the word at the address indicated by register S.
+.text .procedure
+write_int:
+    ; Handle the special case where A = 0
+    beqz A, 0.zero.f
+    ; Handle the special case where A = -2147483648, i.e. 0x80000000
+    li X, 0x80000000
+    beq A, X, 0.big_neg.f
+    ; Y register is used to represent the current digit position in
+    ; writing out the input value.
+    li Y, 1_000_000_000
+    ; Write a negative sign for other negatives, then make it positive
+    bgez A, 0.find_first_nonzero.f
+    li X, '-' ecalli Z, X, stdio.put_byte
+    neg A, A
+; Enumerate until finding the first nonzero digit
+0.find_first_nonzero:
+    div X, A, Y
+    bnez X, 0.write_loop.f
+    li X, 10
+    div Y, Y, X
+    j 0.find_first_nonzero.b
+; Write each digit
+0.write_loop:
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    li X, 10
+    div Y, Y, X
+    beqz Y, 0.end.f
+    sw Y, S
+    div Y, A, Y
+    rem X, Y, X
+    lw Y, S
+    j 0.write_loop.b
+; Write out -2147483648
+0.big_neg:
+    li X, '-' ecalli Z, X, stdio.put_byte
+    li X, '2' ecalli Z, X, stdio.put_byte
+    li X, '1' ecalli Z, X, stdio.put_byte
+    li X, '4' ecalli Z, X, stdio.put_byte
+    li X, '7' ecalli Z, X, stdio.put_byte
+    li X, '4' ecalli Z, X, stdio.put_byte
+    li X, '8' ecalli Z, X, stdio.put_byte
+    li X, '3' ecalli Z, X, stdio.put_byte
+    li X, '6' ecalli Z, X, stdio.put_byte
+    li X, '4' ecalli Z, X, stdio.put_byte
+    li X, '8' ecalli Z, X, stdio.put_byte
+    ret R
+; Write out 0
+0.zero:
+    li X, '0' ecalli Z, X, stdio.put_byte
+; All done
+0.end:
+    ret R 
+.end write_int

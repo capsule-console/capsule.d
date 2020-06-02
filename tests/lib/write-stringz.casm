@@ -1,0 +1,17 @@
+.export write_stringz
+
+.const stdio.put_byte, 0x3002
+
+; Beginning at the address indicated by register A,
+; print characters until a zero (null char) is encountered.
+; Modifies the value in register A.
+.text .procedure
+write_stringz:
+    lbu X, A
+    beqz X, 1f
+    ecalli Z, X, stdio.put_byte
+    addi A, A, 1
+    j write_stringz
+1:
+    ret R
+.end write_stringz

@@ -1,0 +1,31 @@
+; Normal, idiomatic hello world example
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.rodata
+    hello_world: .stringz "Hello, world!"
+    
+.text
+.entry
+    ; Ensure stdio is active
+    ecalli Z, Z, stdio.init
+    ; Initialize the loop counter to zero
+    mv C, Z
+
+loop:
+    ; Load the next character in the string
+    lbu X, C, hello_world
+    ; If the character was zero, terminate the loop
+    beq X, Z, end
+    ; Otherwise proceed to print the character
+    ecalli Z, X, stdio.put_byte
+    ; Increment the loop counter C
+    addi C, C, 1
+    ; Go to the beginning of the loop
+    j loop
+
+end:
+    ; End program execution
+    ecalli Z, Z, meta.exit_ok

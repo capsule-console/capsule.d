@@ -1,0 +1,57 @@
+; Test min (set to minimum signed) with a range of values
+; Store the result of min(rs1, rs2) to rd
+
+.extern write_int
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    la S, write_int.target
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 0
+    li X, 0
+    li Y, 0
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, +1
+    li Y, +1
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, -1
+    li Y, -1
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, +1
+    li Y, -1
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, -1
+    li Y, +1
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li X, +2147483647 ; Same as 0x7fffffff
+    li Y, -2147483648 ; Same as 0x80000000
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li Y, -2147483648
+    li X, 0
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li Y, +2147483647
+    li X, 0
+    min A, X, Y call R, write_int ecalli Z, B, stdio.put_byte
+    ; 128
+    li Y, 256
+    li X, 128
+    min A, X, Y call R, write_int
+    ; All done
+    ecalli Z, Z, meta.exit_ok

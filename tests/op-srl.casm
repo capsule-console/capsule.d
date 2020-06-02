@@ -1,0 +1,111 @@
+; Test srl (shift logical right) with a range of values
+; Store the result of (rs1 >>> rs2) >>> i16 to rd, with
+; rs2 and i16 each independently masked to use only their
+; lowest 5 bits, i.e. (rs2 & 0x1f) and (i16 & 0x1f)
+; The left-most bits that data is shifted out of are filled
+; with zeroes.
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+; Shift by an immediate value
+    ; 73107310
+    li X, 0x73107310
+    srl A, X, Z, 0
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 39883988
+    li X, 0x73107310
+    srl A, X, Z, 1
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 7310731
+    li X, 0x73107310
+    srl A, X, Z, 4
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; f310
+    li X, 0xf3107310
+    srl A, X, Z, 16
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1cc
+    li X, 0x73107310
+    srl A, X, Z, 22
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x73107310
+    srl A, X, Z, 31
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 39883988
+    li X, 0x73107310
+    srl A, X, Z, 33
+    call R, write_hex ecalli Z, B, stdio.put_byte
+; Shift by a register value
+    ; 73107310
+    li X, 0x73107310
+    li Y, 0 srl A, X, Y
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 39883988
+    li X, 0x73107310
+    li Y, 1 srl A, X, Y
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 7310731
+    li X, 0x73107310
+    li Y, 4 srl A, X, Y
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; f310
+    li X, 0xf3107310
+    li Y, 16 srl A, X, Y
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1cc
+    li X, 0x73107310
+    li Y, 22 srl A, X, Y
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x73107310
+    li Y, 31 srl A, X, Y
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 39883988
+    li X, 0x73107310
+    li Y, 33 srl A, X, Y
+    call R, write_hex ecalli Z, B, stdio.put_byte
+; Shift by both a register and immediate value
+    ; 73107310
+    li X, 0x73107310
+    li Y, 0 srl A, X, Y, 0
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 39883988
+    li X, 0x73107310
+    li Y, 1 srl A, X, Y, 0
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 7310731
+    li X, 0x73107310
+    li Y, 2 srl A, X, Y, 2
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; f310
+    li X, 0xf3107310
+    li Y, 4 srl A, X, Y, 12
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1cc
+    li X, 0x73107310
+    li Y, 18 srl A, X, Y, 4
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x73107310
+    li Y, 1 srl A, X, Y, 30
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0xffffffff
+    li Y, 16 srl A, X, Y, 16
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1cc41cc4
+    li X, 0x73107310
+    li Y, 33 srl A, X, Y, 33
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

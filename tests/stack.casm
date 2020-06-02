@@ -1,0 +1,51 @@
+; Test stack-related operations.
+; Requires that the linker be invoked with a --stack-length of at least
+; eight bytes.
+
+.extern write_stringz
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Ensure stdio is active
+    ecalli Z, Z, stdio.init
+    nop ; TODO: don't
+    ; Initialize the stack pointer and frame pointer
+    la B, .stack.end
+    mv S, B
+    ; Push the characters of "Hello! \0" onto the stack one-by-one
+    li X, 0     addi S, S, -1 sb X, S
+    li X, ' '   addi S, S, -1 sb X, S
+    li X, '!'   addi S, S, -1 sb X, S
+    li X, 'o'   addi S, S, -1 sb X, S
+    li X, 'l'   addi S, S, -1 sb X, S
+    li X, 'l'   addi S, S, -1 sb X, S
+    li X, 'e'   addi S, S, -1 sb X, S
+    li X, 'H'   addi S, S, -1 sb X, S
+    ; Write "Hello! " to stdout
+    mv A, S
+    call R, write_stringz
+    ; Pop "Hello" but keep "! \0"
+    addi S, S, 5
+    ; Push "Nice" onto the stack
+    li X, 'e'   addi S, S, -1 sb X, S
+    li X, 'c'   addi S, S, -1 sb X, S
+    li X, 'i'   addi S, S, -1 sb X, S
+    li X, 'N'   addi S, S, -1 sb X, S
+    ; Write "Nice! " to stdout
+    mv A, S
+    call R, write_stringz
+    ; Overwrite "Nice! \0" with "Cool!\0\0" via the frame pointer
+    li X, 'C'   sb X, B, -7
+    li X, 'o'   sb X, B, -6
+    li X, 'o'   sb X, B, -5
+    li X, 'l'   sb X, B, -4
+    li X, 0     sb X, B, -2
+    ; Write "Cool!" to stdout
+    mv A, S
+    call R, write_stringz
+    ; All done
+    ecalli Z, Z, meta.exit_ok

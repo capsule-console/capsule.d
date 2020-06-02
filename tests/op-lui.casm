@@ -1,0 +1,25 @@
+; Test lui (load upper immediate) with a range of values
+; Assign rd to the 16-bit immediate shifted left 16 bits,
+; i.e. place the immediate in rd's high half word and zero
+; out the low half word.
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    lui A, 0x0000 call R, write_hex ecalli Z, B, stdio.put_byte ; 0
+    lui A, 0x0001 call R, write_hex ecalli Z, B, stdio.put_byte ; 10000
+    lui A, 0x0080 call R, write_hex ecalli Z, B, stdio.put_byte ; 800000
+    lui A, 0x00ff call R, write_hex ecalli Z, B, stdio.put_byte ; ff0000
+    lui A, 0x1234 call R, write_hex ecalli Z, B, stdio.put_byte ; 12340000
+    lui A, 0x8000 call R, write_hex ecalli Z, B, stdio.put_byte ; 80000000
+    lui A, 0xff00 call R, write_hex ecalli Z, B, stdio.put_byte ; ff000000
+    lui A, 0xffff call R, write_hex                             ; ffff0000
+    ecalli Z, Z, meta.exit_ok
+    

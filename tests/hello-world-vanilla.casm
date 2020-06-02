@@ -1,0 +1,33 @@
+; Hello world example using only normal instructions
+; and completely explicit reference types.
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.rodata
+    hello_world: .stringz "Hello, world!"
+    
+.text
+.entry
+    ; Ensure stdio is active
+    ecall Z, X, Z, stdio.init
+    ; Initialize the loop counter to zero
+    add C, Z, Z, 0
+
+loop:
+    ; Load the next character in the string
+    lbu X, C, hello_world
+    ; If the character was zero, terminate the loop
+    beq X, Z, end[pcrel_half]
+    ; Otherwise proceed to print the character
+    ecall Z, X, Z, stdio.put_byte
+    ; Increment the loop counter C
+    add C, C, Z, 1
+    ; Go to the beginning of the loop
+    jal Z, loop[pcrel_half]
+
+end:
+    ; End program execution
+    ecall Z, X, Z, meta.exit_ok
+    
