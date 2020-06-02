@@ -1,0 +1,77 @@
+{
+    "name": "capsule",
+    "version": "0.0.1",
+    "authors": ["Sophie Kirschner"],
+    "homepage": "https://github.com/capsule-console/capsule.d",
+    "description": "Capsule assembler, linker, and virtual machine implemented in the D programming language",
+    "copyright": "Copyright © 2020, Sophie Kirschner",
+    "license": "GNU AGPLv3",
+    "buildRequirements": ["silenceWarnings"],
+    "sourcePaths": ["capsule"],
+    "importPaths": ["."],
+    "excludedSourceFiles": [
+        "**/test.d",
+        "**/temp.d",
+        "**/wip_*.d",
+        "**/old_*.d",
+        "**/reject_*.d",
+    ],
+    "configurations": [
+        {
+            "name": "core",
+            "targetType": "library",
+            "targetPath": "lib",
+            "targetName": "capsule",
+            "versions": [
+                "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeCheckerMain",
+                "CapsuleExcludeExecutionMain",
+                "CapsuleExcludeLinkerMain"
+            ],
+        },
+        {
+            "name": "capsule",
+            "targetType": "executable",
+            "targetPath": "bin",
+            "targetName": "capsule",
+            "versions": [
+                "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeCheckerMain",
+                "CapsuleExcludeLinkerMain"
+            ],
+        },
+        {
+            "name": "casm",
+            "targetType": "executable",
+            "targetPath": "bin",
+            "targetName": "casm",
+            "versions": [
+                "CapsuleExcludeCheckerMain",
+                "CapsuleExcludeExecutionMain",
+                "CapsuleExcludeLinkerMain"
+            ],
+        },
+        {
+            "name": "clink",
+            "targetType": "executable",
+            "targetPath": "bin",
+            "targetName": "clink",
+            "versions": [
+                "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeCheckerMain",
+                "CapsuleExcludeExecutionMain"
+            ],
+        },
+        {
+            "name": "capcheck",
+            "targetType": "executable",
+            "targetPath": "bin",
+            "targetName": "capcheck",
+            "versions": [
+                "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeExecutionMain",
+                "CapsuleExcludeLinkerMain"
+            ],
+        },
+    ],
+}
