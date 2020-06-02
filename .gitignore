@@ -22,3 +22,10 @@ docs/
 
 # Code coverage
 *.lst
+
+# Miscellanea
+old/
+bin/
+assets/
+temp.d
+todo.txt
