@@ -813,8 +813,10 @@ struct CapsuleAsmParser {
         if(this.reader.front == '\\') {
             size_t escStartIndex = this.reader.index;
             this.reader.popFront();
-            while(!this.reader.empty && this.reader.front != '\'') {
+            bool escape = true;
+            while(!this.reader.empty && (escape || this.reader.front != '\'')) {
                 this.reader.popFront();
+                escape = false;
             }
             if(!this.reader.empty && this.reader.front == '\'') {
                 const escapeSequence = this.reader.content[
