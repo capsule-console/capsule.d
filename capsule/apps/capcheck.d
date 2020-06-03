@@ -123,18 +123,19 @@ void writeln(T...)(lazy T args) {
 struct CapsuleCheckTest {
     alias Status = CapsuleApplicationStatus;
     
+    Status status = Status.Ok;
     string name = null;
+    string comment = null;
     string[] sources = null;
     string stdin = null;
     string stdout = null;
-    Status status = Status.Ok;
     string casmArgs = null;
     string clinkArgs = null;
     string capsuleArgs = null;
 }
 
-/// Helper to escape a string to be used as a command line argument (Posix)
-version(Posix) string escapeArg(in string arg) {
+/// Helper to escape a string to be used as a command line argument
+string escapeArg(in string arg) {
     string escaped = `"`;
     foreach(ch; arg) {
         if(ch == '\"') {
@@ -142,21 +143,6 @@ version(Posix) string escapeArg(in string arg) {
         }
         else if(ch == '\\') {
             escaped ~= `\\`;
-        }
-        else {
-            escaped ~= ch;
-        }
-    }
-    escaped ~= `"`;
-    return escaped;
-}
-
-/// Helper to escape a string to be used as a command line argument (Windows)
-version(Windows) string escapeArg(in string arg) {
-    string escaped = `"`;
-    foreach(ch; arg) {
-        if(ch == '\"') {
-            escaped ~= `""`;
         }
         else {
             escaped ~= ch;
@@ -247,6 +233,7 @@ CapsuleApplicationStatus check(string[] args) {
         );
         CapsuleCheckTest test = {
             name: section.name,
+            comment: section.get("comment"),
             sources: section.all("source"),
             stdin: section.get("stdin"),
             stdout: section.get("stdout"),
@@ -358,8 +345,12 @@ auto runTest(
     string linkCmd = (
         config.clinkCommand ~ " " ~ objPaths ~
         " -o " ~ escapeArg(programPath) ~
-        cmdLogFlag ~ " " ~ test.clinkArgs ~ "\0"
+        cmdLogFlag ~ " " ~ test.clinkArgs
     );
+    if(test.comment.length) {
+        linkCmd ~= " --program-comment " ~ escapeArg(test.comment);
+    }
+    linkCmd ~= "\0";
     assert(linkCmd.length && linkCmd[$ - 1] == '\0');
     verboseln(linkCmd[0 .. $ - 1]);
     result.linkTime.start();
