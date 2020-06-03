@@ -49,15 +49,6 @@ contexts:
     - match: (\s+)
       pop: true
 
-  # Match the argument list for a directive taking a single identifier
-  # as its argument, such as .export and .extern
-  symbol_directive_arguments:
-    - include: immediate
-    - match: ([ \t]*,[ \t]*)
-      scope: punctuation.separator.instruction.arguments
-    - match: (\s+)
-      pop: true
-
   # Match a register name, such as "a" or "A" or "r1" or "R1".
   registers:
     - match: (\b((?i)[ZABCRSXY]|R[01234567])\b)
@@ -86,7 +77,8 @@ contexts:
     - match: (?i)(\b(beqz|bnez|b[lg]ez|b[lg]tz|bgtu?|bleu?|jr?|call|ret|ecalli)\b[ \t]*)
       scope: support.function.control.pseudo.casm
       push: instruction_arguments
-    - match: (\b(op|OP)(\[)(0[xX][0-9a-fA-F]{2})(\]))
+    - match: (\b(op|OP)(\[)(0[xX][0-9a-fA-F]{2})(\])[ \t]*)
+      push: instruction_arguments
       captures:
         2: support.function.source.casm
         3: keyword.operator.paren.bracket.casm
