@@ -11,6 +11,7 @@ import capsule.core.escape;
 import capsule.core.extension;
 import capsule.core.file;
 import capsule.core.filesystem;
+import capsule.core.heap;
 import capsule.core.hex;
 import capsule.core.indexof;
 import capsule.core.ini;

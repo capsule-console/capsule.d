@@ -50,7 +50,7 @@ ExtFunction getExtFunction(in uint id) {
     uint low = 0;
     uint high = cast(uint) ecallExtList.length;
     while(true) {
-        uint mid = low + ((high - low) / 2);
+        const uint mid = low + ((high - low) / 2);
         if(ecallExtList[mid].id == id) {
             return ecallExtList[mid].func;
         }
