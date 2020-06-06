@@ -2,6 +2,7 @@ module capsule.core;
 
 public:
 
+import capsule.core.adler32;
 import capsule.core.ascii;
 import capsule.core.concat;
 import capsule.core.config;
