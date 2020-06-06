@@ -4,6 +4,7 @@ import capsule.core.crc : CRC32;
 import capsule.core.encoding : CapsuleArchitecture;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
 import capsule.core.obj : CapsuleObject;
+import capsule.core.programsource : CapsuleProgramSource;
 
 nothrow @safe @nogc public:
 
@@ -54,7 +55,6 @@ enum CapsuleProgramSegmentType: uint {
     @("heap") Heap,
 }
 
-/// TODO
 struct CapsuleProgramSymbol {
     alias Type = CapsuleObject.Symbol.Type;
     
@@ -114,29 +114,46 @@ struct CapsuleProgramSegment {
     
     alias Type = CapsuleProgramSegmentType;
     
+    /// The type of segment, e.g. bss, data, text
     Type type;
+    /// The offset of this section in memory
     uint offset = 0;
+    /// The length of this section.
+    /// Should be the same as bytes.length for initialized segments.
     uint length = 0;
+    /// CRC32 checksum to verify the integrity of an initialized segment's
+    /// content.
     uint checksum = 0;
+    /// Array of bytes making up the segment.
+    /// Array should be empty for uninitialized segments.
     ubyte[] bytes = null;
     
+    /// Check whether the segment is valid.
     bool ok() const {
         return (
+            // Must have a known segment type
             (this.type !is Type.None && this.type <= Type.Heap) &&
+            // Initialized sections must have consistent lengths
             (!this.isInitialized || this.length == this.bytes.length) &&
+            // Segment must lie entirely within addressable memory
+            (this.offset < int.max) &&
             (int.max - this.offset >= this.length) &&
+            // Checksum must be consistent with segment data
             (this.checksum == CRC32.get(this.bytes))
         );
     }
     
+    /// Get the ending memory address for this segment.
     uint end() const {
         return this.offset + this.length;
     }
     
+    /// Check whether a memory address falls within this segment.
     bool containsAddress(in uint address) const {
         return address >= this.offset && address < this.length;
     }
     
+    /// Check whether a segment type contains initialized or uninitialized data.
     static bool typeIsInitialized(in Type type) {
         switch(type) {
             case Type.None: return false;
@@ -150,8 +167,7 @@ struct CapsuleProgramSegment {
         }
     }
     
-    /// Check whether the segment contains
-    /// initialized data (data, rodata, text) or uninitialized data (bss).
+    /// Check whether the segment contains initialized or uninitialized data.
     bool isInitialized() const {
         return typeof(this).typeIsInitialized(this.type);
     }
@@ -160,6 +176,7 @@ struct CapsuleProgramSegment {
 struct CapsuleProgram {
     alias Architecture = CapsuleArchitecture;
     alias Segment = CapsuleProgramSegment;
+    alias Source = CapsuleProgramSource;
     alias Symbol = CapsuleProgramSymbol;
     alias TextEncoding = CapsuleTextEncoding;
     alias TimeEncoding = CapsuleTimeEncoding;
@@ -182,23 +199,26 @@ struct CapsuleProgram {
     /// Timestamp as a signed number of seconds since Unix epoch
     long timestamp = 0;
     
-    ///
+    /// Information about the program's bss segment.
     CapsuleProgramSegment bssSegment;
-    ///
+    /// Information about the program's data segment.
     CapsuleProgramSegment dataSegment;
-    ///
+    /// Information about the program's rodata segment.
     CapsuleProgramSegment readOnlyDataSegment;
-    ///
+    /// Information about the program's text segment.
     CapsuleProgramSegment textSegment;
-    ///
+    /// Information about the program's stack segment.
     CapsuleProgramSegment stackSegment;
-    ///
+    /// Information about the program's heap segment.
     CapsuleProgramSegment heapSegment;
     
     ///
     string[] names = null;
     ///
     Symbol[] symbols = null;
+    
+    ///
+    Source.Map sourceMap;
     
     /// Check that the program is valid and can in fact be run
     bool ok() const {
@@ -218,7 +238,7 @@ struct CapsuleProgram {
             this.textSegment.type is Segment.Type.Text &&
             this.stackSegment.type is Segment.Type.Stack &&
             this.heapSegment.type is Segment.Type.Heap &&
-            // Segments offsets and lengths put them in the correct order?
+            // Segment offsets and lengths put them in the correct order?
             this.dataSegment.offset >= this.bssSegment.end &&
             this.readOnlyDataSegment.offset >= this.dataSegment.end &&
             this.textSegment.offset >= this.readOnlyDataSegment.end &&

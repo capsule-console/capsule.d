@@ -23,7 +23,9 @@ mixin template CapsuleObjectCoderMixin() {
     static const NamesHeader = stringToInt("NAMS");
     static const SymbolsHeader = stringToInt("SYMB");
     static const ReferencesHeader = stringToInt("REFS");
-    static const SectionsHeader = stringToInt("SECT");
+    static const SectionHeader = stringToInt("SECT");
+    static const SourceHeader = stringToInt("SRCF");
+    static const SourceLocationsHeader = stringToInt("SLOC");
 }
 
 /// Provides an interface for encoding a CapsuleObject and all its
@@ -48,8 +50,12 @@ struct CapsuleObjectEncoder {
         FileSectionHeader sourceUri = {
             name: SourceURIHeader,
             omitSection: !object.sourceUri || !object.sourceUri.length,
-            length: typeof(this).getPaddedBytesLength(object.sourceUri.length),
-            data: typeof(this).encodeFileSectionHeaderData(object.sourceUri.length),
+            length: typeof(this).getPaddedBytesLength(
+                object.sourceUri.length
+            ),
+            data: typeof(this).encodeFileSectionHeaderData(
+                cast(uint) object.sourceUri.length
+            ),
         };
         FileSectionHeader sourceHash = {
             name: SourceHashHeader,
@@ -61,8 +67,12 @@ struct CapsuleObjectEncoder {
         FileSectionHeader comment = {
             name: CommentHeader,
             omitSection: object.comment.length == 0,
-            length: typeof(this).getPaddedBytesLength(object.comment.length),
-            data: typeof(this).encodeFileSectionHeaderData(object.comment.length),
+            length: typeof(this).getPaddedBytesLength(
+                object.comment.length
+            ),
+            data: typeof(this).encodeFileSectionHeaderData(
+                cast(uint) object.comment.length
+            ),
         };
         FileSectionHeader entry = {
             name: EntryHeader,
@@ -90,12 +100,52 @@ struct CapsuleObjectEncoder {
             entries: cast(uint) object.references.length,
             noContent: object.references.length == 0,
         };
-        FileSectionHeader sections = {
-            name: SectionsHeader,
-            length: typeof(this).getSectionsContentLength(object.sections),
-            entries: cast(uint) object.sections.length,
-            noContent: object.sections.length == 0,
+        FileSectionHeader sourceLocations = {
+            name: SourceLocationsHeader,
+            omitSection: object.sectionSourceLocations.length == 0,
+            length: typeof(this).getSourceLocationsContentLength(object.sectionSourceLocations),
+            data: typeof(this).encodeFileSectionHeaderData(
+                cast(uint) object.sectionSourceLocations.length
+            ),
         };
+        FileSectionHeader[] fileSections = [
+            timestamp, sourceUri, sourceHash, comment,
+            entry, names, symbols, references, sourceLocations,
+        ];
+        for(uint i = 0; i < object.sections.length; i++) {
+            const objSection = object.sections[i];
+            const bytesLength = (objSection.isInitialized ?
+                typeof(this).getPaddedBytesLength(objSection.bytes) : 0
+            );
+            FileSectionHeader fileSection = {
+                name: SectionHeader,
+                length: 12 + bytesLength,
+                data: typeof(this).encodeFileSectionHeaderData(
+                    i, cast(ushort) objSection.type, objSection.unused,
+                    objSection.length, objSection.checksum
+                ),
+            };
+            fileSections ~= fileSection;
+            assert(fileSection.intData[0] == i);
+            assert(fileSection.shortData[2] == cast(ushort) objSection.type);
+        }
+        for(uint i = 0; i < object.sources.length; i++) {
+            const source = object.sources[i];
+            const textLength = 4 + (
+                typeof(this).getPaddedBytesLength(source.name) +
+                typeof(this).getPaddedBytesLength(source.content)
+            );
+            FileSectionHeader sourceSection = {
+                name: SourceHeader,
+                length: textLength,
+                data: typeof(this).encodeFileSectionHeaderData(
+                    i, source.encoding, source.unused,
+                    cast(uint) source.name.length,
+                    cast(uint) source.content.length,
+                ),
+            };
+            fileSections ~= sourceSection;
+        }
         bool withHeader(
             in FileSectionHeader header, in uint name,
             void delegate() write
@@ -109,17 +159,32 @@ struct CapsuleObjectEncoder {
             }
         }
         WriteSectionContentDelegate[] writers = [
-            (header) => withHeader(header, SourceURIHeader, () => this.writeTextContent(object.sourceUri)),
-            (header) => withHeader(header, CommentHeader, () => this.writeTextContent(object.comment)),
-            (header) => withHeader(header, NamesHeader, () => this.writeNamesContent(object.names)),
-            (header) => withHeader(header, SymbolsHeader, () => this.writeSymbolsContent(object.symbols)),
-            (header) => withHeader(header, ReferencesHeader, () => this.writeReferencesContent(object.references)),
-            (header) => withHeader(header, SectionsHeader, () => this.writeSectionsContent(object.sections)),
+            (header) => withHeader(header, SourceURIHeader,
+                () => this.writeTextContent(object.sourceUri)
+            ),
+            (header) => withHeader(header, CommentHeader,
+                () => this.writeTextContent(object.comment)
+            ),
+            (header) => withHeader(header, NamesHeader,
+                () => this.writeNamesContent(object.names)
+            ),
+            (header) => withHeader(header, SymbolsHeader,
+                () => this.writeSymbolsContent(object.symbols)
+            ),
+            (header) => withHeader(header, ReferencesHeader,
+                () => this.writeReferencesContent(object.references)
+            ),
+            (header) => withHeader(header, SourceLocationsHeader,
+                () => this.writeSourceLocationsContent(object.sectionSourceLocations)
+            ),
+            (header) => withHeader(header, SectionHeader,
+                () => this.writeSectionContent(object.sections[header.intData[0]], header)
+            ),
+            (header) => withHeader(header, SourceHeader,
+                () => this.writeSourceContent(object.sources[header.intData[0]], header)
+            ),
         ];
-        this.writeFile(fileHeader, [
-            timestamp, sourceUri, sourceHash, comment,
-            entry, names, symbols, references, sections,
-        ], writers);
+        this.writeFile(fileHeader, fileSections, writers);
     }
     
     void writeTextContent(in string text) {
@@ -168,32 +233,49 @@ struct CapsuleObjectEncoder {
         }
     }
     
-    static uint getSectionsContentLength(in CapsuleObject.Section[] sections) {
-        uint length = 24 * cast(uint) sections.length;
-        foreach(section; sections) {
-            length += (section.isInitialized ?
-                typeof(this).getPaddedBytesLength(section.bytes.length) : 0
-            );
+    static uint getSourceLocationsContentLength(
+        in CapsuleObject.Source.Location[][] sectionSourceLocations
+    ) {
+        uint length = 4 * cast(uint) sectionSourceLocations.length;
+        foreach(locations; sectionSourceLocations) {
+            length += 24 * locations.length;
         }
         return length;
     }
     
-    void writeSectionsContent(in CapsuleObject.Section[] sections) {
-        foreach(section; sections) {
-            this.writeShort(cast(ushort) section.type);
-            this.writeShort(section.unused);
-            this.writeInt(section.name);
-            this.writeInt(section.alignment);
-            this.writeInt(cast(uint) section.priority);
-            this.writeInt(section.checksum);
-            if(section.isInitialized) {
-                this.writeInt(cast(uint) section.bytes.length);
-                this.writePaddedBytes(section.bytes);
-            }
-            else {
-                this.writeInt(section.length);
+    void writeSourceLocationsContent(
+        in CapsuleObject.Source.Location[][] sectionSourceLocations
+    ) {
+        foreach(locations; sectionSourceLocations) {
+            this.writeInt(cast(uint) locations.length);
+            foreach(location; locations) {
+                this.writeInt(location.source);
+                this.writeInt(location.startAddress);
+                this.writeInt(location.endAddress);
+                this.writeInt(location.contentStartIndex);
+                this.writeInt(location.contentEndIndex);
+                this.writeInt(location.contentLineNumber);
             }
         }
+    }
+    
+    void writeSectionContent(
+        in CapsuleObject.Section section, in FileSectionHeader header
+    ) @trusted {
+        this.writeInt(section.name);
+        this.writeInt(section.alignment);
+        this.writeInt(section.priority);
+        if(section.isInitialized) {
+            this.writePaddedBytes(section.bytes);
+        }
+    }
+    
+    void writeSourceContent(
+        in CapsuleObject.Source source, in FileSectionHeader header
+    ) @trusted {
+        this.writeInt(source.checksum);
+        this.writePaddedBytes(source.name);
+        this.writePaddedBytes(source.content);
     }
 }
 
@@ -234,7 +316,9 @@ struct CapsuleObjectDecoder {
             (header) => (this.readNamesSection(header)),
             (header) => (this.readSymbolsSection(header)),
             (header) => (this.readReferencesSection(header)),
-            (header) => (this.readSectionsSection(header)),
+            (header) => (this.readSourceLocationsSection(header)),
+            (header) => (this.readSectionSection(header)),
+            (header) => (this.readSourceSection(header)),
         ];
         this.readFileContent(fileHeader, readers);
         return this;
@@ -330,27 +414,71 @@ struct CapsuleObjectDecoder {
         return true;
     }
     
-    CapsuleObject.Section readSection() {
+    bool readSourceLocationsSection(in FileSectionHeader header) {
+        if(header.name != SourceLocationsHeader) return false;
+        const numSections = header.intData[0];
+        this.object.sectionSourceLocations.length = numSections;
+        for(size_t i = 0; i < numSections; i++) {
+            const numLocations = this.readInt();
+            this.object.sectionSourceLocations[i].length = numLocations;
+            for(size_t j = 0; j < numLocations; j++) {
+                CapsuleObject.Source.Location location;
+                location.source = this.readInt();
+                location.startAddress = this.readInt();
+                location.endAddress = this.readInt();
+                location.contentStartIndex = this.readInt();
+                location.contentEndIndex = this.readInt();
+                location.contentLineNumber = this.readInt();
+                this.object.sectionSourceLocations[i][j] = location;
+            }
+        }
+        return true;
+    }
+    
+    bool readSectionSection(in FileSectionHeader header) {
+        if(header.name != SectionHeader) return false;
         CapsuleObject.Section section;
-        section.type = cast(CapsuleObject.Section.Type) this.readShort();
-        section.unused = this.readShort();
+        const index = header.intData[0];
+        section.type = cast(CapsuleObject.Section.Type) header.shortData[2];
+        section.unused = header.shortData[3];
+        section.length = header.intData[2];
+        section.checksum = header.intData[3];
         section.name = this.readInt();
         section.alignment = this.readInt();
-        section.priority = cast(int) this.readInt();
-        section.checksum = this.readInt();
-        section.length = this.readInt();
+        section.priority = this.readInt();
         if(section.isInitialized) {
             section.bytes = this.readPaddedBytes(section.length);
         }
-        return section;
+        if(index >= uint.max) {
+            this.setStatus(Status.BadSectionContent);
+            return true;
+        }
+        if(index >= this.object.sections.length) {
+            this.object.sections.length = 1 + index;
+        }
+        this.object.sections[index] = section;
+        return true;
     }
     
-    bool readSectionsSection(in FileSectionHeader header) {
-        if(header.name != SectionsHeader) return false;
-        this.object.sections.length = header.entries;
-        for(uint i = 0; i < header.entries; i++) {
-            this.object.sections[i] = this.readSection();
+    bool readSourceSection(in FileSectionHeader header) @trusted {
+        if(header.name != SourceHeader) return false;
+        CapsuleObject.Source source;
+        const index = header.intData[0];
+        source.encoding = cast(CapsuleObject.Source.Encoding) header.shortData[2];
+        source.unused = header.shortData[2];
+        const nameLength = header.intData[2];
+        const contentLength = header.intData[3];
+        source.checksum = this.readInt();
+        source.name = cast(string) this.readPaddedBytes(nameLength);
+        source.content = cast(string) this.readPaddedBytes(contentLength);
+        if(index >= uint.max) {
+            this.setStatus(Status.BadSectionContent);
+            return true;
         }
+        if(index >= this.object.sources.length) {
+            this.object.sources.length = 1 + index;
+        }
+        this.object.sources[index] = source;
         return true;
     }
 }
@@ -449,9 +577,55 @@ unittest {
         priority: -50,
         bytes: [0x00, 0x00],
     };
+    CapsuleObject.Source src0 = {
+        encoding: CapsuleObject.Source.Encoding.None,
+        checksum: 0x112211ff,
+        name: "hello/world.d",
+        content: "content content content content content",
+    };
+    CapsuleObject.Source src1 = {
+        encoding: CapsuleObject.Source.Encoding.None,
+        checksum: 0x4321abcd,
+        name: "test/name.txt",
+        content: "test source file content hello",
+    };
+    CapsuleObject.Source src2 = {
+        encoding: CapsuleObject.Source.Encoding.None,
+        checksum: 0x4321abcd,
+        name: "fake/file/path",
+        content: "bump",
+    };
+    CapsuleObject.Source.Location srcLoc0 = {
+        source: 0,
+        startAddress: 1,
+        endAddress: 8,
+        contentStartIndex: 2,
+        contentEndIndex: 10,
+        contentLineNumber: 4,
+    };
+    CapsuleObject.Source.Location srcLoc1 = {
+        source: 1,
+        startAddress: 2,
+        endAddress: 4,
+        contentStartIndex: 5,
+        contentEndIndex: 6,
+        contentLineNumber: 3,
+    };
+    CapsuleObject.Source.Location srcLoc2 = {
+        source: 2,
+        startAddress: 0,
+        endAddress: 200,
+        contentStartIndex: 1234,
+        contentEndIndex: 55,
+        contentLineNumber: 70,
+    };
     original.symbols ~= [sym0, sym1, sym2, sym3];
     original.references ~= [ref0, ref1];
     original.sections ~= [sec0, sec1, sec2];
+    original.sources = [src0, src1, src2];
+    original.sectionSourceLocations = [
+        [srcLoc0], [srcLoc1, srcLoc2],
+    ];
     // Encode it and decode it back
     ubyte[] encoded;
     size_t readIndex = 0;

@@ -227,7 +227,7 @@ auto getCapsulePseudoInstructionArgs(in CapsuleAsmPseudoInstructionType type) {
         case Type.ShiftLeftLogicalImmediate: return Args.RegDestSrcImmAlways;
         case Type.ShiftRightLogicalImmediate: return Args.RegDestSrcImmAlways;
         case Type.ShiftRightArithmeticImmediate: return Args.RegDestSrcImmAlways;
-        case Type.AddImmediate: return Args.RegDestSrcImmAlways;
+        case Type.AddImmediate: return Args.AddImmediate;
         case Type.CountLeadingOnes: return Args.RegDestSrcImmNever;
         case Type.CountTrailingOnes: return Args.RegDestSrcImmNever;
         case Type.SetEqualZero: return Args.RegDestSrcImmNever;

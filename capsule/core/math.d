@@ -99,6 +99,10 @@ uint pcnt(in uint value) {
     return x & 0x0000003F;
 }
 
+bool isPow2(T)(in T value) {
+    return (value & value - 1) ? 0 : 1;
+}
+
 /// Tests for gcd and lcm
 unittest {
     assert(gcd(8, 4) == 4);
@@ -169,3 +173,20 @@ unittest {
     assert(pcnt(0x00000000) == 0);
 }
 
+/// Tests for isPow2
+unittest {
+    assert(isPow2(0x0));
+    assert(isPow2(0x1));
+    assert(isPow2(0x2));
+    assert(isPow2(0x4));
+    assert(isPow2(0x8));
+    assert(isPow2(0x10));
+    assert(isPow2(0x100));
+    assert(isPow2(0x8000));
+    assert(isPow2(0x80000000));
+    assert(!isPow2(0x3));
+    assert(!isPow2(0x5));
+    assert(!isPow2(0xffff));
+    assert(!isPow2(0x12345));
+    assert(!isPow2(0xffffffff));
+}

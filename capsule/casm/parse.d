@@ -674,24 +674,11 @@ struct CapsuleAsmParser {
     /// integer literal, parse the given literal value.
     /// This function always returns an unsigned integer representation of
     /// the data, even if there was a negative sign.
-    auto parseIntegerLiteral() {
+    auto parseUnsignedIntegerLiteral() {
         alias Result = CapsuleAsmParseResult!uint;
         const location = this.reader.location;
-        // Check first character - handle a '+' or '-' sign,
-        // or the case where there isn't a valid integer here
-        const negative = (!this.reader.empty && this.reader.front == '-');
-        if(!this.reader.empty && (
-            this.reader.front == '-' || this.reader.front == '+'
-        )) {
-            this.reader.popFront();
-        }
-        else if(this.reader.empty || !isDigit(this.reader.front)) {
-            return Result.Error(
-                this.endLocation(location), Status.InvalidDecimalLiteral
-            );
-        }
         // Parse some digits
-        long value = 0;
+        uint value = 0;
         size_t index = 0;
         while(!this.reader.empty && (this.reader.front == '_' || (
             this.reader.front >= '0' && this.reader.front <= '9'
@@ -709,17 +696,10 @@ struct CapsuleAsmParser {
             index++;
         }
         // Wrap it up
-        if(index == 0) {
-            return Result.Error(
-                this.endLocation(location), Status.InvalidDecimalLiteral
-            );
-        }
-        else {
-            return Result.Ok(
-                this.endLocation(location),
-                cast(uint) (negative ? -value : value)
-            );
-        }
+        if(index == 0) return Result.Error(
+            this.endLocation(location), Status.InvalidDecimalLiteral
+        );
+        return Result.Ok(this.endLocation(location), value);
     }
     
     /// Assuming the reader is positioned at the beginning of a hexadecimal
@@ -733,12 +713,12 @@ struct CapsuleAsmParser {
             value = (value << 4) | getHexDigitValue(this.reader.front);
             this.reader.popFront();
             if(index++ > 8) return Result.Error(
-                this.endLocation(location), Status.InvalidHexLiteral
+                this.endLocation(location), Status.InvalidHexLiteralTooLong
             );
         }
         if(index == 0) {
             return Result.Error(
-                this.endLocation(location), Status.InvalidHexLiteral
+                this.endLocation(location), Status.InvalidHexLiteralPrefix
             );
         }
         else {
@@ -758,7 +738,7 @@ struct CapsuleAsmParser {
             value = (value << 3) | (this.reader.front - '0');
             this.reader.popFront();
             if(value < oldValue) return Result.Error(
-                this.endLocation(location), Status.InvalidOctalLiteral
+                this.endLocation(location), Status.InvalidOctalLiteralOverflow
             );
         }
         if(index == 0) {
@@ -783,12 +763,12 @@ struct CapsuleAsmParser {
             value = (value << 1) | (this.reader.front - '0');
             this.reader.popFront();
             if(value < oldValue) return Result.Error(
-                this.endLocation(location), Status.InvalidBinaryLiteral
+                this.endLocation(location), Status.InvalidBinaryLiteralOverflow
             );
         }
         if(index == 0) {
             return Result.Error(
-                this.endLocation(location), Status.InvalidBinaryLiteral
+                this.endLocation(location), Status.InvalidBinaryLiteralPrefix
             );
         }
         else {
@@ -870,6 +850,34 @@ struct CapsuleAsmParser {
         if(this.reader.empty) return Result.Error(
             this.reader.location, Status.InvalidNumber
         );
+        const bool bitNegate = (this.reader.front == '~');
+        const bool intNegate = (this.reader.front == '-');
+        const bool intPositive = (this.reader.front == '+');
+        if(bitNegate || intNegate || intPositive) {
+            this.reader.popFront();
+        }
+        const result = this.parseUnsignedNumberLiteral();
+        if(!result.ok) {
+            return result;
+        }
+        if(bitNegate) {
+            return Result.Ok(this.endLocation(location), ~result.value);
+        }
+        else if(intNegate) {
+            return Result.Ok(this.endLocation(location), -result.value);
+        }
+        else {
+            return Result.Ok(this.endLocation(location), result.value);
+        }
+    }
+    
+    /// Helper used by the parseNumberLiteral function.
+    auto parseUnsignedNumberLiteral() {
+        alias Result = CapsuleAsmParseResult!uint;
+        const location = this.reader.location;
+        if(this.reader.empty) return Result.Error(
+            this.reader.location, Status.InvalidNumber
+        );
         if(this.reader.front == '0') {
             this.reader.popFront();
             if(this.reader.empty) {
@@ -893,7 +901,9 @@ struct CapsuleAsmParser {
         else if(this.reader.front == '\'') {
             return this.parseCharacterLiteral();
         }
-        return this.parseIntegerLiteral();
+        else {
+            return this.parseUnsignedIntegerLiteral();
+        }
     }
     
     /// Parse a number value.
@@ -911,12 +921,24 @@ struct CapsuleAsmParser {
         // Literal - 1234
         const charLiteral = (this.reader.front == '\'');
         const signedLiteral = (
-            this.reader.front == '-' || this.reader.front == '+'
+            this.reader.front == '-' ||
+            this.reader.front == '+' ||
+            this.reader.front == '~'
         );
         if(isDigit(this.reader.front) || charLiteral || signedLiteral) {
             const literal = this.parseNumberLiteral();
+            // Special case: "0b" looks like a binary number literal
+            if(literal.status is Status.InvalidBinaryLiteralPrefix && (
+                this.reader.index >= 2 &&
+                this.reader.content[this.reader.index - 2] == '0' &&
+                this.reader.content[this.reader.index - 1] == 'b'
+            )) {
+                number.name = "0";
+                number.localType = LocalType.Backward;
+                goto FoundSymbolName;
+            }
             // Found a literal number value
-            if(signedLiteral || charLiteral || (
+            else if(signedLiteral || charLiteral || (
                 this.reader.front != 'b' && this.reader.front != 'f' &&
                 this.reader.front != '.'
             )) {
@@ -958,6 +980,7 @@ struct CapsuleAsmParser {
             );
             number.name = symbol.value;
         }
+        FoundSymbolName:
         this.parseInlineWhitespace();
         if(this.reader.front != '[') {
             return Result.Ok(this.endLocation(location), number);

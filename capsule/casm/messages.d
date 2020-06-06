@@ -147,10 +147,20 @@ enum CapsuleAsmMessageStatus: uint {
     InvalidDecimalLiteral,
     @('E', "Invalid hexadecimal integer literal.")
     InvalidHexLiteral,
+    @('E', "Encountered a hexadecimal number literal prefix without a following value.")
+    InvalidHexLiteralPrefix,
+    @('E', "Hexadecimal number literal is too long. Literals must not exceed eight digits.")
+    InvalidHexLiteralTooLong,
     @('E', "Invalid octal integer literal.")
     InvalidOctalLiteral,
+    @('E', "Binary literal value cannot fit into a 32-bit word.")
+    InvalidOctalLiteralOverflow,
+    @('E', "Encountered a binary number literal prefix without a following value.")
+    InvalidBinaryLiteralPrefix,
     @('E', "Invalid binary integer literal.")
     InvalidBinaryLiteral,
+    @('E', "Binary literal value cannot fit into a 32-bit word.")
+    InvalidBinaryLiteralOverflow,
     @('E', "Invalid character literal.")
     InvalidCharacterLiteral,
     @('E', "Invalid identifier.")
@@ -179,6 +189,8 @@ enum CapsuleAsmMessageStatus: uint {
     InvalidObjectSection,
     @('E', "Invalid object section type.")
     InvalidObjectSectionType,
+    @('E', "Invalid source locations debug data in object.")
+    InvalidObjectSourceLocationData,
     @('E', "Invalid capsule program.")
     InvalidProgram,
     @('E', "Invalid segment.")
@@ -203,6 +215,8 @@ enum CapsuleAsmMessageStatus: uint {
     WrongSectionChecksum,
     @('E', "Wrong segment checksum.")
     WrongSegmentChecksum,
+    @('E', "Wrong source file checksum.")
+    WrongSourceChecksum,
     @('E', "Section is too large.")
     SectionTooLarge,
     @('E', "Segment is too large.")
@@ -219,6 +233,10 @@ enum CapsuleAsmMessageStatus: uint {
     TooManySections,
     @('E', "The number of objects has exceeded the limit.")
     TooManyObjects,
+    @('E', "The number of source files has exceeded the limit.")
+    TooManySources,
+    @('E', "The number of source file locations has exceeded the limit.")
+    TooManySourceLocations,
     @('W', "Data is misaligned.")
     MisalignedData,
     @('W', "Half word is not aligned on a half word boundary.")

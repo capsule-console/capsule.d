@@ -28,6 +28,7 @@ import capsule.core.objstring;
 import capsule.core.parseint;
 import capsule.core.path;
 import capsule.core.program;
+import capsule.core.programsource;
 import capsule.core.range;
 import capsule.core.sort;
 import capsule.core.stdio;

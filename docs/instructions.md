@@ -115,7 +115,7 @@ particularly depending on the inputs.
 | slli rd,rs1,imm       | Shift logical left by immediate       | sll rd,rs1,Z,imm |
 | srli rd,rs1,imm       | Shift logical right by immediate      | srl rd,rs1,Z,imm |
 | srai rd,rs1,imm       | Shift arithmetic right by immediate   | sra rd,rs1,Z,imm |
-| addi rd,rs1,imm       | Add immediate                         | add rd,rs1,Z,imm |
+| addi rd,rs1,imm       | Add immediate                         | lui rd,imm[hi] add rd,rd,rs1,imm[lo] |
 | clo rd,rs1            | Count leading ones                    | xori rd,rs1,-1 <br> clz rd,rd |
 | cto rd,rs1            | Count trailing ones                   | xori rd,rs1,-1 <br> ctz rd,rd |
 | seqz rd,rs1           | Set if equal to zero                  | sltiu rd,rs1,1 |

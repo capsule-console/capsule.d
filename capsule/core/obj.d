@@ -2,6 +2,7 @@ module capsule.core.obj;
 
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
+import capsule.core.programsource : CapsuleProgramSource;
 
 nothrow @safe @nogc public:
 
@@ -97,6 +98,7 @@ struct CapsuleObject {
     alias HashType = CapsuleHashType;
     alias Reference = CapsuleObjectReference;
     alias Section = CapsuleObjectSection;
+    alias Source = CapsuleProgramSource;
     alias Symbol = CapsuleObjectSymbol;
     alias TextEncoding = CapsuleTextEncoding;
     alias TimeEncoding = CapsuleTimeEncoding;
@@ -139,6 +141,11 @@ struct CapsuleObject {
     Reference[] references;
     /// List of sections
     Section[] sections;
+    
+    ///
+    Source[] sources;
+    ///
+    Source.Location[][] sectionSourceLocations;
     
     /// Given a name index, get the corresponding name string.
     /// Returns null if the index was out of bounds.

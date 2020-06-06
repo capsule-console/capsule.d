@@ -264,6 +264,7 @@ struct CapsuleLinker {
     alias Reference = CapsuleLinkerReference;
     alias Section = CapsuleLinkerSection;
     alias Segment = CapsuleLinkerSegment;
+    alias Source = CapsuleProgram.Source;
     alias Symbol = CapsuleLinkerSymbol;
     alias SymbolMap = CapsuleLinkerSymbolMap;
     alias SymbolType = CapsuleObject.Symbol.Type;
@@ -296,6 +297,9 @@ struct CapsuleLinker {
     TimeEncoding objectTimeEncoding = TimeEncoding.None;
     /// A program to be constructed from all the linked objects
     Program program;
+    /// When source file debugging information is included in the objects,
+    /// it is all crammed into this one map to be included in the program.
+    Source.Map programSourceMap;
     
     ///
     Segment bssSegment;
@@ -313,8 +317,9 @@ struct CapsuleLinker {
     uint heapSegmentLength = 0;
     
     ///
-    bool includeDebugSymbols = true;
+    bool includeDebugSymbols = false;
     bool includeLocalSymbols = false;
+    bool includeDebugSources = false;
     
     this(Log* log, CapsuleObject object) {
         this(log, [object]);
@@ -383,6 +388,11 @@ struct CapsuleLinker {
         // Resolve all those references
         this.resolveReferences();
         if(this.log.anyErrors) return this;
+        // Get a source map, provided the input objects had source data
+        if(this.includeDebugSources) {
+            this.programSourceMap = this.createProgramSourceMap();
+        }
+        if(this.log.anyErrors) return this;
         // Put together the resulting program
         this.program = this.createProgram();
         if(this.log.anyErrors) return this;
@@ -401,6 +411,7 @@ struct CapsuleLinker {
         program.comment = this.programComment;
         program.timestamp = getUnixSeconds();
         program.entryOffset = this.entryOffset;
+        program.sourceMap = this.programSourceMap;
         // Set segment data
         program.bssSegment = this.getProgramSegment(Section.Type.BSS);
         program.dataSegment = this.getProgramSegment(Section.Type.Data);
@@ -463,6 +474,68 @@ struct CapsuleLinker {
         }
         // All done
         return program;
+    }
+    
+    Source.Map createProgramSourceMap() {
+        // De-duplicate sources shared between objects
+        Source[] sources;
+        uint[][] sourceIndex = new uint[][this.objects.length];
+        foreach(i, object; this.objects) {
+            sourceIndex[i].length = object.sources.length;
+            ObjectSources:
+            foreach(j, objSource; object.sources) {
+                foreach(k, programSource; sources) {
+                    if(objSource.name == programSource.name &&
+                        objSource.encoding == programSource.encoding &&
+                        objSource.checksum == programSource.checksum &&
+                        objSource.content == programSource.content
+                    ) {
+                        sourceIndex[i][j] = cast(uint) k;
+                        continue ObjectSources;
+                    }
+                }
+                if(sources.length >= uint.max) {
+                    this.addLinkStatus(Status.TooManySources);
+                    return Source.Map.init;
+                }
+                sourceIndex[i][j] = cast(uint) sources.length;
+                sources ~= objSource;
+            }
+        }
+        // Make one single long list of source locations, with per-section
+        // offsets recalculated as program memory addresses
+        Source.Location[] locations;
+        EnumerateObjects:
+        foreach(i, object; this.objects) {
+            if(object.sectionSourceLocations.length < object.sections.length) {
+                this.addLinkStatus(
+                    Status.InvalidObjectSourceLocationData, object.filePath
+                );
+                continue EnumerateObjects;
+            }
+            for(uint j = 0; j < object.sectionSourceLocations.length; j++) {
+                const section = this.getLinkSection(cast(uint) i, j);
+                foreach(objLocation; object.sectionSourceLocations[j]) {
+                    Source.Location programLocation = objLocation;
+                    if(objLocation.source >= sourceIndex[i].length) {
+                        this.addLinkStatus(
+                            Status.InvalidObjectSourceLocationData, object.filePath
+                        );
+                        continue EnumerateObjects;
+                    }
+                    else if(locations.length >= uint.max) {
+                        this.addLinkStatus(Status.TooManySourceLocations);
+                        break EnumerateObjects;
+                    }
+                    programLocation.source = sourceIndex[i][objLocation.source];
+                    programLocation.startAddress += section.offset;
+                    programLocation.endAddress += section.offset;
+                    locations ~= programLocation;
+                }
+            }
+        }
+        // Wrap it up
+        return Source.Map(sources, locations);
     }
     
     Program.Segment getProgramSegment(in Section.Type type) {

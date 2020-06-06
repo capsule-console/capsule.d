@@ -1,9 +1,11 @@
 module capsule.apps.runprogram;
 
 import capsule.core.ascii : isDigit, toLower;
+import capsule.core.crc : CRC32;
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.core.enums : getEnumMemberAttribute;
 import capsule.core.hex : parseHexString, getHexString, getByteHexString;
+import capsule.core.lz77 : lz77Inflate;
 import capsule.core.memory : CapsuleMemoryStatus;
 import capsule.core.obj : CapsuleObjectReferenceLocalType;
 import capsule.core.parseint : parseInt, parseUnsignedInt;
@@ -232,16 +234,20 @@ void runProgram(ref CapsuleEngine engine) {
 
 void runProgramUntil(alias until)(ref CapsuleEngine engine) {
     assert(engine.ok);
-    int[8] reg;
-    while(!until(engine) && engine.status is CapsuleEngine.Status.Running) {
+    int[8] reg = engine.reg;
+    int pc = engine.pc;
+    while(engine.status is CapsuleEngine.Status.Running) {
         reg = engine.reg;
+        pc = engine.pc;
         engine.step();
+        if(!until(engine)) break;
     }
     logRegistersShort(reg);
-    logInstruction(engine);
+    logInstruction(pc, engine.instr);
 }
 
-void debugProgram(in CapsuleProgram program, ref CapsuleEngine engine) {
+void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
+    alias Source = CapsuleProgram.Source;
     alias Status = CapsuleEngine.Status;
     assert(program.ok);
     assert(engine.ok);
@@ -285,6 +291,55 @@ void debugProgram(in CapsuleProgram program, ref CapsuleEngine engine) {
         else if(input == "q") {
             engine.status = Status.Terminated;
             break;
+        }
+        // Show source location for address (or of PC if address is omitted)
+        else if(input == "l" || input.startsWith("l ")) {
+            uint address = engine.pc;
+            if(input.length >= 2) {
+                const target = input[2 .. $];
+                const value = parseNumberInput(program, engine, target);
+                if(!value.ok) {
+                    stdio.writeln("Failed to parse program address value.");
+                    continue;
+                }
+                address = value.value;
+            }
+            const location = program.sourceMap.getLocation(address);
+            if(location && location.source < program.sourceMap.sources.length) {
+                auto source = &program.sourceMap.sources[location.source];
+                if(source.encoding is Source.Encoding.CapsuleLZ77) {
+                    const inflate = lz77Inflate(source.content);
+                    const checksum = (
+                        Source.getChecksum(source.name, inflate.content)
+                    );
+                    if(!inflate.ok) {
+                        stdio.writeln("Source data decompression error.");
+                    }
+                    else if(checksum != source.checksum) {
+                        stdio.writeln("Source content checksum error.");
+                    }
+                    if(inflate.ok && checksum == source.checksum) {
+                        source.content = cast(string) inflate.content;
+                        source.encoding = Source.Encoding.None;
+                    }
+                }
+                if(source.encoding) {
+                    stdio.writeln("Problem reading source file information.");
+                    continue;
+                }
+                if(location.contentStartIndex <= location.contentEndIndex &&
+                    location.contentEndIndex <= source.content.length
+                ) {
+                    stdio.writeln(source.name,
+                        " L", writeInt(location.contentLineNumber), ":"
+                    );
+                    stdio.writeln(source.content[
+                        location.contentStartIndex .. location.contentEndIndex
+                    ]);
+                    continue;
+                }
+            }
+            stdio.writeln("Found no valid source location information.");
         }
         // Display the value of all registers, each on its own line
         else if(input == "reg") {
@@ -338,6 +393,24 @@ void debugProgram(in CapsuleProgram program, ref CapsuleEngine engine) {
                 continue;
             }
             runProgramUntil!(e => e.instr.opcode == targetOpcode)(engine);
+        }
+        // Resume execution until returning from the current procedure
+        // Treats "jalr" with a nonzero rd as a call into a procedure
+        // Treats "jalr" with a zero rd as a return from a procedure
+        else if(input == "until ret") {
+            int nested = 1;
+            runProgramUntil!((e) {
+                if(e.instr.opcode is CapsuleOpcode.JumpAndLinkRegister) {
+                    if(e.instr.rd) {
+                        nested--;
+                        if(nested <= 0) return true;
+                    }
+                    else {
+                        nested++;
+                    }
+                }
+                return false;
+            })(engine);
         }
         // Display information about program memory length
         else if(input == "memlen") {

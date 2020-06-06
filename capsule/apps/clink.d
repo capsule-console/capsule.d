@@ -68,6 +68,15 @@ struct CapsuleLinkerConfig {
     )
     string outputPath;
     
+    @(CapsuleConfigAttribute!bool("debug", "db")
+        .setOptional(false)
+        .setHelpText([
+            "When this flag is set, debugging information will be",
+            "included in the outputted program file."
+        ])
+    )
+    bool writeDebugInfo;
+    
     @(CapsuleConfigAttribute!string("program-title")
         .setOptional(null)
         .setHelpText([
@@ -248,6 +257,8 @@ CapsuleApplicationStatus link(string[] args) {
     linker.programComment = config.programComment;
     linker.stackSegmentLength = config.stackSegmentLength;
     linker.heapSegmentLength = config.heapSegmentLength;
+    linker.includeDebugSymbols = config.writeDebugInfo;
+    linker.includeDebugSources = config.writeDebugInfo;
     linker.link();
     if(!linker.ok) {
         writeln("Linking error.");

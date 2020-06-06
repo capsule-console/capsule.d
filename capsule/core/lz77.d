@@ -193,7 +193,7 @@ auto lz77Deflate(T)(in T[] content) @trusted {
 auto lz77Inflate(T)(in T[] buffer) @trusted {
     auto inflate = LZ77Inflate(cast(typeof(LZ77Inflate.buffer)) buffer);
     inflate.inflate();
-    return inflate.content;
+    return inflate;
 }
 
 private version(unittest) {
@@ -215,7 +215,8 @@ private version(unittest) {
 unittest {
     File file = File.read("../casm/parse.d");
     const buffer = lz77Deflate(file.content);
-    const content = lz77Inflate(buffer);
-    assert(content == file.content);
-    assert(buffer.length < content.length);
+    const inflate = lz77Inflate(buffer);
+    assert(inflate.ok);
+    assert(inflate.content == file.content);
+    assert(buffer.length < file.content.length);
 }

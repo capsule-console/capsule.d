@@ -217,6 +217,11 @@ struct CapsuleInstructionArgs {
         Registers.BothSources, Immediate.Always,
         ReferenceType.PCRelativeAddressWord,
     );
+    /// Examples: addi (pseudo-instruction)
+    static enum AddImmediate = typeof(this)(
+        Registers.DestinationSource, Immediate.Always,
+        ReferenceType.AbsoluteWord,
+    );
     
     /// Indicate which registers are expected as arguments
     Registers registers;

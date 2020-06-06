@@ -48,9 +48,9 @@ struct CRC(T, ulong poly) {
     
     T state = T.max;
     
-    static T get(C)(in C[] bytes) if(C.sizeof == 1) {
+    static T get(C)(in C[] data) {
         typeof(this) crc;
-        crc.put(bytes);
+        crc.put(data);
         return crc.result;
     }
     
@@ -62,7 +62,8 @@ struct CRC(T, ulong poly) {
         return ~this.state;
     }
     
-    void put(C)(in C[] bytes) if(C.sizeof == 1) {
+    void put(C)(in C[] data) {
+        const ubyte[] bytes = cast(const ubyte[]) data;
         size_t offset = 0;
         while(offset + 8 < bytes.length) {
             uint one = (

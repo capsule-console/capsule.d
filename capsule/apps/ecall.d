@@ -61,7 +61,7 @@ ExtFunction getExtFunction(in uint id) {
             high = mid;
         }
         else if(ecallExtList[mid].id < id) {
-            low = mid;
+            low = mid + 1;
         }
     }
 }

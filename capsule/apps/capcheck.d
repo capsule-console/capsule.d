@@ -40,6 +40,15 @@ struct CapsuleCheckConfig {
     )
     string outputPath;
     
+    @(CapsuleConfigAttribute!bool("debug", "db")
+        .setOptional(false)
+        .setHelpText([
+            "When this flag is set, debugging information will be",
+            "included in the outputted object and program files."
+        ])
+    )
+    bool writeDebugInfo;
+    
     @(CapsuleConfigAttribute!string("casm")
         .setOptional("casm")
         .setHelpText([
@@ -326,6 +335,7 @@ auto runTest(
         string compileCmd = (
             config.casmCommand ~ " " ~ source ~
             " -o " ~ escapeArg(objPath) ~
+            (config.writeDebugInfo ? " -db" : "") ~
             cmdLogFlag ~ " " ~ test.casmArgs ~ "\0"
         );
         assert(compileCmd.length && compileCmd[$ - 1] == '\0');
@@ -345,6 +355,7 @@ auto runTest(
     string linkCmd = (
         config.clinkCommand ~ " " ~ objPaths ~
         " -o " ~ escapeArg(programPath) ~
+        (config.writeDebugInfo ? " -db" : "") ~
         cmdLogFlag ~ " " ~ test.clinkArgs
     );
     if(test.comment.length) {

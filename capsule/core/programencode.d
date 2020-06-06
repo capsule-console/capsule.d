@@ -26,6 +26,8 @@ mixin template CapsuleProgramCoderMixin() {
     static const TextSegmentHeader = stringToInt("TEXT");
     static const StackSegmentHeader = stringToInt("STCK");
     static const HeapSegmentHeader = stringToInt("HEAP");
+    static const SourceHeader = stringToInt("SRCF");
+    static const SourceLocationsHeader = stringToInt("SLOC");
 }
 
 struct CapsuleProgramEncoder {
@@ -55,19 +57,25 @@ struct CapsuleProgramEncoder {
             name: CommentHeader,
             omitSection: program.comment.length == 0,
             length: typeof(this).getPaddedBytesLength(program.comment.length),
-            data: typeof(this).encodeFileSectionHeaderData(program.comment.length),
+            data: typeof(this).encodeFileSectionHeaderData(
+                cast(uint) program.comment.length
+            ),
         };
         FileSectionHeader title = {
             name: TitleHeader,
             omitSection: program.title.length == 0,
             length: typeof(this).getPaddedBytesLength(program.title.length),
-            data: typeof(this).encodeFileSectionHeaderData(program.title.length),
+            data: typeof(this).encodeFileSectionHeaderData(
+                cast(uint) program.title.length
+            ),
         };
         FileSectionHeader credit = {
             name: CreditHeader,
             omitSection: program.credit.length == 0,
             length: typeof(this).getPaddedBytesLength(program.credit.length),
-            data: typeof(this).encodeFileSectionHeaderData(program.credit.length),
+            data: typeof(this).encodeFileSectionHeaderData(
+                cast(uint) program.credit.length
+            ),
         };
         FileSectionHeader entry = {
             name: EntryHeader,
@@ -85,6 +93,15 @@ struct CapsuleProgramEncoder {
             entryLength: SymbolEncodedLength,
             entries: cast(uint) program.symbols.length,
             noContent: program.symbols.length == 0,
+        };
+        FileSectionHeader sourceLocations = {
+            name: SourceLocationsHeader,
+            omitSection: program.sourceMap.locations.length == 0,
+            entries: cast(uint) program.sourceMap.locations.length,
+            entryLength: SourceLocationEncodedLength,
+            data: typeof(this).encodeFileSectionHeaderData(
+                cast(uint) program.sourceMap.locations.length,
+            ),
         };
         FileSectionHeader bss = {
             name: BSSSegmentHeader,
@@ -143,6 +160,28 @@ struct CapsuleProgramEncoder {
                 program.heapSegment.checksum,
             ),
         };
+        FileSectionHeader[] fileSections = [
+            timestamp, comment, title, credit,
+            names, symbols, sourceLocations,
+            entry, bss, data, readOnlyData, text, stack, heap,
+        ];
+        for(uint i = 0; i < program.sourceMap.sources.length; i++) {
+            const source = program.sourceMap.sources[i];
+            const textLength = 4 + (
+                typeof(this).getPaddedBytesLength(source.name) +
+                typeof(this).getPaddedBytesLength(source.content)
+            );
+            FileSectionHeader sourceSection = {
+                name: SourceHeader,
+                length: textLength,
+                data: typeof(this).encodeFileSectionHeaderData(
+                    i, source.encoding, source.unused,
+                    cast(uint) source.name.length,
+                    cast(uint) source.content.length,
+                ),
+            };
+            fileSections ~= sourceSection;
+        }
         bool withHeader(
             in FileSectionHeader header, in uint name,
             void delegate() write
@@ -156,21 +195,41 @@ struct CapsuleProgramEncoder {
             }
         }
         WriteSectionContentDelegate[] writers = [
-            (header) => withHeader(header, TitleHeader, () => this.writeTextContent(program.title)),
-            (header) => withHeader(header, CommentHeader, () => this.writeTextContent(program.comment)),
-            (header) => withHeader(header, TitleHeader, () => this.writeTextContent(program.title)),
-            (header) => withHeader(header, CreditHeader, () => this.writeTextContent(program.credit)),
-            (header) => withHeader(header, NamesHeader, () => this.writeNamesContent(program.names)),
-            (header) => withHeader(header, SymbolsHeader, () => this.writeSymbolsContent(program.symbols)),
-            (header) => withHeader(header, DataSegmentHeader, () => this.writeSegmentContent(program.dataSegment)),
-            (header) => withHeader(header, ReadOnlyDataSegmentHeader, () => this.writeSegmentContent(program.readOnlyDataSegment)),
-            (header) => withHeader(header, TextSegmentHeader, () => this.writeSegmentContent(program.textSegment)),
+            (header) => withHeader(header, TitleHeader,
+                () => this.writeTextContent(program.title)
+            ),
+            (header) => withHeader(header, CommentHeader,
+                () => this.writeTextContent(program.comment)
+            ),
+            (header) => withHeader(header, TitleHeader,
+                () => this.writeTextContent(program.title)
+            ),
+            (header) => withHeader(header, CreditHeader,
+                () => this.writeTextContent(program.credit)
+            ),
+            (header) => withHeader(header, NamesHeader,
+                () => this.writeNamesContent(program.names)
+            ),
+            (header) => withHeader(header, SymbolsHeader,
+                () => this.writeSymbolsContent(program.symbols)
+            ),
+            (header) => withHeader(header, DataSegmentHeader,
+                () => this.writeSegmentContent(program.dataSegment)
+            ),
+            (header) => withHeader(header, ReadOnlyDataSegmentHeader,
+                () => this.writeSegmentContent(program.readOnlyDataSegment)
+            ),
+            (header) => withHeader(header, TextSegmentHeader,
+                () => this.writeSegmentContent(program.textSegment)
+            ),
+            (header) => withHeader(header, SourceLocationsHeader,
+                () => this.writeSourceLocationsContent(program.sourceMap.locations)
+            ),
+            (header) => withHeader(header, SourceHeader,
+                () => this.writeSourceContent(program.sourceMap.sources[header.intData[0]], header)
+            ),
         ];
-        this.writeFile(fileHeader, [
-            timestamp, comment, title, credit,
-            entry, bss, data, readOnlyData, text, stack, heap,
-            names, symbols,
-        ], writers);
+        this.writeFile(fileHeader, fileSections, writers);
     }
     
     void writeTextContent(in string text) {
@@ -206,6 +265,29 @@ struct CapsuleProgramEncoder {
             this.writeInt(symbol.length);
             this.writeInt(symbol.value);
         }
+    }
+    
+    enum SourceLocationEncodedLength = 24;
+    
+    void writeSourceLocationsContent(
+        in CapsuleProgram.Source.Location[] locations
+    ) {
+        foreach(location; locations) {
+            this.writeInt(location.source);
+            this.writeInt(location.startAddress);
+            this.writeInt(location.endAddress);
+            this.writeInt(location.contentStartIndex);
+            this.writeInt(location.contentEndIndex);
+            this.writeInt(location.contentLineNumber);
+        }
+    }
+    
+    void writeSourceContent(
+        in CapsuleProgram.Source source, in FileSectionHeader header
+    ) @trusted {
+        this.writeInt(source.checksum);
+        this.writePaddedBytes(source.name);
+        this.writePaddedBytes(source.content);
     }
 }
 
@@ -245,6 +327,8 @@ struct CapsuleProgramDecoder {
             (header) => (this.readEntrySection(header)),
             (header) => (this.readNamesSection(header)),
             (header) => (this.readSymbolsSection(header)),
+            (header) => (this.readSourceLocationsSection(header)),
+            (header) => (this.readSourceSection(header)),
             (header) => (this.readBssSegmentSection(header)),
             (header) => (this.readDataSegmentSection(header)),
             (header) => (this.readReadOnlyDataSegmentSection(header)),
@@ -321,6 +405,45 @@ struct CapsuleProgramDecoder {
         for(uint i = 0; i < header.entries; i++) {
             this.program.symbols[i] = this.readSymbol();
         }
+        return true;
+    }
+    
+    bool readSourceLocationsSection(in FileSectionHeader header) {
+        if(header.name != SourceLocationsHeader) return false;
+        const length = header.intData[0];
+        this.program.sourceMap.locations.length = length;
+        for(size_t i = 0; i < length; i++) {
+            CapsuleProgram.Source.Location location;
+            location.source = this.readInt();
+            location.startAddress = this.readInt();
+            location.endAddress = this.readInt();
+            location.contentStartIndex = this.readInt();
+            location.contentEndIndex = this.readInt();
+            location.contentLineNumber = this.readInt();
+            this.program.sourceMap.locations[i] = location;
+        }
+        return true;
+    }
+    
+    bool readSourceSection(in FileSectionHeader header) @trusted {
+        if(header.name != SourceHeader) return false;
+        CapsuleProgram.Source source;
+        const index = header.intData[0];
+        source.encoding = cast(CapsuleProgram.Source.Encoding) header.shortData[2];
+        source.unused = header.shortData[2];
+        const nameLength = header.intData[2];
+        const contentLength = header.intData[3];
+        source.checksum = this.readInt();
+        source.name = cast(string) this.readPaddedBytes(nameLength);
+        source.content = cast(string) this.readPaddedBytes(contentLength);
+        if(index >= uint.max) {
+            this.setStatus(Status.BadSectionContent);
+            return true;
+        }
+        if(index >= this.program.sourceMap.sources.length) {
+            this.program.sourceMap.sources.length = 1 + index;
+        }
+        this.program.sourceMap.sources[index] = source;
         return true;
     }
     
@@ -466,7 +589,51 @@ unittest {
         length: 64,
         value: 16,
     };
+    CapsuleProgram.Source src0 = {
+        encoding: CapsuleProgram.Source.Encoding.None,
+        checksum: 0x112211ff,
+        name: "hello/world.d",
+        content: "content content content content content",
+    };
+    CapsuleProgram.Source src1 = {
+        encoding: CapsuleProgram.Source.Encoding.None,
+        checksum: 0x4321abcd,
+        name: "test/name.txt",
+        content: "test source file content hello",
+    };
+    CapsuleProgram.Source src2 = {
+        encoding: CapsuleProgram.Source.Encoding.None,
+        checksum: 0x4321abcd,
+        name: "fake/file/path",
+        content: "bump",
+    };
+    CapsuleProgram.Source.Location srcLoc0 = {
+        source: 0,
+        startAddress: 1,
+        endAddress: 8,
+        contentStartIndex: 2,
+        contentEndIndex: 10,
+        contentLineNumber: 4,
+    };
+    CapsuleProgram.Source.Location srcLoc1 = {
+        source: 1,
+        startAddress: 2,
+        endAddress: 4,
+        contentStartIndex: 5,
+        contentEndIndex: 6,
+        contentLineNumber: 3,
+    };
+    CapsuleProgram.Source.Location srcLoc2 = {
+        source: 2,
+        startAddress: 0,
+        endAddress: 200,
+        contentStartIndex: 1234,
+        contentEndIndex: 55,
+        contentLineNumber: 70,
+    };
     original.symbols = [sym0, sym1];
+    original.sourceMap.sources = [src0, src1, src2];
+    original.sourceMap.locations = [srcLoc0, srcLoc1, srcLoc2];
     // Encode it and decode it back
     ubyte[] encoded;
     size_t readIndex = 0;

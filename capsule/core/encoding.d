@@ -448,7 +448,10 @@ mixin template CapsuleDecoderMixin() {
             }
             FoundMatchingSection:
             if(this.status !is Status.Ok) return;
-            version(assert) assert(this.length == startOffset + section.length);
+            version(assert) assert(this.length == startOffset + section.length,
+                "Wrong section length: " ~
+                cast(string) capsuleHeaderIntToString(section.name)
+            );
         }
     }
     

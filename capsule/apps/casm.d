@@ -6,6 +6,7 @@ import capsule.core.config : getCapsuleConfigUsageString;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
 import capsule.core.file : File;
 import capsule.core.indexof : lastIndexOf;
+import capsule.core.obj : CapsuleObject;
 import capsule.core.objencode : CapsuleObjectEncoder;
 import capsule.core.objstring : capsuleObjectToString;
 import capsule.core.stdio : stdio;
@@ -24,11 +25,13 @@ enum string CapsuleObjectFileExtension = "cob";
 enum string CapsuleObjectFileDefaultName = "object.cob";
 
 struct CapsuleAssemblerConfig {
+    alias SourceEncoding = CapsuleObject.Source.Encoding;
     alias TextEncoding = CapsuleTextEncoding;
     alias TimeEncoding = CapsuleTimeEncoding;
     
     alias TextEncodingName = CapsuleConfigAttribute!TextEncoding.EnumName;
     alias TimeEncodingName = CapsuleConfigAttribute!TimeEncoding.EnumName;
+    alias SourceEncodingName = CapsuleConfigAttribute!SourceEncoding.EnumName;
     
     enum string[] UsageText = [
         "Capsule assembler (casm) version " ~ CapsuleAssemblerVersionName,
@@ -59,6 +62,15 @@ struct CapsuleAssemblerConfig {
     )
     string outputPath;
     
+    @(CapsuleConfigAttribute!bool("debug", "db")
+        .setOptional(false)
+        .setHelpText([
+            "When this flag is set, debugging information will be",
+            "included in the outputted object file."
+        ])
+    )
+    bool writeDebugInfo;
+    
     @(CapsuleConfigAttribute!TextEncoding("text-encoding")
         .setOptional(TextEncoding.UTF8)
         .setHelpText([
@@ -85,6 +97,20 @@ struct CapsuleAssemblerConfig {
         ])
     )
     TimeEncoding timeEncoding = TimeEncoding.None;
+    
+    @(CapsuleConfigAttribute!SourceEncoding("source-encoding")
+        .setOptional(SourceEncoding.CapsuleLZ77)
+        .setHelpText([
+            "When sources are included, output object file will",
+            "use this encoding or compression scheme for compiled",
+            "source code.",
+        ])
+        .setEnumNames([
+            SourceEncodingName(SourceEncoding.None, "none"),
+            SourceEncodingName(SourceEncoding.CapsuleLZ77, "clz77"),
+        ])
+    )
+    SourceEncoding objectSourceEncoding = SourceEncoding.CapsuleLZ77;
     
     @(CapsuleConfigAttribute!bool("verbose", "v")
         .setOptional(false)
@@ -193,6 +219,8 @@ CapsuleApplicationStatus compile(string[] args) {
     // Do the compiling
     verboseln("Compiling from sources.");
     auto compiler = CapsuleAsmCompiler(&log, sources);
+    compiler.doWriteDebugInfo = config.writeDebugInfo;
+    compiler.objectSourceEncoding = config.objectSourceEncoding;
     compiler.compile();
     if(!compiler.ok) {
         writeln("Compilation error.");

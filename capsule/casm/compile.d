@@ -6,8 +6,10 @@ import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
 import capsule.core.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
 import capsule.core.file : File, FileLocation;
-import capsule.core.math : lcm, pcnt;
+import capsule.core.lz77 : lz77Deflate;
+import capsule.core.math : lcm, isPow2;
 import capsule.core.obj : CapsuleObject;
+import capsule.core.programsource : CapsuleProgramSource;
 import capsule.core.time : getUnixSeconds;
 import capsule.core.types : CapsuleOpcode, CapsuleInstruction;
 
@@ -31,11 +33,11 @@ struct CapsuleCompilerObjectSection {
     alias Label = CapsuleCompilerObjectLabel;
     alias Node = CapsuleAsmNode;
     alias Reference = CapsuleCompilerObjectReference;
+    alias Source = CapsuleProgramSource;
     alias Symbol = CapsuleCompilerObjectSymbol;
     alias Type = CapsuleObject.Section.Type;
     
-    /// Index in CapsuleCompiler's sections list
-    uint id;
+    
     /// Where in the source code the section is declared
     FileLocation location;
     /// Whether the section is .text, .data, or .rodata
@@ -66,18 +68,28 @@ struct CapsuleCompilerObjectSection {
     /// Indicates whether there has been an instruction alignment
     /// status message yet for this section (as to not be repetitious)
     bool badInstructionAlignment = false;
+    ///
+    bool makeSourceMap = false;
+    ///
+    Source.Map sourceMap;
     
     /// Add a single byte to an initialized data section
-    void addByte(in ubyte value) {
+    void addByte(in FileLocation location, in ubyte value) {
         assert(this.isInitialized);
+        if(this.makeSourceMap) {
+            this.sourceMap.add(location, this.length, 1);
+        }
         this.bytes ~= value;
         this.length++;
         assert(this.length == this.bytes.length);
     }
     
     /// Add a half word to an initialized data section
-    void addHalfWord(in ushort value) @trusted {
+    void addHalfWord(in FileLocation location, in ushort value) @trusted {
         assert(this.isInitialized);
+        if(this.makeSourceMap) {
+            this.sourceMap.add(location, this.length, 2);
+        }
         const offset = this.bytes.length;
         this.bytes.length += 2;
         *(cast(ushort*) &this.bytes[offset]) = value;
@@ -86,8 +98,11 @@ struct CapsuleCompilerObjectSection {
     }
     
     /// Add a word to an initialized data section
-    void addWord(in uint value) @trusted {
+    void addWord(in FileLocation location, in uint value) @trusted {
         assert(this.isInitialized);
+        if(this.makeSourceMap) {
+            this.sourceMap.add(location, this.length, 4);
+        }
         const offset = this.bytes.length;
         this.bytes.length += 4;
         *(cast(uint*) &this.bytes[offset]) = value;
@@ -96,10 +111,13 @@ struct CapsuleCompilerObjectSection {
     }
     
     /// Add bytes to an initialized data section
-    void addBytes(T)(in T[] values) if(T.sizeof == 1) {
+    void addBytes(T)(in FileLocation location, in T[] values) {
         assert(this.isInitialized);
-        this.bytes ~= values;
-        this.length += values.length;
+        if(this.makeSourceMap) {
+            this.sourceMap.add(location, this.length, cast(uint) values.length);
+        }
+        this.bytes ~= cast(ubyte[]) values;
+        this.length += T.sizeof * values.length;
         assert(this.length == this.bytes.length);
     }
     
@@ -107,7 +125,10 @@ struct CapsuleCompilerObjectSection {
     /// The given fill value will be used when reserving bytes in an
     /// initialized data section, otherwise the fill value will always
     /// be treated as zero.
-    void reserveBytes(in uint count, in ubyte fill = 0) {
+    void reserveBytes(in FileLocation location, in uint count, in ubyte fill = 0) {
+        if(this.makeSourceMap) {
+            this.sourceMap.add(location, this.length, count);
+        }
         if(this.isInitialized) {
             uint i = cast(uint) this.bytes.length;
             this.bytes.length += count;
@@ -119,7 +140,12 @@ struct CapsuleCompilerObjectSection {
         assert(!this.isInitialized || this.length == this.bytes.length);
     }
     
-    void reserveHalfWords(in uint count, in ushort fill = 0) @trusted {
+    void reserveHalfWords(
+        in FileLocation location, in uint count, in ushort fill = 0
+    ) @trusted {
+        if(this.makeSourceMap) {
+            this.sourceMap.add(location, this.length, 2 * count);
+        }
         if(this.isInitialized) {
             uint i = cast(uint) this.bytes.length;
             this.bytes.length += 2 * count;
@@ -133,7 +159,12 @@ struct CapsuleCompilerObjectSection {
         assert(!this.isInitialized || this.length == this.bytes.length);
     }
     
-    void reserveWords(in uint count, in uint fill = 0) @trusted {
+    void reserveWords(
+        in FileLocation location, in uint count, in uint fill = 0
+    ) @trusted {
+        if(this.makeSourceMap) {
+            this.sourceMap.add(location, this.length, 4 * count);
+        }
         if(this.isInitialized) {
             uint i = cast(uint) this.bytes.length;
             this.bytes.length += 4 * count;
@@ -149,13 +180,13 @@ struct CapsuleCompilerObjectSection {
     
     void alignWord() {
         if(this.length % 4 != 0) {
-            this.reserveBytes(4 - (this.length % 4), 0);
+            this.reserveBytes(FileLocation.init, 4 - (this.length % 4), 0);
         }
     }
     
     void alignHalfWord() {
         if(this.length % 2 != 0) {
-            this.reserveBytes(1, 0);
+            this.reserveBytes(FileLocation.init, 1, 0);
         }
     }
     
@@ -312,6 +343,7 @@ struct CapsuleAsmCompiler {
     alias PseudoInstructionType = CapsuleAsmNode.PseudoInstructionType;
     alias Reference = CapsuleCompilerObjectReference;
     alias Section = CapsuleCompilerObjectSection;
+    alias Source = CapsuleObject.Source;
     alias Symbol = CapsuleCompilerObjectSymbol;
     alias SectionType = CapsuleObject.Section.Type;
     alias SymbolType = CapsuleObject.Symbol.Type;
@@ -320,16 +352,17 @@ struct CapsuleAsmCompiler {
     alias Visibility = CapsuleObject.Symbol.Visibility;
     
     /// Compile code from these concatenated sources
-    File[] sources;
-    /// Will store the full list of syntax nodes upon parsing the sources
+    File[] sourceFiles;
+    /// Will store the full list of syntax nodes upon parsing sources
     Node[] nodes;
     /// Current index in the node list during compliation
     size_t nodeIndex = 0;
+    
     /// Concatenation of .comment directive strings
     string comment;
     /// A list of object file section representations
     Section[] sections;
-    ///
+    /// A list of exported symbols, indexed by name
     Export[string] exports;
     /// A list of names given by .extern symbol declarations
     Extern[] externs;
@@ -337,30 +370,42 @@ struct CapsuleAsmCompiler {
     Constant[] constants = null;
     /// Set to true when the first .entry directive is encountered
     bool entryExplicit = false;
-    ///
+    /// Indicates which section the entry point is located in
     uint entrySectionIndex = 0;
-    ///
+    /// Indicates the offset of the entry point within the containing section
     uint entryOffset = 0;
     /// Compiled object file data
     Object object;
-    ///
+    /// Data structure used to index globally-visible declarations
     GlobalMap globalMap;
+    
     /// Configuration flag to set whether local references (references to
     /// a symbol within the same section) are resolved by the compiler before
     /// outputting an object, or left in the object for a linker to resolve
-    /// later on. There is probably not ever a good reason to set this to
-    /// false, but here's a config flag regardless.
-    /// Maybe in the future if there is an option to "relax" some references?
+    /// later on.
+    /// This isn't particularly useful right now, but it could be in the
+    /// future if the linker is able to "relax" jumps & etc.
     bool doResolveLocalReferences = true;
     
-    this(Log* log, File source) {
-        this(log, [source]);
+    /// Flag determines whether source file content is included in the
+    /// outputted object data.
+    bool doWriteDebugInfo = false;
+    /// If sources are included (doWriteDebugInfo is true) then this value
+    /// indicates what encoding or compression scheme should be used for
+    /// representing source code file content.
+    Source.Encoding objectSourceEncoding = Source.Encoding.CapsuleLZ77;
+    /// List of sources used in compiling an object, but the list is only
+    /// populated if doWriteDebugInfo was true
+    Source[] objectSources = null;
+    
+    this(Log* log, File sourceFile) {
+        this(log, [sourceFile]);
     }
     
-    this(Log* log, File[] sources) {
+    this(Log* log, File[] sourceFiles) {
         assert(log);
         this.log = log;
-        this.sources = sources;
+        this.sourceFiles = sourceFiles;
         this.addSection(FileLocation.init, SectionType.None);
     }
     
@@ -412,10 +457,13 @@ struct CapsuleAsmCompiler {
                 defNode.getName(),
             );
         }
-        this.sections ~= Section(
-            cast(uint) this.sections.length,
-            location, type
-        );
+        Section section = {
+            location: location,
+            type: type,
+        };
+        section.sourceMap.sources = this.objectSources;
+        section.makeSourceMap = this.doWriteDebugInfo;
+        this.sections ~= section;
     }
     
     void addReference(Section* section, in Reference reference) {
@@ -469,6 +517,8 @@ struct CapsuleAsmCompiler {
     }
     
     typeof(this) compile() {
+        // Handle debug info
+        if(this.doWriteDebugInfo) this.objectSources = this.getObjectSources();
         // Given the list of assembly sources, get a list of syntax nodes
         this.nodes = this.parseSources();
         if(this.log.anyErrors) return this;
@@ -493,7 +543,7 @@ struct CapsuleAsmCompiler {
         assert(this.log);
         this.addStatus(FileLocation.init, Status.CompileParseSources);
         Node[] nodes;
-        foreach(source; this.sources) {
+        foreach(source; this.sourceFiles) {
             this.addStatus(FileLocation(source), Status.CompileParseSourceFile);
             auto parser = Parser(this.log, source);
             parser.parse();
@@ -503,6 +553,33 @@ struct CapsuleAsmCompiler {
             }
         }
         return nodes;
+    }
+    
+    Source[] getObjectSources() const {
+        Source[] objectSources = [];
+        foreach(sourceFile; this.sourceFiles) {
+            const useLz77 = (
+                this.objectSourceEncoding is Source.Encoding.CapsuleLZ77
+            );
+            const encoding = (useLz77 ?
+                Source.Encoding.CapsuleLZ77 : Source.Encoding.None
+            );
+            const content = (useLz77 ?
+                cast(string) lz77Deflate(sourceFile.content) :
+                sourceFile.content
+            );
+            const checksum = Source.getChecksum(
+                sourceFile.path, sourceFile.content
+            );
+            const Source objectSource = {
+                encoding: encoding,
+                checksum: checksum,
+                name: sourceFile.path,
+                content: content,
+            };
+            objectSources ~= objectSource;
+        }
+        return objectSources;
     }
     
     void addExport(in Export exported) {
@@ -763,7 +840,7 @@ struct CapsuleAsmCompiler {
     
     string getObjectSourceUri() const {
         string uri = "";
-        foreach(source; this.sources) {
+        foreach(source; this.sourceFiles) {
             if(uri.length) uri ~= ",";
             uri ~= source.path;
         }
@@ -772,7 +849,7 @@ struct CapsuleAsmCompiler {
     
     ulong getObjectSourceHash() @trusted const {
         CRC64ISO crc;
-        foreach(source; this.sources) {
+        foreach(source; this.sourceFiles) {
             crc.put(cast(byte[]) source.content);
         }
         return crc.result;
@@ -790,6 +867,8 @@ struct CapsuleAsmCompiler {
         object.sourceHashType = HashType.CRC64ISO;
         object.sourceHash = this.getObjectSourceHash();
         object.timestamp = getUnixSeconds();
+        object.sources = this.objectSources;
+        object.sectionSourceLocations.reserve(this.sections.length);
         bool tooManyNames = false;
         bool tooManySymbols = false;
         bool tooManyReferences = false;
@@ -862,6 +941,7 @@ struct CapsuleAsmCompiler {
                     object.entrySection = cast(uint) object.sections.length;
                 }
                 object.sections ~= objSection;
+                object.sectionSourceLocations ~= section.sourceMap.locations;
             }
             else {
                 assert(section.length == 0);
@@ -1063,7 +1143,7 @@ struct CapsuleAsmCompiler {
         }
         // Encode the instruction
         const uint encodedInstr = instruction.encode();
-        section.addWord(encodedInstr);
+        section.addWord(node.location, encodedInstr);
     }
     
     void compilePseudoInstruction(in Node node) @trusted {
@@ -1147,7 +1227,12 @@ struct CapsuleAsmCompiler {
             emit(Node(loc, Opcode.ShiftRightArithmetic, rd, rs1, 0, immediate));
         }
         else if(pseudoType is PseudoType.AddImmediate) {
-            emit(Node(loc, Opcode.Add, rd, rs1, 0, immediate));
+            const values = this.getNumberHalves(immediate);
+            const rdz = values.high ? rd : 0;
+            emitHighHalf(values.high);
+            if(rs1 || values.low || !values.high) {
+                emit(Node(loc, Opcode.Add, rd, rdz, rs1, values.low));
+            }
         }
         else if(pseudoType is PseudoType.CountLeadingOnes) {
             emit(Node(loc, Opcode.XorImmediate, rd, rs1, 0, Number(-1)));
@@ -1483,7 +1568,7 @@ struct CapsuleAsmCompiler {
             auto section = this.requireInitializedSection(node.location);
             if(!section) return;
             const fill = cast(ubyte) node.padDirective.fill;
-            section.reserveBytes(node.padDirective.size, fill);
+            section.reserveBytes(node.location, node.padDirective.size, fill);
         }
         // .padh
         else if(type is DirectiveType.PadHalfWords) {
@@ -1493,7 +1578,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 2 != 0) this.addStatus(
                 node.location, Status.MisalignedHalfWord, node.getName()
             );
-            section.reserveHalfWords(node.padDirective.size, fill);
+            section.reserveHalfWords(node.location, node.padDirective.size, fill);
         }
         // .padw
         else if(type is DirectiveType.PadWords) {
@@ -1503,7 +1588,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 4 != 0) this.addStatus(
                 node.location, Status.MisalignedWord, node.getName()
             );
-            section.reserveWords(node.padDirective.size, fill);
+            section.reserveWords(node.location, node.padDirective.size, fill);
         }
         // .priority
         else if(type is DirectiveType.Priority) {
@@ -1530,7 +1615,7 @@ struct CapsuleAsmCompiler {
         else if(type is DirectiveType.ReserveBytes) {
             auto section = this.requireDeclaredSection(node.location);
             if(!section) return;
-            section.reserveBytes(node.padDirective.size);
+            section.reserveBytes(node.location, node.padDirective.size);
         }
         // .resh
         else if(type is DirectiveType.ReserveHalfWords) {
@@ -1539,7 +1624,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 2 != 0) this.addStatus(
                 node.location, Status.MisalignedHalfWord, node.getName()
             );
-            section.reserveHalfWords(node.padDirective.size);
+            section.reserveHalfWords(node.location, node.padDirective.size);
         }
         // .resw
         else if(type is DirectiveType.ReserveWords) {
@@ -1548,7 +1633,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 4 != 0) this.addStatus(
                 node.location, Status.MisalignedWord, node.getName()
             );
-            section.reserveWords(node.padDirective.size);
+            section.reserveWords(node.location, node.padDirective.size);
         }
         // .rodata
         else if(type is DirectiveType.ReadOnlyData) {
@@ -1558,14 +1643,13 @@ struct CapsuleAsmCompiler {
         else if(type is DirectiveType.String) {
             auto section = this.requireInitializedSection(node.location);
             if(!section) return;
-            section.addBytes(node.textDirective.text);
+            section.addBytes(node.location, node.textDirective.text);
         }
         // .stringz
         else if(type is DirectiveType.StringZ) {
             auto section = this.requireInitializedSection(node.location);
             if(!section) return;
-            section.addBytes(node.textDirective.text);
-            section.addByte('\0');
+            section.addBytes(node.location, node.textDirective.text ~ "\0");
         }
         // .text
         else if(type is DirectiveType.Text) {
@@ -1595,7 +1679,7 @@ struct CapsuleAsmCompiler {
             return;
         }
         // Emit a message for non-power-of-two alignment values
-        else if(pcnt(size) > 1) {
+        else if(!isPow2(size)) {
             this.addStatus(node.location, Status.AlignmentNotPowTwo);
         }
         // Find the LCM of the old and new alignments
@@ -1614,7 +1698,7 @@ struct CapsuleAsmCompiler {
         // align the following data on the specified boundarys
         const padding = size - (this.byteOffset % size);
         if(padding && padding < size) {
-            section.reserveBytes(cast(uint) padding, fill);
+            section.reserveBytes(node.location, cast(uint) padding, fill);
         }
     }
     
@@ -1667,13 +1751,13 @@ struct CapsuleAsmCompiler {
             // Write the number's value to the section
             //const uint offset = section.length;
             static if(T.sizeof == 1) {
-                section.addByte(cast(ubyte) resolveValue.writeValue);
+                section.addByte(node.location, cast(ubyte) resolveValue.writeValue);
             }
             else static if(T.sizeof == 2) {
-                section.addHalfWord(cast(ushort) resolveValue.writeValue);
+                section.addHalfWord(node.location, cast(ushort) resolveValue.writeValue);
             }
             else static if(T.sizeof == 4) {
-                section.addWord(cast(uint) resolveValue.writeValue);
+                section.addWord(node.location, cast(uint) resolveValue.writeValue);
             }
             else {
                 static assert(false, "Unhandled data type: " ~ T.stringof);
