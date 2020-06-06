@@ -1,6 +1,6 @@
 module capsule.core.lz77;
 
-public:
+public nothrow @safe:
 
 /// Enumeration of possible status values for the LZ77Inflate type.
 enum LZ77InflateStatus: uint {
@@ -13,6 +13,8 @@ enum LZ77InflateStatus: uint {
 /// Can indicate either a literal string of bytes or a reference to
 /// repeated prior data.
 struct LZ77Unit {
+    nothrow @safe @nogc:
+    
     alias Distance = uint;
     alias Length = int;
     
@@ -20,13 +22,9 @@ struct LZ77Unit {
     enum uint MaxSubstringLength = 128;
     enum uint MaxDistance = ushort.max;
     
-    string text;
+    const(ubyte)[] content;
     Length length;
     Distance distance;
-    
-    bool opCast(T: bool)() const {
-        return this.length || this.text.length;
-    }
 }
 
 /// Used internally by the LZ77Deflate type to represent the result of a
@@ -38,29 +36,31 @@ struct LZ77SubstringResult {
 
 /// Type used to compress data using an LZ77-derived algorithm.
 struct LZ77Deflate {
+    nothrow @safe:
+    
     alias SubstringResult = LZ77SubstringResult;
     alias Unit = LZ77Unit;
     
-    string text = null;
+    const(ubyte)[] content = null;
     size_t index = 0;
     SubstringResult queuedResult;
     ubyte[] buffer;
     
     void deflate() {
-        while(this.index < this.text.length) {
+        while(this.index < this.content.length) {
             version(assert) const i = this.index;
             auto unit = this.getNextUnit();
-            assert(unit.length || unit.text.length);
+            assert(unit.length || unit.content.length);
             this.addEncodeUnit(unit);
             version(assert) assert(this.index > i);
         }
     }
     
     void addEncodeUnit(in Unit unit) {
-        if(unit.text.length) {
-            assert(unit.text.length < Unit.MaxTextLength);
-            this.buffer ~= cast(ubyte) unit.text.length;
-            this.buffer ~= unit.text;
+        if(unit.content.length) {
+            assert(unit.content.length < Unit.MaxTextLength);
+            this.buffer ~= cast(ubyte) unit.content.length;
+            this.buffer ~= unit.content;
         }
         else {
             assert(unit.length);
@@ -71,7 +71,7 @@ struct LZ77Deflate {
         }
     }
     
-    Unit getNextUnit() {
+    Unit getNextUnit() @nogc {
         const start = this.index;
         auto sub = (this.queuedResult.length ?
             this.queuedResult : this.findSubstring(this.index)
@@ -84,7 +84,7 @@ struct LZ77Deflate {
             this.index += sub.length;
             return Unit(null, length, distance);
         }
-        while(this.index < this.text.length) {
+        while(this.index < this.content.length) {
             sub = this.findSubstring(this.index);
             if(sub.length) {
                 this.queuedResult = sub;
@@ -92,20 +92,20 @@ struct LZ77Deflate {
             }
             this.index++;
         }
-        return Unit(this.text[start .. this.index]);
+        return Unit(this.content[start .. this.index]);
     }
     
-    auto findSubstring(in size_t index) const {
+    auto findSubstring(in size_t index) @nogc const {
         const imin = (index > ushort.max ? index - ushort.max : 0);
         const jmax = (
-            this.text.length - index < Unit.MaxSubstringLength ?
-            this.text.length - index : Unit.MaxSubstringLength
+            this.content.length - index < Unit.MaxSubstringLength ?
+            this.content.length - index : Unit.MaxSubstringLength
         );
         size_t bestIndex = 0;
         size_t bestLength = 0;
         for(size_t i = imin; i < index; i++) {
             size_t j = 0;
-            while(j < jmax && this.text[i + j] == this.text[index + j]) {
+            while(j < jmax && this.content[i + j] == this.content[index + j]) {
                 j++;
             }
             if(j > bestLength && j > 3) {
@@ -119,13 +119,15 @@ struct LZ77Deflate {
 
 /// Type used to decompress data using an LZ77-derived algorithm.
 struct LZ77Inflate {
+    nothrow @safe:
+    
     alias Status = LZ77InflateStatus;
     alias Unit = LZ77Unit;
     
-    ubyte[] buffer = null;
+    const(ubyte)[] buffer = null;
     size_t index = 0;
     Status status = Status.Ok;
-    string text = null;
+    ubyte[] content = null;
     
     void inflate() {
         while(this.index < this.buffer.length && this.status is Status.Ok) {
@@ -135,11 +137,11 @@ struct LZ77Inflate {
         }
     }
     
-    bool ok() const {
+    bool ok() @nogc const {
         return this.status is Status.Ok;
     }
     
-    void step() {
+    void step() @trusted {
         assert(this.index < this.buffer.length);
         const length = cast(byte) this.buffer[this.index];
         if(length > 0) {
@@ -147,7 +149,7 @@ struct LZ77Inflate {
                 this.status = Status.UnexpectedEOF;
                 return;
             }
-            this.text ~= cast(char[]) this.buffer[
+            this.content ~= this.buffer[
                 this.index + 1 .. this.index + 1 + length
             ];
             this.index += 1 + length;
@@ -158,18 +160,18 @@ struct LZ77Inflate {
                 return;
             }
             const distance = *(cast(ushort*) (&this.buffer[1 + this.index]));
-            if(!distance || distance > this.text.length) {
+            if(!distance || distance > this.content.length) {
                 this.status = Status.InflateError;
                 return;
             }
-            size_t start = this.text.length - distance;
+            size_t start = this.content.length - distance;
             const end = start - length;
-            size_t textEnd = (end < this.text.length ? end : this.text.length);
-            this.text ~= this.text[start .. textEnd];
-            while(end > textEnd) {
-                start = textEnd;
-                textEnd = (end < this.text.length ? end : this.text.length);
-                this.text ~= this.text[start .. textEnd];
+            size_t contentEnd = (end < this.content.length ? end : this.content.length);
+            this.content ~= this.content[start .. contentEnd];
+            while(end > contentEnd) {
+                start = contentEnd;
+                contentEnd = (end < this.content.length ? end : this.content.length);
+                this.content ~= this.content[start .. contentEnd];
             }
             this.index += 3;
         }
@@ -180,19 +182,40 @@ struct LZ77Inflate {
     }
 }
 
+/// Convenience function to LZ77-compress data.
+auto lz77Deflate(T)(in T[] content) @trusted {
+    auto deflate = LZ77Deflate(cast(typeof(LZ77Deflate.content)) content);
+    deflate.deflate();
+    return deflate.buffer;
+}
+
+/// Convenience function to LZ77-decompress data.
+auto lz77Inflate(T)(in T[] buffer) @trusted {
+    auto inflate = LZ77Inflate(cast(typeof(LZ77Inflate.buffer)) buffer);
+    inflate.inflate();
+    return inflate.content;
+}
+
 private version(unittest) {
     import capsule.core.file : File;
 }
 
 /// Test coverage for LZ77 compression and decompression
-unittest {
+@trusted unittest {
     File file = File.read("../casm/compile.d");
-    const testSource = file.content;
-    auto deflate = LZ77Deflate(testSource);
+    auto deflate = LZ77Deflate(cast(ubyte[]) file.content);
     deflate.deflate();
     auto inflate = LZ77Inflate(deflate.buffer);
     inflate.inflate();
     assert(inflate.ok);
-    assert(inflate.text == deflate.text);
-    assert(deflate.buffer.length < deflate.text.length);
+    assert(inflate.content == deflate.content);
+    assert(deflate.buffer.length < deflate.content.length);
+}
+
+unittest {
+    File file = File.read("../casm/parse.d");
+    const buffer = lz77Deflate(file.content);
+    const content = lz77Inflate(buffer);
+    assert(content == file.content);
+    assert(buffer.length < content.length);
 }
