@@ -17,6 +17,7 @@ import capsule.core.hex;
 import capsule.core.indexof;
 import capsule.core.ini;
 import capsule.core.join;
+import capsule.core.lz77;
 import capsule.core.map;
 import capsule.core.math;
 import capsule.core.memory;
