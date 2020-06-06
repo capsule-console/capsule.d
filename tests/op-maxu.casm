@@ -1,0 +1,48 @@
+; Test maxu (set to maximum unsigned) with a range of values
+; Store the result of max(rs1, rs2) to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 0
+    li X, 0
+    li Y, 0
+    maxu A, X, Y call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 0
+    li Y, 1
+    maxu A, X, Y call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 1
+    li Y, 0
+    maxu A, X, Y call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 1
+    li Y, 1
+    maxu A, X, Y call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ffff
+    li X, 0xff
+    li Y, 0xffff
+    maxu A, X, Y call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 4000
+    li X, 0x2000
+    li Y, 0x4000
+    maxu A, X, Y call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ffffffff
+    li X, 0xffffffff
+    li Y, 0x80000000
+    maxu A, X, Y call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ffffffff
+    li Y, 0x10000000
+    li X, 0xffffffff
+    maxu A, X, Y call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

@@ -1,0 +1,37 @@
+; Test revb (reverse byte order) with a range of values
+; Store the result of revb(rs1) to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 0
+    li X, 0x00000000
+    revb A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1000000
+    li X, 0x00000001
+    revb A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ff000000
+    li X, 0x000000ff
+    revb A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ff
+    li X, 0xff000000
+    revb A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 12345678
+    li X, 0x78563412
+    revb A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1010101
+    li X, 0x01010101
+    revb A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 80000001
+    li X, 0x01000080
+    revb A, X call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

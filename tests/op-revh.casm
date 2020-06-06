@@ -1,0 +1,37 @@
+; Test revh (reverse half word order) with a range of values
+; Store the result of revh(rs1) to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 0
+    li X, 0x00000000
+    revh A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 10000
+    li X, 0x00000001
+    revh A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ff0000
+    li X, 0x000000ff
+    revh A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ff00
+    li X, 0xff000000
+    revh A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 12345678
+    li X, 0x56781234
+    revh A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1010101
+    li X, 0x01010101
+    revh A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 800100
+    li X, 0x01000080
+    revh A, X call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok
