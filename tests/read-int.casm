@@ -1,0 +1,63 @@
+.extern read_int
+.extern write_int
+.extern write_stringz
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.rodata
+    strz.int_value: .stringz "int: "
+    strz.end_char: .stringz "end: "
+    strz.ovf_flag: .stringz "ovf"
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+    ; Reserve memory needed by write_int_parse_result
+    write_int_parse_result.target: .resw 2
+
+.text .procedure
+parse_and_write_int:
+    la B, write_int_parse_result.target
+    sw R, B, 0
+    call R, read_int
+    mv C, A
+    sw X, B, 4
+    bnez Y, 0.ovf.f
+0.ok:
+    la A, strz.int_value
+    call R, write_stringz
+    mv A, C
+    call R, write_int
+    j 0.end.f
+0.ovf:
+    la A, strz.ovf_flag
+    call R, write_stringz
+0.end:
+    li A, ' '
+    ecalli Z, A, stdio.put_byte
+    la A, strz.end_char
+    call R, write_stringz
+    li A, '\''
+    lw X, B, 4
+    ecalli Z, A, stdio.put_byte
+    ecalli Z, X, stdio.put_byte
+    ecalli Z, A, stdio.put_byte
+    lw R, B, 0
+    ret R
+.end parse_and_write_int
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    ; Process a comma-separated list of numbers
+0:  call R, parse_and_write_int
+    addi X, X, -','
+    bnez X, 1f
+    li X, ' ' ecalli Z, X, stdio.put_byte
+    j 0b
+    ; No more numbers
+1:  ecalli Z, Z, meta.exit_ok

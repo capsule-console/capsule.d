@@ -1,0 +1,105 @@
+.export read_int
+
+.const stdio.get_byte, 0x3003
+
+; Read a signed decimal integer input from stdin and store the
+; parsed value in register A.
+; Stops reading at the first non-digit.
+; X will hold the value of the first non-digit character.
+; Y will be 1 if there was overflow and 0 if there was not.
+; Make sure to ecall stdio.init before calling this function.
+; Modifies only the registers A, X, and Y.
+.text .procedure
+read_int:
+    ; Initialize register A (used as an accumulator)
+    li A, 0
+    ; Branch based on the first character, i.e. whether it's a sign or a digit
+    ecalli X, Z, stdio.get_byte
+    li Y, '-'
+    beq X, Y, 0.first_neg.f
+    li Y, '+'
+    beq X, Y, 0.loop_pos.f
+    j 0.read_pos.f
+; Parsing a positive number continues here after consuming one character
+0.loop_pos:
+    ecalli X, Z, stdio.get_byte
+; Parsing a positive number starts here
+0.read_pos:
+    ; Check that the character in register X is a digit 0-9
+    li Y, '0'
+    blt X, Y, 0.end.f
+    li Y, '9'
+    bgt X, Y, 0.end.f
+    ; Check if multiplying A (accumulator) by 10 will cause overflow
+    li Y, 10
+    mulhu Y, A, Y
+    bnez Y, 0.ovf.f
+    ; Multiply A (accumulator) by 10
+    li Y, 10
+    mul Y, A, Y
+    ; Add the value of the digit character in X
+    add Y, Y, X, -'0'
+    ; Check if adding the newest digit caused overflow
+    bgt A, Y, 0.ovf.f
+    ; Repeat for the next character
+    mv A, Y
+    j 0.loop_pos.b
+; Parsing a negative number starts here
+0.first_neg:
+    ; Check that the character in register X is a digit 0-9
+    ecalli X, Z, stdio.get_byte
+    li Y, '0'
+    blt X, Y, 0.end.f
+    li Y, '9'
+    bgt X, Y, 0.end.f
+    ; Multiply A (accumulator) by 10
+    li Y, 10
+    mul Y, A, Y
+    ; Add the value of the digit character in X
+    addi X, X, -'0'
+    sub Y, Y, X
+    ; Check if adding the newest digit caused overflow
+    blt A, Y, 0.ovf.f
+    ; Proceed to handling the next character
+    mv A, Y
+; Parsing a negative number continues here after consuming one character
+0.loop_neg:
+    ; Check that the character in register X is a digit 0-9
+    ecalli X, Z, stdio.get_byte
+    li Y, '0'
+    blt X, Y, 0.end.f
+    li Y, '9'
+    bgt X, Y, 0.end.f
+    ; Check if multiplying A (accumulator) by 10 will cause overflow
+    li Y, 10
+    mulh Y, A, Y
+    addi Y, Y, 1
+    bnez Y, 0.ovf.f
+    ; Multiply A (accumulator) by 10
+    li Y, 10
+    mul Y, A, Y
+    ; Add the value of the digit character in X
+    addi X, X, -'0'
+    sub Y, Y, X
+    ; Check if adding the newest digit caused overflow
+    blt A, Y, 0.ovf.f
+    ; Repeat for the next character
+    mv A, Y
+    j 0.loop_neg.b
+; Handle overflow: Consume digits until reaching the end of the integer
+0.ovf:
+    ecalli X, Z, stdio.get_byte
+    li Y, '0'
+    blt X, Y, 0.end_ovf.f
+    li Y, '9'
+    bgt X, Y, 0.end_ovf.f
+    j 0.ovf.b
+; Finished parsing (overflow)
+0.end_ovf:
+    li Y, 1
+    ret R
+; Finished parsing (no overflow)
+0.end:
+    li Y, 0
+    ret R
+.end read_int
