@@ -54,13 +54,14 @@ ExtFunction getExtFunction(in uint id) {
         if(ecallExtList[mid].id == id) {
             return ecallExtList[mid].func;
         }
-        else if(1 + low >= high) {
+        else if(low == mid) {
             return null;
         }
         else if(ecallExtList[mid].id > id) {
             high = mid;
         }
-        else if(ecallExtList[mid].id < id) {
+        else {
+            assert(ecallExtList[mid].id < id);
             low = mid + 1;
         }
     }

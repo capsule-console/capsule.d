@@ -246,7 +246,9 @@ struct CapsuleProgram {
             this.heapSegment.offset >= this.stackSegment.end &&
             // Lists of things are of acceptable lengths?
             this.names.length <= uint.max &&
-            this.symbols.length <= uint.max
+            this.symbols.length <= uint.max &&
+            // Source map must be valid, if there is one
+            this.sourceMap.locationListIsSorted()
         );
     }
     

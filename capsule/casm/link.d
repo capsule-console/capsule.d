@@ -535,6 +535,7 @@ struct CapsuleLinker {
             }
         }
         // Wrap it up
+        sort(locations);
         return Source.Map(sources, locations);
     }
     
