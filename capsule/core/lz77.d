@@ -58,7 +58,7 @@ struct LZ77Deflate {
     
     void addEncodeUnit(in Unit unit) {
         if(unit.content.length) {
-            assert(unit.content.length < Unit.MaxTextLength);
+            assert(unit.content.length <= Unit.MaxTextLength);
             this.buffer ~= cast(ubyte) unit.content.length;
             this.buffer ~= unit.content;
         }
@@ -84,7 +84,9 @@ struct LZ77Deflate {
             this.index += sub.length;
             return Unit(null, length, distance);
         }
-        while(this.index < this.content.length) {
+        while(this.index < this.content.length &&
+            (this.index - start) < Unit.MaxTextLength
+        ) {
             sub = this.findSubstring(this.index);
             if(sub.length) {
                 this.queuedResult = sub;
@@ -214,6 +216,15 @@ private version(unittest) {
 
 unittest {
     File file = File.read("../casm/parse.d");
+    const buffer = lz77Deflate(file.content);
+    const inflate = lz77Inflate(buffer);
+    assert(inflate.ok);
+    assert(inflate.content == file.content);
+    assert(buffer.length < file.content.length);
+}
+
+unittest {
+    File file = File.read("../../tests/lib/write-stringz.casm");
     const buffer = lz77Deflate(file.content);
     const inflate = lz77Inflate(buffer);
     assert(inflate.ok);
