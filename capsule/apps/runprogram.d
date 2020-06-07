@@ -20,6 +20,30 @@ import capsule.core.writeint : writeInt;
 
 public:
 
+const string HelpText = `Capsule debugging help:
+Press enter with no input to step once.
+Input a number of periods '.' to step that many times.
+q - Quit
+help - Help
+reg - Show registers
+rset [name] [value] - Set register
+resume - Resume execution
+until pc [address] - Until PC reaches address
+until sym [name] - Until PC reaches symbol
+until op [opcode] - Until PC reaches an opcode
+until ret - Until returning from the current procedure
+memlen - Show memory length characteristics
+sym [name] - Show symbol information
+lb [address] - Load sign-extended byte
+lbu [address] - Load zero-extended byte
+lh [address] - Load sign-extended half word
+lhu [address] - Load zero-extended half word
+lw [address] - Load word
+lin [address] - Load instruction
+l - Show source map information at PC
+l [address] - Show source map information
+`;
+
 void logInstruction(in CapsuleEngine engine) {
     logInstruction(engine.pc, engine.instr);
 }
@@ -307,7 +331,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
         // Display help text
         // TODO: Write some help text...
         else if(input == "help") {
-            stdio.writeln("Sorry, no help text yet...");
+            stdio.write(HelpText);
         }
         // Quit
         else if(input == "q") {
@@ -442,6 +466,12 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
             );
             stdio.writeln("Read-only end: ",
                 getHexString(engine.mem.romEnd), " (", writeInt(engine.mem.romEnd), ")"
+            );
+            stdio.writeln("Executable start: ",
+                getHexString(engine.mem.execStart), " (", writeInt(engine.mem.execStart), ")"
+            );
+            stdio.writeln("Executable end: ",
+                getHexString(engine.mem.execEnd), " (", writeInt(engine.mem.execEnd), ")"
             );
         }
         // Show information about any symbols matching a given name
