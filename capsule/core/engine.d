@@ -76,18 +76,12 @@ struct CapsuleEngine {
     int entry = 0;
     /// Program counter
     int pc = 0;
-    /// Exception code
-    ExceptionCode exc = ExceptionCode.None;
-    /// Trap table pointer
-    int edt = -1;
-    /// Exception data pointer
-    int edp = -1;
-    /// Return from exception to pointer
-    int epc = 0;
     /// Registers Z, A, B, C, R, S, X, Y
     int[8] reg;
     /// The most recently executed instruction
     Instruction instr;
+    /// Exception code indicating the reason for a fatal error
+    ExceptionCode exception = ExceptionCode.None;
     
     void initialize(Memory mem, ExtensionCallHandler ecall) nothrow @safe @nogc {
         this.status = Status.Initialized;
@@ -114,18 +108,9 @@ struct CapsuleEngine {
         );
     }
     
-    /// Handle an exception
-    void trap(in ExceptionCode exc) nothrow @safe @nogc {
-        const trapPtr = this.edt + 4 * (cast(int) exc);
-        if(this.edt < 0 || trapPtr < 0) {
-            assert(false, getCapsuleExceptionDescription(exc));
-        }
-        if(this.edp >= 0) {
-            // TODO: store data describing the exception
-        }
-        this.exc = exc;
-        this.epc = 4 + this.pc;
-        this.pc = trapPtr;
+    void setException(in CapsuleExceptionCode exception) nothrow @safe @nogc {
+        this.exception = exception;
+        this.status = Status.Aborted;
     }
     
     /// Set the full value of a register
@@ -154,12 +139,21 @@ struct CapsuleEngine {
     /// Decode and record the instruction under the PC
     /// TODO: Status flag for the PC ending up in non-executable memory
     void next() nothrow @safe @nogc {
-        const idata = this.mem.lw(this.pc);
+        const idata = this.mem.loadInstructionWord(this.pc);
         final switch(idata.status) {
-            case Memory.Status.Ok: break;
-            case Memory.Status.ReadOnly: assert(false);
-            case Memory.Status.Misaligned: return this.trap(ExceptionCode.PCMisaligned);
-            case Memory.Status.OutOfBounds: return this.trap(ExceptionCode.PCOutOfBounds);
+            case Memory.Status.Ok:
+                break;
+            case Memory.Status.ReadOnly:
+                assert(false);
+            case Memory.Status.NotExecutable:
+                this.setException(ExceptionCode.PCNotExecutable);
+                return;
+            case Memory.Status.Misaligned:
+                this.setException(ExceptionCode.PCMisaligned);
+                return;
+            case Memory.Status.OutOfBounds:
+                this.setException(ExceptionCode.PCOutOfBounds);
+                return;
         }
         this.instr = Instruction.decode(idata.value);
     }
@@ -168,6 +162,7 @@ struct CapsuleEngine {
     void step() {
         assert(this.status is Status.Running);
         this.next();
+        if(this.status !is Status.Running) return;
         this.exec();
     }
     
@@ -327,87 +322,102 @@ struct CapsuleEngine {
                 pc += 4;
                 break;
             case Opcode.LoadByteSignExt:
-                const load = this.mem.lb(ri(i.rs1) + i.i32);
+                const load = this.mem.loadByteSigned(ri(i.rs1) + i.i32);
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(int) load.value);
                         pc += 4;
                         break;
-                    case Memory.Status.ReadOnly: assert(false);
+                    case Memory.Status.ReadOnly:
+                        assert(false);
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.LoadMisaligned);
+                        this.setException(ExceptionCode.LoadMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.LoadOutOfBounds);
+                        this.setException(ExceptionCode.LoadOutOfBounds);
                         break;
                 }
                 break;
             case Opcode.LoadByteZeroExt:
-                const load = this.mem.lbu(ri(i.rs1) + i.i32);
+                const load = this.mem.loadByteUnsigned(ri(i.rs1) + i.i32);
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(uint) load.value);
                         pc += 4;
                         break;
-                    case Memory.Status.ReadOnly: assert(false);
+                    case Memory.Status.ReadOnly:
+                        assert(false);
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.LoadMisaligned);
+                        this.setException(ExceptionCode.LoadMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.LoadOutOfBounds);
+                        this.setException(ExceptionCode.LoadOutOfBounds);
                         break;
                 }
                 break;
             case Opcode.LoadHalfWordSignExt:
-                const load = this.mem.lh((ri(i.rs1) + i.i32) & ~1);
+                const load = this.mem.loadHalfWordSigned((ri(i.rs1) + i.i32));
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(int) load.value);
                         pc += 4;
                         break;
-                    case Memory.Status.ReadOnly: assert(false);
+                    case Memory.Status.ReadOnly:
+                        assert(false);
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.LoadMisaligned);
+                        this.setException(ExceptionCode.LoadMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.LoadOutOfBounds);
+                        this.setException(ExceptionCode.LoadOutOfBounds);
                         break;
                 }
                 break;
             case Opcode.LoadHalfWordZeroExt:
-                const load = this.mem.lhu((ri(i.rs1) + i.i32) & ~1);
+                const load = this.mem.loadHalfWordUnsigned((ri(i.rs1) + i.i32));
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(uint) load.value);
                         pc += 4;
                         break;
-                    case Memory.Status.ReadOnly: assert(false);
+                    case Memory.Status.ReadOnly:
+                        assert(false);
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.LoadMisaligned);
+                        this.setException(ExceptionCode.LoadMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.LoadOutOfBounds);
+                        this.setException(ExceptionCode.LoadOutOfBounds);
                         break;
                 }
                 break;
             case Opcode.LoadWord:
-                const load = this.mem.lw((ri(i.rs1) + i.i32));
+                const load = this.mem.loadWord((ri(i.rs1) + i.i32));
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, load.value);
                         pc += 4;
                         break;
-                    case Memory.Status.ReadOnly: assert(false);
+                    case Memory.Status.ReadOnly:
+                        assert(false);
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.LoadMisaligned);
+                        this.setException(ExceptionCode.LoadMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.LoadOutOfBounds);
+                        this.setException(ExceptionCode.LoadOutOfBounds);
                         break;
                 }
                 break;
             case Opcode.StoreByte:
-                const status = this.mem.sb(
+                const status = this.mem.storeByte(
                     ri(i.rs2) + i.i32, cast(ubyte) ru(i.rs1)
                 );
                 final switch(status) {
@@ -415,37 +425,41 @@ struct CapsuleEngine {
                         pc += 4;
                         break;
                     case Memory.Status.ReadOnly:
-                        this.trap(ExceptionCode.StoreToReadOnly);
+                        this.setException(ExceptionCode.StoreToReadOnly);
                         break;
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.StoreMisaligned);
+                        this.setException(ExceptionCode.StoreMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.StoreOutOfBounds);
+                        this.setException(ExceptionCode.StoreOutOfBounds);
                         break;
                 }
                 break;
             case Opcode.StoreHalfWord:
-                const status = this.mem.sh(
-                    (ri(i.rs2) + i.i32) & ~1, cast(ushort) ru(i.rs1)
+                const status = this.mem.storeHalfWord(
+                    (ri(i.rs2) + i.i32), cast(ushort) ru(i.rs1)
                 );
                 final switch(status) {
                     case Memory.Status.Ok:
                         pc += 4;
                         break;
                     case Memory.Status.ReadOnly:
-                        this.trap(ExceptionCode.StoreToReadOnly);
+                        this.setException(ExceptionCode.StoreToReadOnly);
                         break;
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.StoreMisaligned);
+                        this.setException(ExceptionCode.StoreMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.StoreOutOfBounds);
+                        this.setException(ExceptionCode.StoreOutOfBounds);
                         break;
                 }
                 break;
             case Opcode.StoreWord:
-                const status = this.mem.sw(
+                const status = this.mem.storeWord(
                     (ri(i.rs2) + i.i32), ru(i.rs1)
                 );
                 final switch(status) {
@@ -453,13 +467,15 @@ struct CapsuleEngine {
                         pc += 4;
                         break;
                     case Memory.Status.ReadOnly:
-                        this.trap(ExceptionCode.StoreToReadOnly);
+                        this.setException(ExceptionCode.StoreToReadOnly);
                         break;
+                    case Memory.Status.NotExecutable:
+                        assert(false);
                     case Memory.Status.Misaligned:
-                        this.trap(ExceptionCode.StoreMisaligned);
+                        this.setException(ExceptionCode.StoreMisaligned);
                         break;
                     case Memory.Status.OutOfBounds:
-                        this.trap(ExceptionCode.StoreOutOfBounds);
+                        this.setException(ExceptionCode.StoreOutOfBounds);
                         break;
                 }
                 break;
@@ -505,19 +521,14 @@ struct CapsuleEngine {
                     pc += 4;
                 }
                 else {
-                    this.trap(result.exc);
+                    this.setException(result.exc);
                 }
                 break;
             case Opcode.Breakpoint:
-                this.trap(ExceptionCode.Breakpoint);
+                pc += 4;
                 break;
-            case Opcode.ReturnFromException:
-                // TODO: clear exception somehow?
-                exc = ExceptionCode.None;
-                pc = epc;
-                return;
             default: // Unknown opcode
-                this.trap(ExceptionCode.InvalidInstruction);
+                this.setException(ExceptionCode.InvalidInstruction);
         }
     }
 }

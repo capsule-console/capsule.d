@@ -55,6 +55,46 @@ enum CapsuleProgramSegmentType: uint {
     @("heap") Heap,
 }
 
+struct CapsuleProgramSegmentProperties {
+    alias Type = CapsuleProgramSegmentType;
+    
+    /// Represent properties of a missing or absent segment.
+    static enum None = typeof(this)(Type.None, false, false, false);
+    /// Represent the properties of a bss segment.
+    static enum BSS = typeof(this)(Type.BSS, false, true, false);
+    /// Represent the properties of a data segment.
+    static enum Data = typeof(this)(Type.Data, true, true, false);
+    /// Represent the properties of a rodata segment.
+    static enum ReadOnlyData = typeof(this)(Type.ReadOnlyData, true, false, false);
+    /// Represent the properties of a text segment.
+    static enum Text = typeof(this)(Type.Text, true, false, true);
+    /// Represent the properties of a stack segment.
+    static enum Stack = typeof(this)(Type.Stack, false, true, false);
+    /// Represent the properties of a heap segment.
+    static enum Heap = typeof(this)(Type.Heap, false, true, false);
+    
+    /// Type of the segment whose properties are being represented.
+    Type type;
+    /// Whether data in this segment is initialized or uninitialized.
+    bool initialized;
+    /// Whether writes to this segment are normally allowed.
+    bool write;
+    /// Whether execution of instructions in this segment is normally allowed.
+    bool execute;
+    
+    static typeof(this) get(in Type type) {
+        switch(type) {
+            case Type.BSS: return typeof(this).BSS;
+            case Type.Data: return typeof(this).Data;
+            case Type.ReadOnlyData: return typeof(this).ReadOnlyData;
+            case Type.Text: return typeof(this).Text;
+            case Type.Stack: return typeof(this).Stack;
+            case Type.Heap: return typeof(this).Heap;
+            default: return typeof(this).None;
+        }
+    }
+}
+
 struct CapsuleProgramSymbol {
     alias Type = CapsuleObject.Symbol.Type;
     

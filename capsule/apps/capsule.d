@@ -12,6 +12,7 @@ import capsule.core.program : CapsuleProgram;
 import capsule.core.programencode : CapsuleProgramDecoder;
 import capsule.core.programstring : capsuleProgramToString;
 import capsule.core.stdio : stdio;
+import capsule.core.typestrings : getCapsuleExceptionDescription;
 
 import capsule.apps.ecall : ecall, ecallExtList;
 import capsule.apps.runprogram : runProgram, debugProgram;
@@ -229,6 +230,11 @@ CapsuleApplicationStatus execute(string[] args) {
     if(verbose) {
         const status = getEnumMemberName(engine.status);
         stdio.writeln("Execution complete with status ", status);
+    }
+    if(engine.exception) {
+        stdio.writeln("Exception: ",
+            getCapsuleExceptionDescription(engine.exception)
+        );
     }
     engine.mem.free();
     switch(engine.status) {

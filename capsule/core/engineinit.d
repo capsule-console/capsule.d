@@ -27,6 +27,8 @@ auto initializeCapsuleMemory(in CapsuleProgram program) {
     memory.allocate(program.length);
     memory.romStart = program.readOnlyDataSegment.offset;
     memory.romEnd = program.textSegment.end;
+    memory.execStart = program.textSegment.offset;
+    memory.execEnd = program.textSegment.end;
     const dataOk = memory.write(
         program.dataSegment.offset, program.dataSegment.bytes
     );

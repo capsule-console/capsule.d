@@ -8,7 +8,7 @@ import capsule.core.writeint : writeInt;
 
 public pure nothrow @safe:
 
-const string CapsuleUnknownExceptionDescription = "Unknown exception code";
+const string CapsuleUnknownExceptionDescription = "Unknown exception";
 
 /// Names corresponding to register numbers
 const string[8] CapsuleRegisterNames = [
@@ -41,7 +41,7 @@ const string[16] CapsuleExceptionDescriptions = [
     "Triple fault",
     "Double fault",
     "Invalid instruction",
-    "Breakpoint",
+    "Memory location is not executable",
     "Misaligned load",
     "Misaligned store",
     "Misaligned program counter",

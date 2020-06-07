@@ -66,7 +66,6 @@ enum CapsuleOpcode: ubyte {
     @("bgeu") BranchGreaterEqualUnsigned = 0x3b, /// Branch if greater or equal unsigned
     @("ecall") ExtensionCall = 0x3c, /// Call extension
     @("ebreak") Breakpoint = 0x3d, /// Breakpoint
-    @("rfe") ReturnFromException = 0x3e, /// Return from exception
 }
 
 /// Enumeration of Capsule exception codes
@@ -75,7 +74,7 @@ enum CapsuleExceptionCode: ubyte {
     @("triple") TripleFault = 0x01, /// Triple fault
     @("double") DoubleFault = 0x02, /// Double fault
     @("instr") InvalidInstruction = 0x03, /// Invalid instruction
-    @("break") Breakpoint = 0x04, /// Breakpoint
+    @("pcexec") PCNotExecutable = 0x04, /// Program counter not in executable memory
     @("lalign") LoadMisaligned = 0x05, /// Misaligned load
     @("salign") StoreMisaligned = 0x06, /// Misaligned store
     @("pcalign") PCMisaligned = 0x07, /// Misaligned program counter

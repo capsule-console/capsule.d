@@ -126,6 +126,7 @@ string getMemoryLoadStatusString(in CapsuleMemoryStatus status) {
     final switch(status) {
         case Status.Ok: return null;
         case Status.ReadOnly: return "tried to write to read-only memory";
+        case Status.NotExecutable: return "memory is not executable";
         case Status.Misaligned: return "misaligned address";
         case Status.OutOfBounds: return "address out of bounds";
     }
@@ -376,7 +377,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
         // Resume execution
         // TODO: Until an exception or something, presumably..?
         else if(input == "resume") {
-            runProgram(engine);
+            runProgramUntil!(e => e.instr.opcode is CapsuleOpcode.Breakpoint)(engine);
         }
         // Resume execution until reaching a given address with the PC
         else if(input.startsWith("until pc ")) {
@@ -398,7 +399,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
                 runProgramUntil!(e => e.pc == matchSymbol.value)(engine);
             }
             else {
-                stdio.writeln("Failed to parse target program counter value.");
+                stdio.writeln("Failed to match target symbol.");
             }
         }
         // Resume execution until after the next instance of a given opcode
@@ -459,7 +460,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
                 stdio.writeln("Failed to parse memory location.");
                 continue;
             }
-            const load = engine.mem.lw(parsed.value);
+            const load = engine.mem.loadWord(parsed.value);
             if(load.ok) {
                 logInstruction(parsed.value, CapsuleInstruction.decode(cast(uint) load.value));
             }
@@ -476,7 +477,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
                 stdio.writeln("Failed to parse memory location.");
                 continue;
             }
-            const load = engine.mem.lb(parsed.value);
+            const load = engine.mem.loadByteSigned(parsed.value);
             stdio.write("@", getHexString(parsed.value), " ");
             if(load.ok) logValue("byte", load.value);
         }
@@ -488,7 +489,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
                 stdio.writeln("Failed to parse memory location.");
                 continue;
             }
-            const load = engine.mem.lbu(parsed.value);
+            const load = engine.mem.loadByteUnsigned(parsed.value);
             stdio.write("@", getHexString(parsed.value), " ");
             if(load.ok) logValue("byte", load.value);
         }
@@ -500,7 +501,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
                 stdio.writeln("Failed to parse memory location.");
                 continue;
             }
-            const load = engine.mem.lh(parsed.value);
+            const load = engine.mem.loadHalfWordSigned(parsed.value);
             stdio.write("@", getHexString(parsed.value), " ");
             if(load.ok) logValue("half", load.value);
         }
@@ -512,7 +513,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
                 stdio.writeln("Failed to parse memory location.");
                 continue;
             }
-            const load = engine.mem.lhu(parsed.value);
+            const load = engine.mem.loadHalfWordUnsigned(parsed.value);
             stdio.write("@", getHexString(parsed.value), " ");
             if(load.ok) logValue("half", load.value);
         }
@@ -524,7 +525,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
                 stdio.writeln("Failed to parse memory location.");
                 continue;
             }
-            const load = engine.mem.lw(parsed.value);
+            const load = engine.mem.loadWord(parsed.value);
             stdio.write("@", getHexString(parsed.value), " ");
             if(load.ok) logValue("word", load.value);
         }

@@ -202,7 +202,6 @@ auto getCapsuleInstructionArgs(in CapsuleOpcode opcode) {
         case Opcode.BranchGreaterEqualUnsigned: return Args.Branch;
         case Opcode.ExtensionCall: return Args.RegAllImmMaybe;
         case Opcode.Breakpoint: return Args.None;
-        case Opcode.ReturnFromException: return Args.None;
         default: return Args.None;
     }
 }

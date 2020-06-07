@@ -81,8 +81,8 @@ Note the following abbreviations:
 | 0x3a | bge rs1,rs2,imm        | Branch if greater or equal signed         | if rs1 >= rs2: PC = PC + (i32) |
 | 0x3b | bgeu rs1,rs2,imm       | Branch if greater or equal unsigned       | if rs1 >= rs2: PC = PC + (i32) |
 | 0x3c | ecall rd,rs1,rs2,imm   | Call extension                            | rd = ecall(extid: rs2 + i32, input: rs1) |
-| 0x3d | ebreak                 | Breakpoint                                | Trigger breakpoint exception |
-| 0x3e | rfe                    | Return from exception                     | PC = EPC |
+| 0x3d | ebreak                 | Breakpoint                                | Reserved for debugging tools to represent a breakpoint |
+| 0x3e | \-                     | _Reserved_                                | \- |
 | 0x3f | \-                     | _Reserved_                                | \- |
 | 0x40 | \-                     | _Reserved_, and so on through 0x7F.       | \- |
 

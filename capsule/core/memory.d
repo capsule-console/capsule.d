@@ -2,17 +2,20 @@ module capsule.core.memory;
 
 import core.stdc.stdlib : free, calloc;
 
-public pure nothrow @safe @nogc:
+public nothrow @safe @nogc:
 
+/// Enumeration of possible memory operation status values.
 enum CapsuleMemoryStatus: uint {
     /// Successful read or write
     Ok = 0,
     /// Failure: Tried to write to read-only memory
-    ReadOnly = 1,
+    ReadOnly,
+    /// Failure: Tried to read non-executable memory for execution
+    NotExecutable,
     /// Failure: Tried to read or write on a misaligned address
-    Misaligned = 2,
+    Misaligned,
     /// Failure: Memory address out of bounds
-    OutOfBounds = 3,
+    OutOfBounds,
 }
 
 /// Couples a loaded value from memory with a status indicator.
@@ -22,17 +25,21 @@ struct CapsuleMemoryLoad(T) {
     alias Status = CapsuleMemoryStatus;
     
     static enum ReadOnly = typeof(this)(Status.ReadOnly, 0);
+    static enum NotExecutable = typeof(this)(Status.NotExecutable, 0);
     static enum Misaligned = typeof(this)(Status.Misaligned, 0);
     static enum OutOfBounds = typeof(this)(Status.OutOfBounds, 0);
     
+    /// The status of the load.
     Status status = Status.Ok;
+    /// The loaded value, when the load was successful.
     T value;
     
     static typeof(this) Ok(in T value) {
         return typeof(this)(Status.Ok, value);
     }
     
-    @property bool ok() const {
+    /// Returns true if the load status is "Ok".
+    bool ok() const {
         return this.status is Status.Ok;
     }
     
@@ -41,20 +48,26 @@ struct CapsuleMemoryLoad(T) {
     }
 }
 
-/// Split memory:
-/// Memory up to address X is ROM.
-/// Memory from X to Y is RAM.
-/// ROM and RAM lengths are determined by cartridge metadata.
+/// Data structure to represent and manage a Capsule program's memory
+/// during execution.
 @trusted struct CapsuleMemory {
     nothrow @nogc:
     
     alias Status = CapsuleMemoryStatus;
     alias Load = CapsuleMemoryLoad;
     
+    /// Pointer to a memory buffer.
     ubyte* data = null;
+    /// Length in bytes of the memory buffer.
     uint length = 0;
+    /// Starting address of read-only memory.
     uint romStart = 0;
+    /// Endingtarting address of read-only memory.
     uint romEnd = 0;
+    /// Starting address of executable memory.
+    uint execStart = 0;
+    /// Endingtarting address of executable memory.
+    uint execEnd = 0;
     
     void allocate(in uint length) {
         assert(length <= int.max);
@@ -78,11 +91,14 @@ struct CapsuleMemoryLoad(T) {
     }
     
     bool ok() const {
-        return this.data !is null;
+        return (this.data !is null &&
+            this.romStart <= this.romEnd &&
+            this.execStart <= this.execEnd
+        );
     }
     
     /// Load sign-extended byte
-    Load!int lb(in int address) const {
+    Load!int loadByteSigned(in int address) const {
         if(address < 0 || address >= this.length) {
             return Load!int.OutOfBounds;
         }
@@ -93,7 +109,7 @@ struct CapsuleMemoryLoad(T) {
     }
     
     /// Load zero-extended byte
-    Load!uint lbu(in int address) const {
+    Load!uint loadByteUnsigned(in int address) const {
         if(address < 0 || address >= this.length) {
             return Load!uint.OutOfBounds;
         }
@@ -104,7 +120,7 @@ struct CapsuleMemoryLoad(T) {
     }
     
     /// Load sign-extended half word
-    Load!int lh(in int address) const {
+    Load!int loadHalfWordSigned(in int address) const {
         if(address < 0 || address >= this.length) {
             return Load!int.OutOfBounds;
         }
@@ -118,7 +134,7 @@ struct CapsuleMemoryLoad(T) {
     }
     
     /// Load zero-extended half word
-    Load!uint lhu(in int address) const {
+    Load!uint loadHalfWordUnsigned(in int address) const {
         if(address < 0 || address >= this.length) {
             return Load!uint.OutOfBounds;
         }
@@ -132,7 +148,7 @@ struct CapsuleMemoryLoad(T) {
     }
     
     /// Load word
-    Load!int lw(in int address) const {
+    Load!int loadWord(in int address) const {
         if(address < 0 || address >= this.length) {
             return Load!int.OutOfBounds;
         }
@@ -145,8 +161,25 @@ struct CapsuleMemoryLoad(T) {
         }
     }
     
+    /// Load instruction
+    Load!int loadInstructionWord(in int address) const {
+        if(address < 0 || address >= this.length) {
+            return Load!int.OutOfBounds;
+        }
+        else if(address & 0x3) {
+            return Load!int.Misaligned;
+        }
+        else if(address < this.execStart || address >= this.execEnd) {
+            return Load!int.NotExecutable;
+        }
+        else {
+            const value = *(cast(int*) &this.data[address]);
+            return Load!int.Ok(value);
+        }
+    }
+    
     /// Store byte
-    Status sb(in int address, in ubyte value) {
+    Status storeByte(in int address, in ubyte value) {
         if(address < 0 || address >= this.length) {
             return Status.OutOfBounds;
         }
@@ -160,7 +193,7 @@ struct CapsuleMemoryLoad(T) {
     }
     
     /// Store half word
-    Status sh(in int address, in ushort value) {
+    Status storeHalfWord(in int address, in ushort value) {
         if(address < 0 || address >= this.length) {
             return Status.OutOfBounds;
         }
@@ -177,7 +210,7 @@ struct CapsuleMemoryLoad(T) {
     }
     
     /// Store word
-    Status sw(in int address, in int value) {
+    Status storeWord(in int address, in int value) {
         if(address < 0 || address >= this.length) {
             return Status.OutOfBounds;
         }
