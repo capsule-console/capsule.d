@@ -12,7 +12,6 @@
 .entry
     ; Ensure stdio is active
     ecalli Z, Z, stdio.init
-    nop ; TODO: don't
     ; Initialize the stack pointer and frame pointer
     la B, .stack.end
     mv S, B

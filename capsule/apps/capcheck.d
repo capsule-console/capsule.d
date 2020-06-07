@@ -129,18 +129,48 @@ void writeln(T...)(lazy T args) {
     stdio.writeln(args);
 }
 
+void writems(in ulong milliseconds) {
+    const seconds = milliseconds / 1000;
+    const remainingMs = milliseconds % 1000;
+    const msPadding = (
+        remainingMs < 10 ? "00" :
+        remainingMs < 100 ? "0" : ""
+    );
+    write(writeInt(seconds), ".", msPadding, writeInt(remainingMs), "s");
+}
+
 struct CapsuleCheckTest {
+    alias Case = CapsuleCheckTestCase;
     alias Status = CapsuleApplicationStatus;
     
-    Status status = Status.Ok;
     string name = null;
     string comment = null;
     string[] sources = null;
-    string stdin = null;
-    string stdout = null;
     string casmArgs = null;
     string clinkArgs = null;
     string capsuleArgs = null;
+    Case[] cases = null;
+    
+    bool hasNameMatch(in string name) {
+        if(name == this.name) {
+            return true;
+        }
+        foreach(testCase; this.cases) {
+            if(name == testCase.name) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+struct CapsuleCheckTestCase {
+    alias Status = CapsuleApplicationStatus;
+    
+    string name = null;
+    Status status = Status.Ok;
+    string stdin = null;
+    string stdout = null;
 }
 
 /// Helper to escape a string to be used as a command line argument
@@ -227,78 +257,137 @@ CapsuleApplicationStatus check(string[] args) {
         Path(config.outputPath) : Path.join(iniDir, config.outputPath)
     ).toString();
     verboseln("Outputting binary files to directory ", outDir);
-    // Run each test case
-    verboseln("Running tests.");
-    uint testsPassed = 0;
-    uint testsFailed = 0;
+    // Put together a list of tests
+    verboseln("Organizing tests and test cases.");
+    CapsuleCheckTest[] tests;
+    uint totalTestCases = 0;
     foreach(section; ini.sections) {
-        // Handle the --only CLI option
-        if(config.onlyTestName.length && section.name != config.onlyTestName) {
+        // Sections marked "caseof" get added to Test objects
+        if(section.get("caseof").length) {
+            bool foundTest = false;
+            foreach(ref test; tests) {
+                if(test.name == section.get("caseof")) {
+                    const expectStatus = (
+                        getEnumMemberByName!Status(section.get("status"))
+                    );
+                    CapsuleCheckTestCase testCase = {
+                        name: section.name,
+                        stdin: section.get("stdin"),
+                        stdout: section.get("stdout"),
+                        status: expectStatus,
+                    };
+                    foundTest = true;
+                    test.cases ~= testCase;
+                    totalTestCases++;
+                    break;
+                }
+            }
+            if(!foundTest) {
+                writeln("Unmatched \"caseof\" setting in section: ", section.name);
+            }
             continue;
         }
-        // Run the test
-        const expectStatus = (
-            getEnumMemberByName!(CapsuleCheckTest.Status)(section.get("status"))
-        );
+        // Otherwise add to the test list
         CapsuleCheckTest test = {
             name: section.name,
             comment: section.get("comment"),
             sources: section.all("source"),
-            stdin: section.get("stdin"),
-            stdout: section.get("stdout"),
             casmArgs: section.get("casmargs"),
             clinkArgs: section.get("clinkargs"),
             capsuleArgs: section.get("capsuleargs"),
-            status: expectStatus,
         };
-        const testResult = runTest(config, outDir, test);
-        // Display PASS/FAIL
-        if(testResult.status is Status.Ok) {
-            write("PASS: ", section.name);
-            testsPassed++;
+        if(section.get("stdin") || section.get("stdout") || section.get("status")) {
+            const expectStatus = (
+                getEnumMemberByName!Status(section.get("status"))
+            );
+            CapsuleCheckTestCase testCase = {
+                name: section.name,
+                stdin: section.get("stdin"),
+                stdout: section.get("stdout"),
+                status: expectStatus,
+            };
+            test.cases ~= testCase;
+            totalTestCases++;
         }
-        else {
-            const statusName = getEnumMemberName(testResult.status);
-            write("FAIL: ", section.name ~ " (" ~ statusName ~ ")");
+        tests ~= test;
+    }
+    // Run the tests
+    verboseln("Running tests.");
+    uint testsPassed = 0;
+    uint testsFailed = 0;
+    foreach(test; tests) {
+        // Handle tests with no cases
+        if(!test.cases.length) {
+            stdio.writeln("Test section has no cases: ", test.name);
+            continue;
+        }
+        // Handle the --only CLI option filtering out this entire test
+        if(config.onlyTestName.length && !test.hasNameMatch(config.onlyTestName)) {
+            continue;
+        }
+        // Build the test program
+        CapsuleCheckTestBuilder builder = {
+            test: test,
+            config: config,
+            outDir: outDir,
+        };
+        builder.build();
+        const buildms = (
+            builder.compileTime.milliseconds + builder.linkTime.milliseconds
+        );
+        if(!builder.ok) {
+            testsFailed += test.cases.length;
+            const status = (builder.compileStatus ?
+                builder.compileStatus : builder.linkStatus
+            );
+            const statusName = getEnumMemberName(status);
+            write("BUILD FAIL: ", test.name ~ " (" ~ statusName ~ ") (");
+            writems(buildms);
+            writeln(")");
             testsFailed++;
+            continue;
         }
-        // Display the time taken to run the test
-        const totalMs = (
-            testResult.compileTime.milliseconds +
-            testResult.linkTime.milliseconds +
-            testResult.runTime.milliseconds
-        );
-        const totalSeconds = totalMs / 1000;
-        const remainingMs = totalMs % 1000;
-        const msPadding = (
-            remainingMs < 10 ? "00" :
-            remainingMs < 100 ? "0" : ""
-        );
-        writeln(" (",
-            writeInt(totalSeconds), ".", msPadding, writeInt(remainingMs),
-            "s)"
-        );
-        // Display expected and actual stdout
-        if(verbose) {
-            writeln("Expected stdout ", section.name,
-                " (", writeInt(test.stdout.length), " bytes):"
-            );
-            writeln(test.stdout);
-            writeln("Actual stdout ", section.name,
-                " (", writeInt(testResult.stdout.length), " bytes):"
-            );
-            writeln(testResult.stdout);
-        }
-        // More handling for --only
-        if(config.onlyTestName.length) {
-            assert(section.name == config.onlyTestName);
-            break;
+        // Run each test program
+        foreach(testCase; test.cases) {
+            // Handle the --only CLI option filtering out this test case
+            if(config.onlyTestName.length &&
+                config.onlyTestName != test.name &&
+                config.onlyTestName != testCase.name
+            ) {
+                continue;
+            }
+            // Run the test
+            CapsuleCheckTestRunner runner = builder.getRunner(testCase);
+            runner.run();
+            // Display PASS/FAIL information
+            if(runner.ok) {
+                write("TEST PASS: ", testCase.name, " (");
+                testsPassed++;
+            }
+            else {
+                const statusName = getEnumMemberName(runner.status);
+                write("TEST FAIL: ", testCase.name ~ " (" ~ statusName ~ ") (");
+                testsFailed++;
+            }
+            writems(buildms + runner.runTime.milliseconds);
+            writeln(")");
+            // Display expected and actual stdout
+            if(verbose) {
+                verboseln("Expected stdout ", testCase.name,
+                    " (", writeInt(testCase.stdout.length), " bytes):"
+                );
+                verboseln(testCase.stdout);
+                verboseln("Actual stdout ", testCase.name,
+                    " (", writeInt(runner.stdout.length), " bytes):"
+                );
+                verboseln(runner.stdout);
+            }
         }
     }
     // Write summmary of test results
     verboseln("Finished running tests.");
     writeln(
-        "Passed: ", writeInt(testsPassed), " of ", writeInt(ini.sections.length)
+        "Passed: ", writeInt(testsPassed), " of ", writeInt(totalTestCases)
     );
     if(testsFailed) {
         writeln("Failed: ", writeInt(testsFailed));
@@ -306,112 +395,156 @@ CapsuleApplicationStatus check(string[] args) {
     return testsFailed ? Status.CheckTestFailure : Status.Ok;
 }
 
-auto runTest(
-    in CapsuleCheckConfig config, in string outDir,
-    in CapsuleCheckTest test,
-) {
-    // Handy data types
+struct CapsuleCheckTestBuilder {
+    alias Config = CapsuleCheckConfig;
+    alias Runner = CapsuleCheckTestRunner;
     alias Status = CapsuleApplicationStatus;
-    struct Result {
-        Status status = Status.Ok;
-        string stdout = null;
-        Timer compileTime;
-        Timer linkTime;
-        Timer runTime;
+    alias Test = CapsuleCheckTest;
+    alias TestCase = CapsuleCheckTestCase;
+    
+    Test test;
+    Config config;
+    string outDir;
+    
+    Status compileStatus = Status.Ok;
+    Status linkStatus = Status.Ok;
+    string programPath = null;
+    Timer compileTime;
+    Timer linkTime;
+    string linkCmd;
+    
+    bool ok() const {
+        return this.compileStatus is Status.Ok && this.linkStatus is Status.Ok;
     }
-    // Initialize some variables
-    Result result;
-    string objPaths = "";
-    const cmdLogFlag = (
-        silent ? "" :
-        config.veryVerbose ? " -v" :
-        !verbose ? " --silent" : ""
-    );
-    // Compile each source file
-    foreach(source; test.sources) {
-        const objPath = Path.join(outDir, source).toString() ~ ".cob";
-        if(objPaths.length) objPaths ~= " ";
-        objPaths ~= escapeArg(objPath);
-        string compileCmd = (
-            config.casmCommand ~ " " ~ source ~
-            " -o " ~ escapeArg(objPath) ~
-            (config.writeDebugInfo ? " -db" : "") ~
-            cmdLogFlag ~ " " ~ test.casmArgs ~ "\0"
+    
+    Runner getRunner(TestCase testCase) {
+        Runner runner = {
+            test: this.test,
+            testCase: testCase,
+            config: this.config,
+            outDir: this.outDir,
+            programPath: this.programPath,
+        };
+        return runner;
+    }
+    
+    void build() {
+        string objPaths = "";
+        const cmdLogFlag = (
+            silent ? "" :
+            this.config.veryVerbose ? " -v" :
+            !verbose ? " --silent" : ""
         );
-        assert(compileCmd.length && compileCmd[$ - 1] == '\0');
-        verboseln(compileCmd[0 .. $ - 1]);
-        result.compileTime.start();
-        const compileStatus = cast(Status) system(compileCmd.ptr);
-        result.compileTime.suspend();
-        if(compileStatus !is Status.Ok) {
-            result.status = compileStatus;
-            return result;
+        // Compile each source file
+        foreach(source; this.test.sources) {
+            const objPath = Path.join(this.outDir, source).toString() ~ ".cob";
+            if(objPaths.length) objPaths ~= " ";
+            objPaths ~= escapeArg(objPath);
+            string compileCmd = (
+                this.config.casmCommand ~ " " ~ source ~
+                " -o " ~ escapeArg(objPath) ~
+                (this.config.writeDebugInfo ? " -db" : "") ~
+                cmdLogFlag ~ " " ~ this.test.casmArgs ~ "\0"
+            );
+            assert(compileCmd.length && compileCmd[$ - 1] == '\0');
+            verboseln(compileCmd[0 .. $ - 1]);
+            this.compileTime.start();
+            this.compileStatus = cast(Status) system(compileCmd.ptr);
+            this.compileTime.suspend();
+            if(compileStatus !is Status.Ok) {
+                return;
+            }
         }
+        // Link object files
+        this.programPath = (
+            Path.join(this.outDir, this.test.name).toString() ~ ".capsule"
+        );
+        this.linkCmd = (
+            this.config.clinkCommand ~ " " ~ objPaths ~
+            " -o " ~ escapeArg(this.programPath) ~
+            (this.config.writeDebugInfo ? " -db" : "") ~
+            cmdLogFlag ~ " " ~ this.test.clinkArgs
+        );
+        if(this.test.comment.length) {
+            this.linkCmd ~= " --program-comment " ~ escapeArg(this.test.comment);
+        }
+        this.linkCmd ~= "\0";
+        assert(this.linkCmd.length && this.linkCmd[$ - 1] == '\0');
+        verboseln(this.linkCmd[0 .. $ - 1]);
+        this.linkTime.start();
+        this.linkStatus = cast(Status) system(this.linkCmd.ptr);
+        this.linkTime.end();
     }
-    // Link object files
-    const programPath = (
-        Path.join(outDir, test.name).toString() ~ ".capsule"
-    );
-    string linkCmd = (
-        config.clinkCommand ~ " " ~ objPaths ~
-        " -o " ~ escapeArg(programPath) ~
-        (config.writeDebugInfo ? " -db" : "") ~
-        cmdLogFlag ~ " " ~ test.clinkArgs
-    );
-    if(test.comment.length) {
-        linkCmd ~= " --program-comment " ~ escapeArg(test.comment);
+}
+
+struct CapsuleCheckTestRunner {
+    alias Builder = CapsuleCheckTestBuilder;
+    alias Config = CapsuleCheckConfig;
+    alias Status = CapsuleApplicationStatus;
+    alias Test = CapsuleCheckTest;
+    alias TestCase = CapsuleCheckTestCase;
+    
+    Test test;
+    TestCase testCase;
+    Config config;
+    string outDir;
+    
+    Status runStatus = Status.Ok;
+    string programPath = null;
+    string runCmd;
+    Timer runTime;
+    File.Status stdoutReadStatus;
+    string stdout;
+    
+    bool ok() const {
+        return (
+            this.runStatus is this.testCase.status &&
+            this.stdout == this.testCase.stdout
+        );
     }
-    linkCmd ~= "\0";
-    assert(linkCmd.length && linkCmd[$ - 1] == '\0');
-    verboseln(linkCmd[0 .. $ - 1]);
-    result.linkTime.start();
-    const linkStatus = cast(Status) system(linkCmd.ptr);
-    result.linkTime.end();
-    if(linkStatus !is Status.Ok) {
-        result.status = linkStatus;
-        return result;
-    }
-    // Run the compiled program
-    const stdoutPath = (
-        Path.join(outDir, test.name).toString() ~ ".stdout.txt"
-    );
-    string runCmd = (
-        config.capsuleCommand ~ " " ~ escapeArg(programPath) ~
-        " --stdout-path " ~ escapeArg(stdoutPath) ~
-        (config.veryVerbose && !silent ? " -v" : "") ~
-        " " ~ test.capsuleArgs
-    );
-    if(test.stdin.length) {
-        runCmd ~= " -in " ~ escapeArg(test.stdin);
-    }
-    runCmd ~= "\0";
-    assert(runCmd.length && runCmd[$ - 1] == '\0');
-    verboseln(runCmd[0 .. $ - 1]);
-    result.runTime.start();
-    const runStatus = cast(Status) system(runCmd.ptr);
-    result.runTime.end();
-    // Verify the output
-    if(runStatus !is test.status) {
-        if(test.status is Status.Ok) {
-            result.status = runStatus;
-            return result;
+    
+    Status status() const {
+        if(this.runStatus !is this.testCase.status) {
+            if(this.runStatus is Status.Ok) {
+                return Status.CheckTestFailureWrongStatus;
+            }
+            else {
+                return this.runStatus;
+            }
+        }
+        else if(this.stdout != this.testCase.stdout) {
+            return Status.CheckTestFailureWrongOutput;
         }
         else {
-            result.status = Status.CheckTestFailureWrongStatus;
-            return result;
+            return Status.Ok;
         }
     }
-    const stdoutFile = File.read(stdoutPath);
-    result.stdout = stdoutFile.content;
-    if((!test.stdout.length && stdoutFile.ok) || (test.stdout.length && 
-        (!stdoutFile.ok || stdoutFile.content != test.stdout)
-    )) {
-        result.status = Status.CheckTestFailureWrongOutput;
-        return result;
+    
+    void run() {
+        // Run the compiled program
+        const stdoutPath = (
+            Path.join(this.outDir, this.testCase.name).toString() ~ ".stdout.txt"
+        );
+        this.runCmd = (
+            this.config.capsuleCommand ~ " " ~ escapeArg(programPath) ~
+            " --stdout-path " ~ escapeArg(stdoutPath) ~
+            (this.config.veryVerbose && !silent ? " -v" : "") ~
+            " " ~ this.test.capsuleArgs
+        );
+        if(this.testCase.stdin.length) {
+            this.runCmd ~= " -in " ~ escapeArg(this.testCase.stdin);
+        }
+        this.runCmd ~= "\0";
+        assert(this.runCmd.length && this.runCmd[$ - 1] == '\0');
+        verboseln(this.runCmd[0 .. $ - 1]);
+        this.runTime.start();
+        this.runStatus = cast(Status) system(this.runCmd.ptr);
+        this.runTime.end();
+        // Record the output
+        const stdoutFile = File.read(stdoutPath);
+        this.stdoutReadStatus = stdoutFile.status;
+        this.stdout = stdoutFile.content;
     }
-    // All done
-    result.status = Status.Ok;
-    return result;
 }
 
 version(CapsuleExcludeCheckerMain) {}

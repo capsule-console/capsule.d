@@ -1,0 +1,64 @@
+; Simple Collatz sequence program. Reads a decimal integer from
+; stdin and then writes that number's Collatz sequence to stdout.
+; https://en.wikipedia.org/wiki/Collatz_conjecture
+; https://esolangs.org/wiki/Collatz_sequence
+
+.extern read_int
+.extern write_int
+.extern write_stringz
+
+.const meta.exit_ok, 0x0001
+.const meta.exit_error, 0x0002
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.rodata
+    collatz.err: .stringz "Error: Invalid input."
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    ; Read a decimal value from stdin and save it to register C
+    call R, read_int
+    mv C, A
+    ; Handle overflowed inputs
+    bnez Y, 0.err.f
+    ; Handle inputs less than 1
+    beqz A, 0.err.f
+0.loop:
+    ; Begin main Collatz loop
+    mv A, C
+    call R, write_int
+    ; Exit if C == 1
+    addi X, C, -1
+    beqz X, 0.one.f
+    ; Write a space to separate one number from the next
+    li Y, ' '
+    ecalli Z, Y, stdio.put_byte
+    ; X = 0 if C is even, otherwise X = 1
+    andi X, C, 1
+    bnez X, 0.odd.f
+0.even:
+    ; C = C / 2
+    srli C, C, 1
+    j 0.loop.b
+0.odd:
+    ; C = C * 3 + 1
+    li X, 3
+    mul C, C, X
+    addi C, C, 1
+    j 0.loop.b
+0.one:
+    ; Exit when C reaches 1
+    ecalli Z, Z, meta.exit_ok
+0.err:
+    ; Exit when the inputted number overflowed
+    la A, collatz.err
+    call R, write_stringz
+    ecalli Z, Z, meta.exit_error
