@@ -233,6 +233,10 @@ void runProgram(ref CapsuleEngine engine) {
 }
 
 void runProgramUntil(alias until)(ref CapsuleEngine engine) {
+    if(engine.status !is CapsuleEngine.Status.Running) {
+        stdio.writeln("Program ended.");
+        return;
+    }
     assert(engine.ok);
     int[8] reg = engine.reg;
     int pc = engine.pc;
@@ -240,10 +244,13 @@ void runProgramUntil(alias until)(ref CapsuleEngine engine) {
         reg = engine.reg;
         pc = engine.pc;
         engine.step();
-        if(!until(engine)) break;
+        if(until(engine)) break;
     }
     logRegistersShort(reg);
     logInstruction(pc, engine.instr);
+    if(engine.status !is CapsuleEngine.Status.Running) {
+        stdio.writeln("Program execution complete.");
+    }
 }
 
 void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
@@ -254,7 +261,7 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
     char[1024] buffer;
     stdio.writeln("Running Capsule program in debug mode.");
     stdio.writeln("Type \"help\" for more information.");
-    while(engine.status is Status.Running) {
+    while(true) {
         stdio.write("db > ");
         const length = stdio.readln(buffer);
         if(!length) {
@@ -267,12 +274,23 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
         }
         const input = buffer[0 .. length - 1];
         if(!input.length) {
+            if(engine.status !is CapsuleEngine.Status.Running) {
+                stdio.writeln("Program ended.");
+                continue;
+            }
             engine.next();
             logRegistersShort(engine.reg);
             logInstruction(engine);
             engine.exec();
+            if(engine.status !is CapsuleEngine.Status.Running) {
+                stdio.writeln("Program execution complete.");
+            }
         }
         else if(input[0] == '.') {
+            if(engine.status !is CapsuleEngine.Status.Running) {
+                stdio.writeln("Program ended.");
+                continue;
+            }
             const n = input.length;
             int[8] reg;
             for(uint i = 0; i < n && engine.status is Status.Running; i++) {
@@ -281,6 +299,9 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
             }
             logRegistersShort(reg);
             logInstruction(engine);
+            if(engine.status !is CapsuleEngine.Status.Running) {
+                stdio.writeln("Program execution complete.");
+            }
         }
         // Display help text
         // TODO: Write some help text...
