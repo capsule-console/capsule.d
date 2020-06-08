@@ -298,7 +298,12 @@ CapsuleApplicationStatus link(string[] args) {
         writeln("Failed to write program data to file path ", outputPath);
         return Status.ProgramFileWriteError;
     }
-    writeln("Wrote program data to file path ", outputPath);
+    if(config.writeDebugInfo) {
+        writeln("Wrote program data with debug info to ", outputPath);
+    }
+    else {
+        writeln("Wrote program data to ", outputPath);
+    }
     // If the verbose flag was set, write a stringification of the
     // program file to stdout
     if(verbose) {

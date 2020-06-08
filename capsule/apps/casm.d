@@ -261,7 +261,12 @@ CapsuleApplicationStatus compile(string[] args) {
         writeln("Failed to write object data to file path ", outputPath);
         return Status.ObjectFileWriteError;
     }
-    writeln("Wrote object data to file path ", outputPath);
+    if(config.writeDebugInfo) {
+        writeln("Wrote object data with debug info to ", outputPath);
+    }
+    else {
+        writeln("Wrote object data to ", outputPath);
+    }
     // If the verbose flag was set, write a stringification of the
     // object file to stdout
     if(verbose) {
