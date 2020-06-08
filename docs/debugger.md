@@ -413,7 +413,7 @@ none label end = 0x00000030 (int: 48)
 
 ### List sources (list sources)
 
-The **list sym** command displays a list of all source
+The **list sources** command displays a list of all source
 files included in the loaded program file.
 Sources are only included in programs built with debug
 settings.
