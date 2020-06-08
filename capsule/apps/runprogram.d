@@ -3,7 +3,7 @@ module capsule.apps.runprogram;
 import capsule.core.ascii : isDigit, toLower;
 import capsule.core.crc : CRC32;
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
-import capsule.core.enums : getEnumMemberAttribute;
+import capsule.core.enums : getEnumMemberAttribute, getEnumMemberName;
 import capsule.core.hex : parseHexString, getHexString, getByteHexString;
 import capsule.core.lz77 : lz77Inflate;
 import capsule.core.memory : CapsuleMemoryStatus;
@@ -19,30 +19,6 @@ import capsule.core.typestrings : CapsuleRegisterNames;
 import capsule.core.writeint : writeInt;
 
 public:
-
-const string HelpText = `Capsule debugging help:
-Press enter with no input to step once.
-Input a number of periods '.' to step that many times.
-q - Quit
-help - Help
-reg - Show registers
-rset [name] [value] - Set register
-resume - Resume execution
-until pc [address] - Until PC reaches address
-until sym [name] - Until PC reaches symbol
-until op [opcode] - Until PC reaches an opcode
-until ret - Until returning from the current procedure
-memlen - Show memory length characteristics
-sym [name] - Show symbol information
-lb [address] - Load sign-extended byte
-lbu [address] - Load zero-extended byte
-lh [address] - Load sign-extended half word
-lhu [address] - Load zero-extended half word
-lw [address] - Load word
-lin [address] - Load instruction
-l - Show source map information at PC
-l [address] - Show source map information
-`;
 
 void logInstruction(in CapsuleEngine engine) {
     logInstruction(engine.pc, engine.instr);
@@ -149,10 +125,10 @@ string getMemoryLoadStatusString(in CapsuleMemoryStatus status) {
     alias Status = CapsuleMemoryStatus;
     final switch(status) {
         case Status.Ok: return null;
-        case Status.ReadOnly: return "tried to write to read-only memory";
-        case Status.NotExecutable: return "memory is not executable";
-        case Status.Misaligned: return "misaligned address";
-        case Status.OutOfBounds: return "address out of bounds";
+        case Status.ReadOnly: return "Tried to write to read-only memory";
+        case Status.NotExecutable: return "Memory is not executable";
+        case Status.Misaligned: return "Misaligned address";
+        case Status.OutOfBounds: return "Address out of bounds";
     }
 }
 
@@ -257,6 +233,8 @@ void runProgram(ref CapsuleEngine engine) {
     }
 }
 
+bool runProgramUntilBreakpoint = true;
+
 void runProgramUntil(alias until)(ref CapsuleEngine engine) {
     if(engine.status !is CapsuleEngine.Status.Running) {
         stdio.writeln("Program ended.");
@@ -265,18 +243,56 @@ void runProgramUntil(alias until)(ref CapsuleEngine engine) {
     assert(engine.ok);
     int[8] reg = engine.reg;
     int pc = engine.pc;
+    bool first = true;
     while(engine.status is CapsuleEngine.Status.Running) {
+        engine.next();
         reg = engine.reg;
         pc = engine.pc;
-        engine.step();
-        if(until(engine)) break;
+        if(!first && (until(engine) || (runProgramUntilBreakpoint && 
+            engine.instr.opcode is CapsuleOpcode.Breakpoint
+        ))) {
+            break;
+        }
+        if(engine.status is CapsuleEngine.Status.Running) {
+            engine.step();
+            first = false;
+        }
     }
     logRegistersShort(reg);
     logInstruction(pc, engine.instr);
     if(engine.status !is CapsuleEngine.Status.Running) {
-        stdio.writeln("Program execution complete.");
+        stdio.writeln("Program execution complete. Status: ",
+            getEnumMemberName(engine.status)
+        );
     }
 }
+
+const string HelpText = `Capsule debugging help:
+Press enter with no input to step once.
+Input a number of periods '.' to step that many times.
+q - Quit
+help - Help
+reg - Show registers
+rset [name] [value] - Set register
+resume - Resume execution
+toggle ebreak - Toggle pausing on breakpoints
+until pc [address] - Until PC reaches address
+until sym [name] - Until PC reaches symbol
+until op [opcode] - Until PC reaches an opcode
+until ret - Until returning from the current procedure
+memlen - Show memory length characteristics
+sym [name] - Show symbol information
+lb [address] - Load sign-extended byte
+lbu [address] - Load zero-extended byte
+lh [address] - Load sign-extended half word
+lhu [address] - Load zero-extended half word
+lw [address] - Load word
+lin [address] - Load instruction
+l - Show source map information at PC
+l [address] - Show source map information
+list sources - List program sources
+list sym - List symbols in program
+`;
 
 void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
     alias Source = CapsuleProgram.Source;
@@ -306,7 +322,9 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
             engine.next();
             logRegistersShort(engine.reg);
             logInstruction(engine);
-            engine.exec();
+            if(engine.status is CapsuleEngine.Status.Running) {
+                engine.exec();
+            }
             if(engine.status !is CapsuleEngine.Status.Running) {
                 stdio.writeln("Program execution complete.");
             }
@@ -329,7 +347,6 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
             }
         }
         // Display help text
-        // TODO: Write some help text...
         else if(input == "help") {
             stdio.write(HelpText);
         }
@@ -399,9 +416,18 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
             else stdio.writeln("Invalid register value assignment.");
         }
         // Resume execution
-        // TODO: Until an exception or something, presumably..?
         else if(input == "resume") {
-            runProgramUntil!(e => e.instr.opcode is CapsuleOpcode.Breakpoint)(engine);
+            runProgramUntil!(e => false)(engine);
+        }
+        // Toggle pausing execution at breakpoints
+        else if(input == "toggle ebreak") {
+            runProgramUntilBreakpoint = !runProgramUntilBreakpoint;
+            if(runProgramUntilBreakpoint) stdio.writeln(
+                "Toggled breakpoints: Execution will pause on ebreak."
+            );
+            else stdio.writeln(
+                "Toggled breakpoints: Execution will no longer pause on ebreak."
+            );
         }
         // Resume execution until reaching a given address with the PC
         else if(input.startsWith("until pc ")) {
@@ -448,11 +474,13 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
             runProgramUntil!((e) {
                 if(e.instr.opcode is CapsuleOpcode.JumpAndLinkRegister) {
                     if(e.instr.rd) {
-                        nested--;
-                        if(nested <= 0) return true;
+                        nested++;
+                    }
+                    else if(nested <= 1) {
+                        return true;
                     }
                     else {
-                        nested++;
+                        nested--;
                     }
                 }
                 return false;
@@ -473,6 +501,23 @@ void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
             stdio.writeln("Executable end: ",
                 getHexString(engine.mem.execEnd), " (", writeInt(engine.mem.execEnd), ")"
             );
+        }
+        // List program sources
+        else if(input == "list sources") {
+            const count = program.sourceMap.sources.length;
+            stdio.writeln("Listing ", writeInt(count), " sources:");
+            foreach(source; program.sourceMap.sources) {
+                stdio.writeln(source.name);
+            }
+        }
+        // List all available symbols
+        else if(input == "list sym") {
+            const count = program.symbols.length;
+            stdio.writeln("Listing ", writeInt(count), " symbols:");
+            foreach(symbol; program.symbols) {
+                const name = program.getName(symbol.name);
+                logProgramSymbol(program, name, symbol);
+            }
         }
         // Show information about any symbols matching a given name
         else if(input.startsWith("sym ")) {
