@@ -1523,9 +1523,9 @@ struct CapsuleAsmCompiler {
         else if(type is DirectiveType.Data) {
             this.addSection(node.location, Section.Type.Data);
         }
-        // .end
-        else if(type is DirectiveType.End) {
-            this.compileEndDirective(node);
+        // .endproc
+        else if(type is DirectiveType.EndProcedure) {
+            this.compileEndProcedureDirective(node);
         }
         // .entry
         else if(type is DirectiveType.Entry) {
@@ -1702,25 +1702,37 @@ struct CapsuleAsmCompiler {
         }
     }
     
-    void compileEndDirective(in Node node) {
-        assert(node.directiveType is DirectiveType.End);
+    void compileEndProcedureDirective(in Node node) {
+        assert(node.directiveType is DirectiveType.EndProcedure);
         // Make sure a section has been declared
         auto section = this.requireDeclaredSection(node.location);
         if(!section) return;
-        // Find the corresponding label for the .end directive
+        // Find the corresponding label for the .endproc directive
         const name = node.symbolDirective.name;
         for(size_t i = section.labels.length; i > 0; i--) {
             if(section.labels[i - 1].name == name) {
                 assert(section.labels[i - 1].offset <= this.byteOffset);
+                if(section.labels[i - 1].type !is Symbol.Type.Procedure) {
+                    this.addStatus(
+                        node.location,
+                        Status.InvalidCompileEndProcedureName,
+                        name
+                    );
+                    return;
+                }
                 section.labels[i - 1].length = (
                     this.byteOffset - section.labels[i - 1].offset
                 );
-                this.addStatus(node.location, Status.CompileEndDirective, name);
+                this.addStatus(
+                    node.location, Status.CompileEndProcedureDirective, name
+                );
                 return;
             }
         }
         // If execution reached this point, no corresponding label was found
-        this.addStatus(node.location, Status.InvalidCompileEndDirectiveName, name);
+        this.addStatus(
+            node.location, Status.InvalidCompileEndProcedureName, name
+        );
     }
     
     void compileByteDataDirective(T)(in Node node) {

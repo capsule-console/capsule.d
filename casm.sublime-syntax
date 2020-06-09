@@ -38,7 +38,9 @@ contexts:
     - match: ((\.)(byte|half|word)\b[ \t]*)
       scope: support.type.directive.data.casm
       push: data_directive_arguments
-    - match: (\.)(align|comment|const|data|end|entry|export|extern|pad[bhw]|priority|procedure|res[bhw]|stringz?)\b
+    - match: (\.)(endproc|procedure)\b
+      scope: support.type.directive.type.casm
+    - match: (\.)(align|comment|const|data|entry|export|extern|pad[bhw]|priority|res[bhw]|stringz?)\b
       scope: support.type.directive.casm
 
   # Match the argument list for a .byte, .half, or .word directive

@@ -14,4 +14,4 @@ write_stringz:
     j write_stringz
 1:
     ret R
-.end write_stringz
+.endproc write_stringz

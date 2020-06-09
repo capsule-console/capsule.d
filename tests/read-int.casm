@@ -46,7 +46,7 @@ parse_and_write_int:
     ecalli Z, A, stdio.put_byte
     lw R, B, 0
     ret R
-.end parse_and_write_int
+.endproc parse_and_write_int
 
 .text
 .entry

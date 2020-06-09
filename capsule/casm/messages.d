@@ -60,8 +60,8 @@ enum CapsuleAsmMessageStatus: uint {
     CompileLabelDefinition,
     @('D', "Compiler encountered a directive.")
     CompileDirective,
-    @('D', "Compiler identified an end offset for a symbol definition.")
-    CompileEndDirective,
+    @('D', "Compiler identified an end offset for a procedure definition.")
+    CompileEndProcedureDirective,
     @('D', "Compiler found a .const constant value directive.")
     CompileConstantDirective,
     @('D', "Compiler found an .export directive.")
@@ -109,8 +109,8 @@ enum CapsuleAsmMessageStatus: uint {
     ExportUndeclaredSymbol,
     @('E', "Reference to undeclared symbol.")
     UndeclaredSymbolReference,
-    @('E', "Directive .end must refer to a label previously defined in the same section.")
-    InvalidCompileEndDirectiveName,
+    @('E', "Directive .endproc must refer to a procedure previously defined in the same section.")
+    InvalidCompileEndProcedureName,
     @('E', "Operation must occur within a declared section.")
     OperationInUndeclaredSection,
     @('E', "Cannot set initialized data in an uninitialized section.")

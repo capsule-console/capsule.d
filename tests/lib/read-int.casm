@@ -102,4 +102,4 @@ read_int:
 0.end:
     li Y, 0
     ret R
-.end read_int
+.endproc read_int

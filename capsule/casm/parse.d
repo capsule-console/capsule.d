@@ -403,8 +403,8 @@ struct CapsuleAsmParser {
         else if(type is DirectiveType.Data) {
             return Node(location, type);
         }
-        // .end [symbol]
-        else if(type is DirectiveType.End) {
+        // .endproc [symbol]
+        else if(type is DirectiveType.EndProcedure) {
             return this.parseSymbolDirective(location, type);
         }
         // .entry

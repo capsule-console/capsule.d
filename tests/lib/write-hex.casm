@@ -43,4 +43,4 @@ write_hex:
     ecalli Z, X, stdio.put_byte
     ; All done
     ret R
-.end write_hex
+.endproc write_hex

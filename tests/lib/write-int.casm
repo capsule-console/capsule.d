@@ -61,4 +61,4 @@ write_int:
 ; All done
 0.end:
     ret R 
-.end write_int
+.endproc write_int

@@ -125,7 +125,7 @@ enum CapsuleAsmDirectiveType: uint {
     @("comment") Comment,
     @("const") Constant,
     @("data") Data,
-    @("end") End,
+    @("endproc") EndProcedure,
     @("entry") Entry,
     @("export") Export,
     @("extern") Extern,
@@ -444,7 +444,7 @@ struct CapsuleAsmNode {
     
     static bool isSymbolDirectiveType(in DirectiveType type) {
         return (
-            type is DirectiveType.End ||
+            type is DirectiveType.EndProcedure ||
             type is DirectiveType.Export ||
             type is DirectiveType.Extern
         );
