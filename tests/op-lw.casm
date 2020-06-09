@@ -1,0 +1,123 @@
+; Test lw (load word) with a range of inputs
+; Store the word at memory address rs1 + imm to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.rodata
+    data.0: .word 0x0, 0x1, 0x2, 0x3
+    data.4: .word 0x1234, 0x8000, 0xabcd, 0xffff
+    data.8: .word 0xff, 0xff00, 0xff0000, 0xff000000
+    data.c: .word 0x12345678, 0x80000000, 0x89abcdef, 0xffffffff
+    data.end:
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 0 0 1 2 3 1234 8000 abcd ffff ff ff00 ff0000
+    ; ff000000 12345678 80000000 89abcdef ffffffff
+    li C, '0' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.0
+    lw A, C, +0  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +4  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +12 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +16 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +20 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +24 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +28 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +32 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +36 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +40 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +44 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +48 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +52 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +56 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +60 call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 4 0 1 2 3 1234 8000 abcd ffff ff ff00 ff0000
+    ; ff000000 12345678 80000000 89abcdef ffffffff
+    li C, '4' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.4
+    lw A, C, -16 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -12 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -4  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +0  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +4  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +12 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +16 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +20 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +24 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +28 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +32 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +36 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +40 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +44 call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8 0 1 2 3 1234 8000 abcd ffff ff ff00 ff0000
+    ; ff000000 12345678 80000000 89abcdef ffffffff
+    li C, '8' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.8
+    lw A, C, -32 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -28 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -24 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -20 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -16 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -12 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -4  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +0  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +4  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +12 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +16 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +20 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +24 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +28 call R, write_hex ecalli Z, B, stdio.put_byte
+    ; c 0 1 2 3 1234 8000 abcd ffff ff ff00 ff0000
+    ; ff000000 12345678 80000000 89abcdef ffffffff
+    li C, 'c' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.c
+    lw A, C, -48 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -44 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -40 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -36 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -32 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -28 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -24 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -20 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -16 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -12 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -4  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +0  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +4  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, +12 call R, write_hex ecalli Z, B, stdio.put_byte
+    ; x 0 1 2 3 1234 8000 abcd ffff ff ff00 ff0000
+    ; ff000000 12345678 80000000 89abcdef ffffffff
+    li C, 'x' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.end
+    lw A, C, -64 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -60 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -56 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -52 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -48 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -44 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -40 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -36 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -32 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -28 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -24 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -20 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -16 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -12 call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -8  call R, write_hex ecalli Z, B, stdio.put_byte
+    lw A, C, -4  call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok
