@@ -1,0 +1,123 @@
+; Test lhu (load zero-extended half word) with a range of inputs
+; Store the zero-extended half word at memory address rs1 + imm to rd
+
+.extern write_int
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.rodata
+    data.0: .half 0, 1, 2, 3
+    data.4: .half 111, 222, 333, 444
+    data.8: .half 32766, 32767, 32768, 32769
+    data.c: .half 65532, 65533, 65534, 65535
+    data.end:
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    li B, ' '
+    ; 0 0 1 2 3 111 222 333 444 32766 32767 32768 32769 65532 65533 65534 65535
+    li C, '0' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.0
+    lhu A, C, +0  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +2  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +6  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +8  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +10 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +12 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +14 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +16 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +18 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +20 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +22 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +24 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +26 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +28 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +30 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 4 0 1 2 3 111 222 333 444 32766 32767 32768 32769 65532 65533 65534 65535
+    li C, '4' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.4
+    lhu A, C, -8  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -6  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -2  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +0  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +2  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +6  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +8  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +10 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +12 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +14 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +16 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +18 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +20 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +22 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 8 0 1 2 3 111 222 333 444 32766 32767 32768 32769 65532 65533 65534 65535
+    li C, '8' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.8
+    lhu A, C, -16 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -14 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -12 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -10 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -8  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -6  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -2  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +0  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +2  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +6  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +8  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +10 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +12 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +14 call R, write_int ecalli Z, B, stdio.put_byte
+    ; c 0 1 2 3 111 222 333 444 32766 32767 32768 32769 65532 65533 65534 65535
+    li C, 'c' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.c
+    lhu A, C, -24 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -22 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -20 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -18 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -16 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -14 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -12 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -10 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -8  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -6  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -2  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +0  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +2  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, +6  call R, write_int ecalli Z, B, stdio.put_byte
+    ; x 0 1 2 3 111 222 333 444 32766 32767 32768 32769 65532 65533 65534 65535
+    li C, 'x' ecalli Z, C, stdio.put_byte ecalli Z, B, stdio.put_byte
+    la C, data.end
+    lhu A, C, -32 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -30 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -28 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -26 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -24 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -22 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -20 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -18 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -16 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -14 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -12 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -10 call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -8  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -6  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -4  call R, write_int ecalli Z, B, stdio.put_byte
+    lhu A, C, -2  call R, write_int
+    ; All done
+    ecalli Z, Z, meta.exit_ok
