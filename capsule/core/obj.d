@@ -63,26 +63,67 @@ enum CapsuleObjectReferenceType: ushort {
     /// Expect a 32-bit absolute value; fill the high 16 bits
     /// Always contains the exact high 16 bits of the value
     @("solo_hi") AbsoluteWordSoloHighHalf = 0x25,
+    /// Expect an 8-bit symbol definition length value
+    @("length_byte") LengthByte = 0x40,
+    /// Expect a 16-bit symbol definition length value
+    @("length_half") LengthHalfWord = 0x41,
+    /// Expect a 32-bit symbol definition length value
+    @("length_word") LengthWord = 0x42,
+    /// Expect a 32-bit length value; fill the low 16 bits
+    @("length_lo") LengthWordLowHalf = 0x43,
+    /// Expect a 32-bit length value; fill the high 16 bits
+    /// Accounts for signedness of the low half by adding 1 if the 15th
+    /// least significant bit of the low half was set.
+    @("length_hi") LengthWordHighHalf = 0x44,
+    /// Expect a 32-bit length value; fill the high 16 bits
+    /// Always contains the exact high 16 bits of the value
+    @("length_solo_hi") LengthWordSoloHighHalf = 0x45,
     /// Expect a signed 16-bit relative address offset as an immediate value
-    @("pcrel_half") PCRelativeAddressHalf = 0x41,
+    @("pcrel_half") PCRelativeAddressHalf = 0xa1,
     /// Expect a signed 32-bit relative address offset and space to
-    /// fit the entire word
-    @("pcrel_word") PCRelativeAddressWord = 0x42,
+    /// fit the entire word.
+    @("pcrel_word") PCRelativeAddressWord = 0xa2,
     /// Expect a signed 32-bit relative address offset; fill the low 16 bits
     /// Pairs with the nearest prior pcrel_hi reference to the symbol with
     /// the same name.
-    @("pcrel_near_lo") PCRelativeAddressNearLowHalf = 0x43,
+    @("pcrel_near_lo") PCRelativeAddressNearLowHalf = 0xa3,
     /// Expect a signed 32-bit relative address offset; fill the high 16 bits
     /// Accounts for signedness of the low half by adding 1 if the 15th
     /// least significant bit of the low half was set.
-    @("pcrel_hi") PCRelativeAddressHighHalf = 0x44,
+    @("pcrel_hi") PCRelativeAddressHighHalf = 0xa4,
     /// Expect a signed 32-bit relative address offset; fill the high 16 bits
-    /// Always contains the exact high 16 bits of the value
-    @("pcrel_solo_hi") PCRelativeAddressSoloHighHalf = 0x45,
+    /// Always contains the exact high 16 bits of the value.
+    @("pcrel_solo_hi") PCRelativeAddressSoloHighHalf = 0xa5,
     /// Expect a signed 32-bit relative address offset; fill the low 16 bits
     /// The reference should be to a label describing the location of a
     /// corresponding pcrel_hi reference.
-    @("pcrel_lo") PCRelativeAddressLowHalf = 0x46,
+    @("pcrel_lo") PCRelativeAddressLowHalf = 0xa6,
+    /// Expect a signed 16-bit relative address offset as an immediate value.
+    /// Relative to the sum of the symbol address and its length.
+    @("end_pcrel_half") EndPCRelativeAddressHalf = 0xc1,
+    /// Expect a signed 32-bit relative address offset and space to
+    /// fit the entire word.
+    /// Relative to the sum of the symbol address and its length.
+    @("end_pcrel_word") EndPCRelativeAddressWord = 0xc2,
+    /// Expect a signed 32-bit relative address offset; fill the low 16 bits
+    /// Pairs with the nearest prior end_pcrel_hi reference to the symbol with
+    /// the same name.
+    /// Relative to the sum of the symbol address and its length.
+    @("end_pcrel_near_lo") EndPCRelativeAddressNearLowHalf = 0xc3,
+    /// Expect a signed 32-bit relative address offset; fill the high 16 bits
+    /// Accounts for signedness of the low half by adding 1 if the 15th
+    /// least significant bit of the low half was set.
+    /// Relative to the sum of the symbol address and its length.
+    @("end_pcrel_hi") EndPCRelativeAddressHighHalf = 0xc4,
+    /// Expect a signed 32-bit relative address offset; fill the high 16 bits
+    /// Always contains the exact high 16 bits of the value
+    /// Relative to the sum of the symbol address and its length.
+    @("end_pcrel_solo_hi") EndPCRelativeAddressSoloHighHalf = 0xc5,
+    /// Expect a signed 32-bit relative address offset; fill the low 16 bits
+    /// The reference should be to a label describing the location of a
+    /// corresponding pcrel_hi reference.
+    /// Relative to the sum of the symbol address and its length.
+    @("end_pcrel_lo") EndPCRelativeAddressLowHalf = 0xc6,
 }
 
 enum CapsuleObjectReferenceLocalType: char {
@@ -249,6 +290,7 @@ struct CapsuleObjectSymbol {
 }
 
 /// Used to mark places where a symbol is referenced.
+/// Basically the same thing as a "relocation" in some other object formats.
 struct CapsuleObjectReference {
     nothrow @safe @nogc:
     
@@ -262,7 +304,8 @@ struct CapsuleObjectReference {
     
     /// Type of reference
     Type type = Type.None;
-    ///
+    /// Is this a local reference and, if so, is it a forward 'f'
+    /// or backward 'b' reference?
     LocalType localType = LocalType.None;
     /// Unused byte
     ubyte unused = 0;
@@ -273,6 +316,7 @@ struct CapsuleObjectReference {
     /// Add to the value being referenced
     int addend = 0;
     
+    /// Determine whether a reference type is a PC-relative type.
     static bool isPcRelativeType(in Type type) {
         switch(type) {
             case Type.PCRelativeAddressHalf: goto case;
@@ -281,15 +325,55 @@ struct CapsuleObjectReference {
             case Type.PCRelativeAddressHighHalf: goto case;
             case Type.PCRelativeAddressSoloHighHalf: goto case;
             case Type.PCRelativeAddressLowHalf: return true;
+            case Type.EndPCRelativeAddressHalf: goto case;
+            case Type.EndPCRelativeAddressWord: goto case;
+            case Type.EndPCRelativeAddressNearLowHalf: goto case;
+            case Type.EndPCRelativeAddressHighHalf: goto case;
+            case Type.EndPCRelativeAddressSoloHighHalf: goto case;
+            case Type.EndPCRelativeAddressLowHalf: return true;
             default: return 0;
         }
     }
     
+    /// Determine whether a reference type is the low half of
+    /// a PC-relative type.
     static bool isPcRelativeLowHalfType(in Type type) {
         switch(type) {
             case Type.PCRelativeAddressNearLowHalf: goto case;
-            case Type.PCRelativeAddressLowHalf: return true;
+            case Type.PCRelativeAddressLowHalf: goto case;
+            case Type.EndPCRelativeAddressNearLowHalf: goto case;
+            case Type.EndPCRelativeAddressLowHalf: return true;
             default: return 0;
+        }
+    }
+    
+    /// True when the reference type is pcrel_near_lo or end_pcrel_near_lo,
+    /// i.e. a reference type that is the low half of the closest preceding
+    /// corresponding high half type. (For that see `getHighHalfType`.)
+    static bool isNearLowHalfType(in Type type) {
+        switch(type) {
+            case Type.PCRelativeAddressNearLowHalf: goto case;
+            case Type.EndPCRelativeAddressNearLowHalf: return true;
+            default: return 0;
+        }
+    }
+    
+    /// Get the corresponding high half reference type for a given low
+    /// half reference type, or CapsuleObject.Reference.Type.None if the
+    /// given type wasn't a low half type or otherwise had no corresponding
+    /// high half type.
+    static Type getHighHalfType(in Type type) {
+        switch(type) {
+            case Type.PCRelativeAddressNearLowHalf:
+                return Type.PCRelativeAddressHighHalf;
+            case Type.PCRelativeAddressLowHalf:
+                return Type.PCRelativeAddressHighHalf;
+            case Type.EndPCRelativeAddressNearLowHalf:
+                return Type.EndPCRelativeAddressHighHalf;
+            case Type.EndPCRelativeAddressLowHalf:
+                return Type.EndPCRelativeAddressHighHalf;
+            default:
+                return Type.None;
         }
     }
     
@@ -302,6 +386,11 @@ struct CapsuleObjectReference {
             case Type.PCRelativeAddressHighHalf: return 2;
             case Type.PCRelativeAddressSoloHighHalf: return 2;
             case Type.PCRelativeAddressNearLowHalf: return 2;
+            case Type.EndPCRelativeAddressHalf: return 2;
+            case Type.EndPCRelativeAddressLowHalf: return 2;
+            case Type.EndPCRelativeAddressHighHalf: return 2;
+            case Type.EndPCRelativeAddressSoloHighHalf: return 2;
+            case Type.EndPCRelativeAddressNearLowHalf: return 2;
             default: return 0;
         }
     }
@@ -318,28 +407,61 @@ struct CapsuleObjectReference {
             case Type.AbsoluteWordLowHalf: return 2;
             case Type.AbsoluteWordHighHalf: return 2;
             case Type.AbsoluteWordSoloHighHalf: return 2;
+            case Type.LengthByte: return 1;
+            case Type.LengthHalfWord: return 2;
+            case Type.LengthWord: return 4;
+            case Type.LengthWordLowHalf: return 2;
+            case Type.LengthWordHighHalf: return 2;
+            case Type.LengthWordSoloHighHalf: return 2;
             case Type.PCRelativeAddressHalf: return 2;
             case Type.PCRelativeAddressWord: return 4;
             case Type.PCRelativeAddressNearLowHalf: return 2;
             case Type.PCRelativeAddressHighHalf: return 2;
             case Type.PCRelativeAddressSoloHighHalf: return 2;
             case Type.PCRelativeAddressLowHalf: return 2;
+            case Type.EndPCRelativeAddressHalf: return 2;
+            case Type.EndPCRelativeAddressWord: return 4;
+            case Type.EndPCRelativeAddressNearLowHalf: return 2;
+            case Type.EndPCRelativeAddressHighHalf: return 2;
+            case Type.EndPCRelativeAddressSoloHighHalf: return 2;
+            case Type.EndPCRelativeAddressLowHalf: return 2;
             default: return 0;
         }
     }
     
+    /// Determine whether this reference is PC-relative.
     bool isPcRelative() const {
         return typeof(this).isPcRelativeType(this.type);
     }
     
+    /// Determine whether this reference represents the low half
+    /// of a PC-relative offset.
     bool isPcRelativeLowHalf() const {
         return typeof(this).isPcRelativeLowHalfType(this.type);
     }
     
+    /// Determine whether this reference is the low half of a
+    /// reference and should have a corresponding high half someplace.
+    bool isNearLowHalfType() const {
+        return typeof(this).isNearLowHalfType(this.type);
+    }
+    
+    /// Get the high half reference type corresponding to this reference's
+    /// low half type, or CapsuleObject.Reference.Type.None if this
+    /// reference type has no corresponding high half type.
+    Type getHighHalfType() const {
+        return typeof(this).getHighHalfType(this.type);
+    }
+    
+    /// Get a value added to the reference's own offset indicating a
+    /// position where bytes are modified in resolving the reference.
     uint typeOffset() const {
         return typeof(this).typeOffset(this.type);
     }
     
+    /// Get the number of bytes starting from the sum of the reference's
+    /// offset or address and its `typeOffset` that are affected by
+    /// resolving a reference.
     uint typeLength() const {
         return typeof(this).typeLength(this.type);
     }

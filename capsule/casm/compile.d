@@ -240,7 +240,9 @@ struct CapsuleCompilerObjectReference {
     /// Whether the reference has been resolved by the compiler
     bool resolved = false;
     /// The resolved value
-    uint resolvedValue = 0;
+    uint symbolValue = 0;
+    /// The length of the resolved symbol value
+    uint symbolLength = 0;
     
     static bool isPcRelativeType(in Type type) {
         return CapsuleObject.Reference.isPcRelativeType(type);
@@ -702,6 +704,7 @@ struct CapsuleAsmCompiler {
             return;
         }
         uint symbolValue = 0;
+        uint symbolLength = 0;
         uint pcOffset = reference.offset;
         // Resolve offsets for references to local labels
         if(reference.localType !is LocalType.None) {
@@ -716,6 +719,7 @@ struct CapsuleAsmCompiler {
                 return;
             }
             symbolValue = localDefinition.label.offset;
+            symbolLength = localDefinition.label.length;
         }
         // References of type pcrel_near_lo look for a corresponding pcrel_hi
         // reference in the immediately previous word
@@ -746,6 +750,7 @@ struct CapsuleAsmCompiler {
                 return;
             }
             symbolValue = global.value;
+            symbolLength = global.length;
         }
         // Handle references to undeclared symbols
         else {
@@ -778,19 +783,21 @@ struct CapsuleAsmCompiler {
                 return;
             }
             pcOffset = symbolValue;
-            symbolValue = section.references[hiRefIndex.index].resolvedValue;
+            symbolValue = section.references[hiRefIndex.index].symbolValue;
+            symbolLength = section.references[hiRefIndex.index].symbolLength;
         }
         // Resolve and write the referenced value to the compiled section
         const resolved = resolveCapsuleObjectReference(
             section.bytes, reference.type, reference.offset,
-            pcOffset, reference.addend, symbolValue
+            pcOffset, reference.addend, symbolValue, symbolLength
         );
         if(resolved.status !is Status.Ok) {
             this.addReferenceStatus(resolved.status, reference);
         }
         else {
             section.references[referenceIndex].resolved = true;
-            section.references[referenceIndex].resolvedValue = resolved.value;
+            section.references[referenceIndex].symbolValue = symbolValue;
+            section.references[referenceIndex].symbolLength = symbolLength;
             this.addReferenceStatus(
                 Status.CompileResolveReferenceSuccess, reference
             );
@@ -1468,7 +1475,8 @@ struct CapsuleAsmCompiler {
         else if(const global = number.name in this.globalMap) {
             if(global.type is Global.Type.Constant) {
                 const resolveValue = resolveCapsuleObjectReferenceValue(
-                    number.referenceType, 0, number.addend, global.value
+                    number.referenceType, 0, number.addend,
+                    global.value, global.length,
                 );
                 if(resolveValue.ok) {
                     return Result.Ok(resolveValue.writeValue);
@@ -1479,6 +1487,24 @@ struct CapsuleAsmCompiler {
             }
         }
         return Result.CannotWrite;
+    }
+    
+    /// Used by directives such as .byte, .half, .word, .resb, .string
+    /// If the directive was immediately preceded by a label then that
+    /// label is automagically retroactively marked as a variable with
+    /// an appropriate length value.
+    bool setLabelVariableLength(in uint length) {
+        auto section = this.currentSection;
+        assert(section);
+        if(section && section.labels.length &&
+            section.labels[$ - 1].type is Symbol.Type.Label &&
+            section.labels[$ - 1].offset == this.byteOffset
+        ) {
+            section.labels[$ - 1].type = Symbol.Type.Variable;
+            section.labels[$ - 1].length = length;
+            return true;
+        }
+        return false;
     }
     
     void compileDirective(in Node node) {
@@ -1568,6 +1594,7 @@ struct CapsuleAsmCompiler {
             auto section = this.requireInitializedSection(node.location);
             if(!section) return;
             const fill = cast(ubyte) node.padDirective.fill;
+            this.setLabelVariableLength(node.padDirective.size);
             section.reserveBytes(node.location, node.padDirective.size, fill);
         }
         // .padh
@@ -1578,6 +1605,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 2 != 0) this.addStatus(
                 node.location, Status.MisalignedHalfWord, node.getName()
             );
+            this.setLabelVariableLength(2 * node.padDirective.size);
             section.reserveHalfWords(node.location, node.padDirective.size, fill);
         }
         // .padw
@@ -1588,6 +1616,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 4 != 0) this.addStatus(
                 node.location, Status.MisalignedWord, node.getName()
             );
+            this.setLabelVariableLength(4 * node.padDirective.size);
             section.reserveWords(node.location, node.padDirective.size, fill);
         }
         // .priority
@@ -1615,6 +1644,7 @@ struct CapsuleAsmCompiler {
         else if(type is DirectiveType.ReserveBytes) {
             auto section = this.requireDeclaredSection(node.location);
             if(!section) return;
+            this.setLabelVariableLength(node.padDirective.size);
             section.reserveBytes(node.location, node.padDirective.size);
         }
         // .resh
@@ -1624,6 +1654,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 2 != 0) this.addStatus(
                 node.location, Status.MisalignedHalfWord, node.getName()
             );
+            this.setLabelVariableLength(2 * node.padDirective.size);
             section.reserveHalfWords(node.location, node.padDirective.size);
         }
         // .resw
@@ -1633,6 +1664,7 @@ struct CapsuleAsmCompiler {
             if(section.length % 4 != 0) this.addStatus(
                 node.location, Status.MisalignedWord, node.getName()
             );
+            this.setLabelVariableLength(4 * node.padDirective.size);
             section.reserveWords(node.location, node.padDirective.size);
         }
         // .rodata
@@ -1643,12 +1675,28 @@ struct CapsuleAsmCompiler {
         else if(type is DirectiveType.String) {
             auto section = this.requireInitializedSection(node.location);
             if(!section) return;
+            if(section.type is Section.Type.Text) this.addStatus(
+                node.location,
+                Status.DataInExecutableSection,
+                getEnumMemberAttribute!string(section.type)
+            );
+            this.setLabelVariableLength(
+                cast(uint) node.textDirective.text.length
+            );
             section.addBytes(node.location, node.textDirective.text);
         }
         // .stringz
         else if(type is DirectiveType.StringZ) {
             auto section = this.requireInitializedSection(node.location);
             if(!section) return;
+            if(section.type is Section.Type.Text) this.addStatus(
+                node.location,
+                Status.DataInExecutableSection,
+                getEnumMemberAttribute!string(section.type)
+            );
+            this.setLabelVariableLength(
+                cast(uint) (1 + node.textDirective.text.length)
+            );
             section.addBytes(node.location, node.textDirective.text ~ "\0");
         }
         // .text
@@ -1741,6 +1789,11 @@ struct CapsuleAsmCompiler {
         static if(T.sizeof == 4) assert(node.directiveType is DirectiveType.Word);
         auto section = this.requireInitializedSection(node.location);
         if(!section) return;
+        if(section.type is Section.Type.Text) this.addStatus(
+            node.location,
+            Status.DataInExecutableSection,
+            getEnumMemberAttribute!string(section.type)
+        );
         static if(T.sizeof == 2) {
             if(section.length % 2 != 0) this.addStatus(
                 node.location, Status.MisalignedHalfWord, node.getName()
@@ -1751,6 +1804,9 @@ struct CapsuleAsmCompiler {
                 node.location, Status.MisalignedWord, node.getName()
             );
         }
+        this.setLabelVariableLength(
+            cast(uint) node.byteDataDirective.values.length
+        );
         foreach(number; node.byteDataDirective.values) {
             const resolveValue = this.tryResolveNumberValue(number);
             if(!resolveValue.ok) this.addStatus(

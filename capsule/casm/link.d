@@ -130,6 +130,8 @@ struct CapsuleLinkerReference {
     bool resolved = false;
     /// Record the value of the referenced symbol
     uint symbolValue = 0;
+    /// Record the length of the referenced symbol
+    uint symbolLength = 0;
     
     bool isPcRelative() const {
         return CapsuleObject.Reference.isPcRelativeType(this.type);
@@ -1066,7 +1068,8 @@ struct CapsuleLinker {
         }
         // Handle pcrel_lo and pcrel_near_lo references; the result depends
         // on the resolved value of a corresponding pcrel_hi reference
-        uint useSymbolValue = symbol.value;
+        reference.symbolValue = symbol.value;
+        reference.symbolLength = symbol.length;
         if(reference.isPcRelativeLowHalf) {
             const hiRefIndex = findCapsuleObjectPcRelHighReference!((hiRef) => (
                 hiRef.object == symbol.object &&
@@ -1088,19 +1091,20 @@ struct CapsuleLinker {
                 section.offset + this.references[hiRefIndex.index].offset
             );
             pcOffset = section.offset + this.references[hiRefIndex.index].offset;
-            useSymbolValue = this.references[hiRefIndex.index].symbolValue;
+            reference.symbolValue = this.references[hiRefIndex.index].symbolValue;
+            reference.symbolLength = this.references[hiRefIndex.index].symbolLength;
         }
         // Resolve and write the referenced value to the containing section
         const resolved = resolveCapsuleObjectReference(
             section.bytes, reference.type, reference.offset,
-            pcOffset, reference.addend, useSymbolValue
+            pcOffset, reference.addend,
+            reference.symbolValue, reference.symbolLength,
         );
         if(resolved.status !is Status.Ok) {
             this.addReferenceStatus(resolved.status, reference);
         }
         else {
             reference.resolved = true;
-            reference.symbolValue = resolved.value;
             this.addReferenceStatus(
                 Status.LinkerResolveReferenceSuccess, reference
             );

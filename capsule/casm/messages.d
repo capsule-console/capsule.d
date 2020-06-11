@@ -113,8 +113,10 @@ enum CapsuleAsmMessageStatus: uint {
     InvalidCompileEndProcedureName,
     @('E', "Operation must occur within a declared section.")
     OperationInUndeclaredSection,
-    @('E', "Cannot set initialized data in an uninitialized section.")
+    @('E', "Assigned initialized data in an uninitialized section.")
     DataInUninitializedSection,
+    @('W', "Assigned arbitrary data in an executable section.")
+    DataInExecutableSection,
     @('E', "Unresolved reference.")
     UnresolvedReference,
     @('E', "Section alignment value is unusually large.")
