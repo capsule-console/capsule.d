@@ -21,7 +21,7 @@ Sections of a same type will ultimately be all
 put together in a series in a segment of that type by the
 linker program (clink).
 The full list of directives which begin a new section are:
-_.bss__, _.data__, _.rodata__, and _.text__.
+_.bss_, _.data_, _.rodata_, and _.text_.
 
 A **symbol** is a name assigned by the programmer to some value
 or some location in the program.
@@ -56,26 +56,26 @@ This distinction is important for some directive types.
 _.align [boundary], [fill]_
 
 Data immediately after an **align** directive will be aligned to a
-specified byte boundary, e.g. if _boundary_ is set to 4 then the
-following data will be aligned to a word boundary.
+specified byte boundary, e.g. if the boundary value given is 4 then the
+following data will be aligned to a 4-byte word boundary.
 
-When used in an initialized section, the _fill_ value indicates what
+When used in an initialized section, the fill value indicates what
 value bytes should be if bytes must be inserted in order to align the
 following data on the correct boundary.
-When used in an uninitialized, the _fill_ value must be zero.
+When used in an uninitialized, the fill value must be zero.
 
 Sections are aligned to a word boundary by default, when they
 contain no align directives.
 A section with one or more align directives will be aligned
 on a boundary that is the least common multiple of 4 and every
-align directive's _boundary_ value.
+align directive's boundary value.
 
 Using the default configuration, the compiler will emit a fatal error
-if the _boundary_ value is not a power of two, or if the least common
-multiple of all the _boundary_ values in a section exceeds 256.
+if the boundary value is not a power of two, or if the least common
+multiple of all the boundary values in a section exceeds 256.
 
-Both _boundary_ and _fill_ must be literal numeric values known
-at compilation time. They cannot be references to symbols.
+Both the boundary and fill values must be literal numeric values
+known at compilation time. They cannot be references to symbols.
 
 ``` casm
 .data
@@ -95,7 +95,7 @@ It is primarily intended to be used for global variables that
 do not need to be initialized before runtime.
 
 All bytes within the bss segment hold a zero value when a program
-begins. The **resb**, **resh**, and **resw** directives can
+begins. The _.resb_, _.resh_, and _.resw_ directives can
 be used to reserve space in a bss section.
 
 ``` casm
@@ -109,11 +109,11 @@ be used to reserve space in a bss section.
 _.byte [numbers...]_
 
 The **byte** directive is used to insert 8-bit bytes of the given values
-in an initialized section, such as a _data_ or _rodata_ section.
+in an initialized section, such as a _.data_ or _.rodata_ section.
 
 Using the directive in an uninitialized section such as a _bss_ section
 is not allowed and will normally result in a compiler error.
-Using it in an executable section such as a _text_ section will normally
+Using it in an executable section such as a _.text_ section will normally
 result in a warning.
 
 It expects one or more comma-separated number values as its arguments,
@@ -154,8 +154,8 @@ instructions, and the data placed in that space will correspond
 to the value assigned to the constant symbol.
 
 Symbols defined via the const directive can be exported using
-an **export** directive or referenced in other modules using
-an **extern** directive, just like any other symbol.
+an _.export_ directive or referenced in other modules using
+an _.extern_ directive, just like any other symbol.
 
 The const directive is not required to appear in any
 particular section, and can be used even where no section has
@@ -181,10 +181,10 @@ It is primarily intended to be used for global variables that
 ought to be initialized to some particular non-zero value before
 runtime.
 
-The **byte**, **half**, and **word** directives exist mainly to
+The _.byte_, _.half_, and _.word_ directives exist mainly to
 be used to define variables in a _data_ or _rodata_ section.
-Note also the **padb**, **padh**, **padw**, **string**,
-and **stringz** instructions.
+Note also the _.padb_, _.padh_, _.padw_, _.string_,
+and _.stringz_ instructions.
 
 ``` casm
 .data
@@ -197,7 +197,7 @@ and **stringz** instructions.
 
 _.endproc [name]_
 
-The **endproc** directive is used in combination with the **procedure**
+The **endproc** directive is used in combination with the _.procedure_
 directive to mark some span of code as belonging to a single procedure.
 
 A procedure can be defined as the code spanning from an entry point used
@@ -245,7 +245,7 @@ _.export [name]_
 The **export** directive indicates that a symbol defined in
 this module should be visible to other modules when linking.
 Other modules can reference the defined symbol with an
-**extern** declaration.
+_.extern_ declaration.
 
 ``` casm
 ; Make my_important_global visible to other linked modules
@@ -273,7 +273,7 @@ _.extern [name]_
 
 The **extern** directive declares a symbol without defining it,
 indicating to the compiler and linker that a module needs to be linked
-with one which does define and **export** a symbol with that name.
+with one which does define and _.export_ a symbol with that name.
 
 ``` casm
 ; Make my_important_global visible to other linked modules
@@ -300,11 +300,11 @@ with one which does define and **export** a symbol with that name.
 _.half [numbers...]_
 
 The **half** directive is used to insert 16-bit half-words of the given
-values in an initialized section, such as a _data_ or _rodata_ section.
+values in an initialized section, such as a _.data_ or _.rodata_ section.
 
 Using the directive in an uninitialized section such as a _bss_ section
 is not allowed and will normally result in a compiler error.
-Using it in an executable section such as a _text_ section will normally
+Using it in an executable section such as a _.text_ section will normally
 result in a warning.
 
 It expects one or more comma-separated number values as its arguments,
@@ -319,14 +319,14 @@ and those values can be either literals or references.
 
 _.padb [count]_
 
-Reserves a given number of 8-bit bytes at the current
-location in memory, all initialized to a given literal number value.
-This directive is primarily intended to be used within a _data_
-or _rodata_ section.
+The **padb** directive reserves a given number of 8-bit bytes at the
+current location in memory, all initialized to a given literal number value.
+This directive is primarily intended to be used within a _.data_
+or _.rodata_ section.
 
 Using the padb directive in an uninitialized section,
 such as a _bss_ section, will normally result in a compiler error.
-Using it in an executable section, such as the _text_ section,
+Using it in an executable section, such as the _.text_ section,
 will normally result in a warning.
 
 ``` casm
@@ -340,14 +340,14 @@ will normally result in a warning.
 
 _.padh [count]_
 
-Reserves a given number of 16-bit half words at the current
-location in memory, all initialized to a given literal number value.
-This directive is primarily intended to be used within a _data_
-or _rodata_ section.
+The **padh** directive reserves a given number of 16-bit half words at the
+current location in memory, all initialized to a given literal number value.
+This directive is primarily intended to be used within a _.data_
+or _.rodata_ section.
 
 Using the padh directive in an uninitialized section,
 such as a _bss_ section, will normally result in a compiler error.
-Using it in an executable section, such as the _text_ section,
+Using it in an executable section, such as the _.text_ section,
 will normally result in a warning.
 
 ``` casm
@@ -361,14 +361,14 @@ will normally result in a warning.
 
 _.padw [count]_
 
-Reserves a given number of 32-bit words at the current
-location in memory, all initialized to a given literal number value.
-This directive is primarily intended to be used within a _data_
-or _rodata_ section.
+The **padw** directive reserves a given number of 32-bit words at the
+current location in memory, all initialized to a given literal number value.
+This directive is primarily intended to be used within a _.data_
+or _.rodata_ section.
 
 Using the padw directive in an uninitialized section,
 such as a _bss_ section, will normally result in a compiler error.
-Using it in an executable section, such as the _text_ section,
+Using it in an executable section, such as the _.text_ section,
 will normally result in a warning.
 
 ``` casm
@@ -413,7 +413,7 @@ _.procedure_
 The **procedure** directive is used to mark a label as indicating the
 entry point to a procedure or function.
 In general, every procedure direction should have a corresponding
-**endproc** directive to indicate the end of the code making up a
+_.endproc_ directive to indicate the end of the code making up a
 procedure.
 
 A procedure can be defined as the code spanning from an entry point used
@@ -441,7 +441,7 @@ _.resb [count]_
 
 Reserves a given number of zero-initialized 8-bit bytes at the
 current location in memory.
-This directive is primarily intended to be used within a _bss_
+This directive is primarily intended to be used within a _.bss_
 section.
 
 ``` casm
@@ -457,7 +457,7 @@ _.resh [count]_
 
 Reserves a given number of zero-initialized 16-bit half words at the
 current location in memory.
-This directive is primarily intended to be used within a _bss_
+This directive is primarily intended to be used within a _.bss_
 section.
 
 ``` casm
@@ -473,7 +473,7 @@ _.resw [count]_
 
 Reserves a given number of zero-initialized 32-bit words at the
 current location in memory.
-This directive is primarily intended to be used within a _bss_
+This directive is primarily intended to be used within a _.bss_
 section.
 
 ``` casm
@@ -494,10 +494,10 @@ The read-only data segment is initialized, not executable, and can
 be read from but not written to.
 It is primarily intended to be used to store global constant values.
 
-The **byte**, **half**, and **word** directives exist mainly to
+The _.byte_, _.half_, and _.word_ directives exist mainly to
 be used to define variables in a _data_ or _rodata_ section.
-Note also the **padb**, **padh**, **padw**, **string**,
-and **stringz** instructions.
+Note also the _.padb_, _.padh_, _.padw_, _.string_,
+and _.stringz_ instructions.
 
 ``` casm
 .rodata
@@ -512,7 +512,7 @@ _.string [text]_
 
 The **string** directive is used to insert string at
 the current location in memory.
-It should normally be used in a _data_ or _rodata_ section.
+It should normally be used in a _.data_ or _.rodata_ section.
 
 ``` casm
 .rodata
@@ -526,7 +526,7 @@ _.stringz [text]_
 The **stringz** directive is used to insert a null-terminated string at
 the current location in memory, meaning a string that has a zero byte
 appended to its end.
-It should normally be used in a _data_ or _rodata_ section.
+It should normally be used in a _.data_ or _.rodata_ section.
 
 ``` casm
 .rodata
@@ -542,7 +542,7 @@ that should be placed in a program's text segment.
 
 The text segment is initialized, is executable, and can
 be read from but not written to.
-In general, executable code belongs in text sections.
+In general, executable code belongs in _.text_ sections.
 
 ``` casm
 .text
@@ -554,11 +554,11 @@ In general, executable code belongs in text sections.
 _.word [numbers...]_
 
 The **word** directive is used to insert 32-bit words of the given values
-in an initialized section, such as a _data_ or _rodata_ section.
+in an initialized section, such as a _.data_ or _.rodata_ section.
 
 Using the directive in an uninitialized section such as a _bss_ section
 is not allowed and will normally result in a compiler error.
-Using it in an executable section such as a _text_ section will normally
+Using it in an executable section such as a _.text_ section will normally
 result in a warning.
 
 It expects one or more comma-separated number values as its arguments,
