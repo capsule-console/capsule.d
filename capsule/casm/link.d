@@ -133,18 +133,39 @@ struct CapsuleLinkerReference {
     /// Record the length of the referenced symbol
     uint symbolLength = 0;
     
+    /// Determine whether this reference is PC-relative.
     bool isPcRelative() const {
         return CapsuleObject.Reference.isPcRelativeType(this.type);
     }
     
+    /// Determine whether this reference represents the low half
+    /// of a PC-relative offset.
     bool isPcRelativeLowHalf() const {
         return CapsuleObject.Reference.isPcRelativeLowHalfType(this.type);
     }
     
+    /// Determine whether this reference is the low half of a
+    /// reference and should have a corresponding high half someplace.
+    bool isNearLowHalfType() const {
+        return CapsuleObject.Reference.isNearLowHalfType(this.type);
+    }
+    
+    /// Get the high half reference type corresponding to this reference's
+    /// low half type, or CapsuleObject.Reference.Type.None if this
+    /// reference type has no corresponding high half type.
+    Type getHighHalfType() const {
+        return CapsuleObject.Reference.getHighHalfType(this.type);
+    }
+    
+    /// Get a value added to the reference's own offset indicating a
+    /// position where bytes are modified in resolving the reference.
     uint typeOffset() const {
         return CapsuleObject.Reference.typeOffset(this.type);
     }
     
+    /// Get the number of bytes starting from the sum of the reference's
+    /// offset or address and its `typeOffset` that are overwritten when
+    /// resolving a reference.
     uint typeLength() const {
         return CapsuleObject.Reference.typeLength(this.type);
     }
@@ -304,19 +325,15 @@ struct CapsuleLinker {
     Source.Map programSourceMap;
     
     ///
-    Segment bssSegment;
-    Segment dataSegment;
-    Segment readOnlyDataSegment;
     Segment textSegment;
-    Segment stackSegment;
-    Segment heapSegment;
+    Segment readOnlyDataSegment;
+    Segment dataSegment;
+    Segment bssSegment;
     
     ///
     string programTitle = null;
     string programCredit = null;
     string programComment = null;
-    uint stackSegmentLength = 0;
-    uint heapSegmentLength = 0;
     
     ///
     bool includeDebugSymbols = false;
@@ -371,12 +388,10 @@ struct CapsuleLinker {
         this.sectionMap = this.createLinkSectionMap();
         if(this.log.anyErrors) return this;
         // Initialize data structures representing segment offsets and lengths
-        this.bssSegment = this.createLinkSegment(Section.Type.BSS);
-        this.dataSegment = this.createLinkSegment(Section.Type.Data);
-        this.readOnlyDataSegment = this.createLinkSegment(Section.Type.ReadOnlyData);
         this.textSegment = this.createLinkSegment(Section.Type.Text);
-        this.stackSegment = this.createLinkStackSegment();
-        this.heapSegment = this.createLinkHeapSegment();
+        this.readOnlyDataSegment = this.createLinkSegment(Section.Type.ReadOnlyData);
+        this.dataSegment = this.createLinkSegment(Section.Type.Data);
+        this.bssSegment = this.createLinkSegment(Section.Type.BSS);
         if(this.log.anyErrors) return this;
         // Find the entry point
         this.entryOffset = this.resolveEntryOffset();
@@ -415,24 +430,10 @@ struct CapsuleLinker {
         program.entryOffset = this.entryOffset;
         program.sourceMap = this.programSourceMap;
         // Set segment data
-        program.bssSegment = this.getProgramSegment(Section.Type.BSS);
-        program.dataSegment = this.getProgramSegment(Section.Type.Data);
-        program.readOnlyDataSegment = this.getProgramSegment(Section.Type.ReadOnlyData);
         program.textSegment = this.getProgramSegment(Section.Type.Text);
-        const stackSegmentOffset = getWordAlignedOffset(program.textSegment.end);
-        Program.Segment stackSegment = {
-            type: Program.Segment.Type.Stack,
-            offset: stackSegmentOffset,
-            length: this.stackSegmentLength,
-        };
-        program.stackSegment = stackSegment;
-        const heapSegmentOffset = getWordAlignedOffset(program.stackSegment.end);
-        Program.Segment heapSegment = {
-            type: Program.Segment.Type.Heap,
-            offset: heapSegmentOffset,
-            length: this.heapSegmentLength,
-        };
-        program.heapSegment = heapSegment;
+        program.readOnlyDataSegment = this.getProgramSegment(Section.Type.ReadOnlyData);
+        program.dataSegment = this.getProgramSegment(Section.Type.Data);
+        program.bssSegment = this.getProgramSegment(Section.Type.BSS);
         // Include symbol information
         bool tooManyNames = false;
         bool tooManySymbols = false;
@@ -475,6 +476,17 @@ struct CapsuleLinker {
             this.addStatus(FileLocation.init, Status.TooManySymbols);
         }
         // All done
+        assert(program.entryOk, "Problem with program entry point.");
+        assert(program.lengthOk, "Problem with program memory length.");
+        assert(program.textSegmentOk, "Problem with program's text segment.");
+        assert(program.readOnlyDataSegmentOk, "Problem with program's rodata segment.");
+        assert(program.dataSegmentOk, "Problem with program's data segment.");
+        assert(program.bssSegmentOk, "Problem with program's bss segment.");
+        assert(program.segmentOrderOk, "Problem with program's segment ordering.");
+        assert(program.namesOk, "Problem with program names list.");
+        assert(program.symbolsOk, "Problem with program symbols list.");
+        assert(program.sourceMapOk, "Problem with program source map.");
+        assert(program.ok);
         return program;
     }
     
@@ -544,7 +556,7 @@ struct CapsuleLinker {
     Program.Segment getProgramSegment(in Section.Type type) {
         // Initialize a segment
         Program.Segment segment = {
-            type: cast(Program.Segment.Type) type,
+            type: type,
             offset: 0,
             length: 0,
             checksum: 0,
@@ -592,23 +604,11 @@ struct CapsuleLinker {
     
     Segment getLinkSegment(in Section.Type type) const {
         switch(type) {
-            case Section.Type.BSS: return this.bssSegment;
-            case Section.Type.Data: return this.dataSegment;
-            case Section.Type.ReadOnlyData: return this.readOnlyDataSegment;
             case Section.Type.Text: return this.textSegment;
+            case Section.Type.ReadOnlyData: return this.readOnlyDataSegment;
+            case Section.Type.Data: return this.dataSegment;
+            case Section.Type.BSS: return this.bssSegment;
             default: assert(false, "Invalid section type.");
-        }
-    }
-    
-    Segment getLinkSegment(in Segment.Type type) const {
-        switch(type) {
-            case Segment.Type.BSS: return this.bssSegment;
-            case Segment.Type.Data: return this.dataSegment;
-            case Segment.Type.ReadOnlyData: return this.readOnlyDataSegment;
-            case Segment.Type.Text: return this.textSegment;
-            case Segment.Type.Stack: return this.stackSegment;
-            case Segment.Type.Heap: return this.heapSegment;
-            default: assert(false, "Invalid segment type.");
         }
     }
     
@@ -633,24 +633,6 @@ struct CapsuleLinker {
                 );
             }
         }
-        return segment;
-    }
-    
-    Segment createLinkStackSegment() const {
-        const offset = getWordAlignedOffset(this.textSegment.end);
-        Segment segment = {
-            offset: offset,
-            length: this.stackSegmentLength,
-        };
-        return segment;
-    }
-    
-    Segment createLinkHeapSegment() const {
-        const offset = getWordAlignedOffset(this.stackSegment.end);
-        Segment segment = {
-            offset: offset,
-            length: this.heapSegmentLength,
-        };
         return segment;
     }
     
@@ -788,9 +770,9 @@ struct CapsuleLinker {
     }
     
     void sortSectionList(ref Section[] sections) {
-        static assert(Section.Type.BSS < Section.Type.Data);
-        static assert(Section.Type.Data < Section.Type.ReadOnlyData);
-        static assert(Section.Type.ReadOnlyData < Section.Type.Text);
+        static assert(Section.Type.Text < Section.Type.ReadOnlyData);
+        static assert(Section.Type.ReadOnlyData < Section.Type.Data);
+        static assert(Section.Type.Data < Section.Type.BSS);
         // TODO: Might be nice to optimize for alignment values one day
         assert(sections.length <= uint.max);
         this.addLinkStatus(Status.LinkSortObjectSections);
@@ -936,59 +918,21 @@ struct CapsuleLinker {
             visibility: Symbol.Visibility.Export,
             name: getEnumMemberAttribute!string(type),
         };
-        if(type is Type.BSSSegmentStart) {
-            symbol.value = this.bssSegment.offset;
-        }
-        else if(type is Type.BSSSegmentEnd) {
-            symbol.value = this.bssSegment.end;
-        }
-        else if(type is Type.BSSSegmentLength) {
-            symbol.value = this.bssSegment.length;
-        }
-        else if(type is Type.DataSegmentStart) {
-            symbol.value = this.dataSegment.offset;
-        }
-        else if(type is Type.DataSegmentEnd) {
-            symbol.value = this.dataSegment.end;
-        }
-        else if(type is Type.DataSegmentLength) {
-            symbol.value = this.dataSegment.length;
-        }
-        else if(type is Type.ReadOnlyDataSegmentStart) {
-            symbol.value = this.readOnlyDataSegment.offset;
-        }
-        else if(type is Type.ReadOnlyDataSegmentEnd) {
-            symbol.value = this.readOnlyDataSegment.end;
-        }
-        else if(type is Type.ReadOnlyDataSegmentLength) {
-            symbol.value = this.readOnlyDataSegment.length;
-        }
-        else if(type is Type.TextSegmentStart) {
+        if(type is Type.TextSegmentOffset) {
             symbol.value = this.textSegment.offset;
+            symbol.length = this.textSegment.length;
         }
-        else if(type is Type.TextSegmentEnd) {
-            symbol.value = this.textSegment.end;
+        else if(type is Type.ReadOnlyDataSegmentOffset) {
+            symbol.value = this.readOnlyDataSegment.offset;
+            symbol.length = this.readOnlyDataSegment.length;
         }
-        else if(type is Type.TextSegmentLength) {
-            symbol.value = this.textSegment.length;
+        else if(type is Type.DataSegmentOffset) {
+            symbol.value = this.dataSegment.offset;
+            symbol.length = this.dataSegment.length;
         }
-        else if(type is Type.StackSegmentStart) {
-            symbol.value = this.stackSegment.offset;
-        }
-        else if(type is Type.StackSegmentEnd) {
-            symbol.value = this.stackSegment.end;
-        }
-        else if(type is Type.StackSegmentLength) {
-            symbol.value = this.stackSegment.length;
-        }
-        else if(type is Type.HeapSegmentStart) {
-            symbol.value = this.heapSegment.offset;
-        }
-        else if(type is Type.HeapSegmentEnd) {
-            symbol.value = this.heapSegment.end;
-        }
-        else if(type is Type.HeapSegmentLength) {
-            symbol.value = this.heapSegment.length;
+        else if(type is Type.BSSSegmentOffset) {
+            symbol.value = this.bssSegment.offset;
+            symbol.length = this.bssSegment.length;
         }
         else {
             this.addReferenceStatus(
@@ -1037,7 +981,7 @@ struct CapsuleLinker {
         }
         // References of type pcrel_near_lo look for a corresponding pcrel_hi
         // reference in the immediately previous word
-        else if(reference.type is Reference.Type.PCRelativeAddressNearLowHalf) {
+        else if(reference.isNearLowHalfType) {
             symbol.type = Symbol.Type.Undefined;
             symbol.object = reference.object;
             symbol.section = reference.section;

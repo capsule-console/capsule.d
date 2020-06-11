@@ -55,14 +55,6 @@ string capsuleProgramToString(
         (verbose ?
             "  bytes: " ~ cast(string) getHexString(program.textSegment.bytes).toArray() ~ "\n" : ""
         ),
-        "stack:\n",
-        "  length: ", writeInt(program.stackSegment.length), "\n",
-        "  offset: ", getHexString(program.stackSegment.offset), "\n",
-        "  checksum: ", getHexString(program.stackSegment.checksum), "\n",
-        "heap:\n",
-        "  length: ", writeInt(program.heapSegment.length), "\n",
-        "  offset: ", getHexString(program.heapSegment.offset), "\n",
-        "  checksum: ", getHexString(program.heapSegment.checksum), "\n",
         "names (" , writeInt(program.names.length), "):\n",
         "  ", join("\n  ", program.names), "\n",
         "symbols (" , writeInt(program.symbols.length), "):\n",

@@ -244,36 +244,41 @@ struct CapsuleCompilerObjectReference {
     /// The length of the resolved symbol value
     uint symbolLength = 0;
     
-    static bool isPcRelativeType(in Type type) {
-        return CapsuleObject.Reference.isPcRelativeType(type);
-    }
-    
-    static bool isPcRelativeLowHalfType(in Type type) {
-        return CapsuleObject.Reference.isPcRelativeLowHalfType(type);
-    }
-    
-    static uint typeLength(in Type type) {
-        return CapsuleObject.Reference.typeLength(type);
-    }
-    
-    static uint typeOffset(in Type type) {
-        return CapsuleObject.Reference.typeOffset(type);
-    }
-    
+    /// Determine whether this reference is PC-relative.
     bool isPcRelative() const {
-        return typeof(this).isPcRelativeType(this.type);
+        return CapsuleObject.Reference.isPcRelativeType(this.type);
     }
     
+    /// Determine whether this reference represents the low half
+    /// of a PC-relative offset.
     bool isPcRelativeLowHalf() const {
-        return typeof(this).isPcRelativeLowHalfType(this.type);
+        return CapsuleObject.Reference.isPcRelativeLowHalfType(this.type);
     }
     
+    /// Determine whether this reference is the low half of a
+    /// reference and should have a corresponding high half someplace.
+    bool isNearLowHalfType() const {
+        return CapsuleObject.Reference.isNearLowHalfType(this.type);
+    }
+    
+    /// Get the high half reference type corresponding to this reference's
+    /// low half type, or CapsuleObject.Reference.Type.None if this
+    /// reference type has no corresponding high half type.
+    Type getHighHalfType() const {
+        return CapsuleObject.Reference.getHighHalfType(this.type);
+    }
+    
+    /// Get a value added to the reference's own offset indicating a
+    /// position where bytes are modified in resolving the reference.
     uint typeOffset() const {
-        return typeof(this).typeOffset(this.type);
+        return CapsuleObject.Reference.typeOffset(this.type);
     }
     
+    /// Get the number of bytes starting from the sum of the reference's
+    /// offset or address and its `typeOffset` that are overwritten when
+    /// resolving a reference.
     uint typeLength() const {
-        return typeof(this).typeLength(this.type);
+        return CapsuleObject.Reference.typeLength(this.type);
     }
 }
 
@@ -490,9 +495,9 @@ struct CapsuleAsmCompiler {
     ) {
         // Make sure this isn't an absolute word (32 bit) reference
         // trying to get crammed into a 16 bit immediate or something
-        const refLength = Reference.typeLength(number.referenceType);
-        const refOffset = Reference.typeOffset(number.referenceType);
-        const pcRel = Reference.isPcRelativeType(number.referenceType);
+        const refLength = Object.Reference.typeLength(number.referenceType);
+        const refOffset = Object.Reference.typeOffset(number.referenceType);
+        const pcRel = Object.Reference.isPcRelativeType(number.referenceType);
         if(refLength > maxRefLength || refLength + refOffset > targetLength ||
             (pcRel && !allowPcRelative)
         ) {
@@ -723,7 +728,7 @@ struct CapsuleAsmCompiler {
         }
         // References of type pcrel_near_lo look for a corresponding pcrel_hi
         // reference in the immediately previous word
-        else if(reference.type is Reference.Type.PCRelativeAddressNearLowHalf) {
+        else if(reference.isNearLowHalfType) {
             symbolValue = reference.offset - 4;
         }
         else if(reference.name.length && reference.name[0] == '.' &&
@@ -1430,6 +1435,12 @@ struct CapsuleAsmCompiler {
                 number.withReferenceType(Reference.Type.AbsoluteWordHighHalf),
             );
         }
+        if(number.referenceType is Reference.Type.LengthWord) {
+            return Result(
+                number.withReferenceType(Reference.Type.LengthWordLowHalf),
+                number.withReferenceType(Reference.Type.LengthWordHighHalf),
+            );
+        }
         // Number is a word-size PC-relative reference?
         else if(number.referenceType is Reference.Type.PCRelativeAddressWord) {
             return Result(
@@ -1437,10 +1448,16 @@ struct CapsuleAsmCompiler {
                 number.withReferenceType(Reference.Type.PCRelativeAddressHighHalf),
             );
         }
+        else if(number.referenceType is Reference.Type.EndPCRelativeAddressWord) {
+            return Result(
+                number.withReferenceType(Reference.Type.EndPCRelativeAddressNearLowHalf),
+                number.withReferenceType(Reference.Type.EndPCRelativeAddressHighHalf),
+            );
+        }
         // Otherwise, the number should already fit into a single half word
         version(assert) {
-            const refLength = Reference.typeLength(number.referenceType);
-            const refOffset = Reference.typeOffset(number.referenceType);
+            const refLength = Object.Reference.typeLength(number.referenceType);
+            const refOffset = Object.Reference.typeOffset(number.referenceType);
             assert(refLength <= 2 && refLength + refOffset <= 4);
         }
         // All done

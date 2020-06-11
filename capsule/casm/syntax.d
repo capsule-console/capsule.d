@@ -41,24 +41,10 @@ enum CapsuleAsmNodeType: uint {
 /// using an identifier beginning with a period '.'
 enum CapsuleAsmNumberLinkDirectiveType: uint {
     None = 0,
-    @("bss.start") BSSSegmentStart,
-    @("bss.end") BSSSegmentEnd,
-    @("bss.length") BSSSegmentLength,
-    @("data.start") DataSegmentStart,
-    @("data.end") DataSegmentEnd,
-    @("data.length") DataSegmentLength,
-    @("rodata.start") ReadOnlyDataSegmentStart,
-    @("rodata.end") ReadOnlyDataSegmentEnd,
-    @("rodata.length") ReadOnlyDataSegmentLength,
-    @("text.start") TextSegmentStart,
-    @("text.end") TextSegmentEnd,
-    @("text.length") TextSegmentLength,
-    @("stack.start") StackSegmentStart,
-    @("stack.end") StackSegmentEnd,
-    @("stack.length") StackSegmentLength,
-    @("heap.start") HeapSegmentStart,
-    @("heap.end") HeapSegmentEnd,
-    @("heap.length") HeapSegmentLength,
+    @("text") TextSegmentOffset,
+    @("rodata") ReadOnlyDataSegmentOffset,
+    @("data") DataSegmentOffset,
+    @("bss") BSSSegmentOffset,
 }
 
 /// Enumeration of recognized pseudo-instructions

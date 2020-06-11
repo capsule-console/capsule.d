@@ -25,20 +25,20 @@ auto initializeCapsuleMemory(in CapsuleProgram program) {
         return memory;
     }
     memory.allocate(program.length);
-    memory.romStart = program.readOnlyDataSegment.offset;
-    memory.romEnd = program.textSegment.end;
+    memory.romStart = program.textSegment.offset;
+    memory.romEnd = program.readOnlyDataSegment.end;
     memory.execStart = program.textSegment.offset;
     memory.execEnd = program.textSegment.end;
-    const dataOk = memory.write(
-        program.dataSegment.offset, program.dataSegment.bytes
+    const textOk = memory.write(
+        program.textSegment.offset, program.textSegment.bytes
     );
     const readOnlyDataOk = memory.write(
         program.readOnlyDataSegment.offset, program.readOnlyDataSegment.bytes
     );
-    const textOk = memory.write(
-        program.textSegment.offset, program.textSegment.bytes
+    const dataOk = memory.write(
+        program.dataSegment.offset, program.dataSegment.bytes
     );
-    if(!dataOk || !readOnlyDataOk || !textOk) {
+    if(!textOk || !readOnlyDataOk || !dataOk) {
         memory.free();
     }
     return memory;

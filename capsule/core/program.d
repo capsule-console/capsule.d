@@ -8,70 +8,19 @@ import capsule.core.programsource : CapsuleProgramSource;
 
 nothrow @safe @nogc public:
 
-/// Enumeration of capsule memory segment types.
-/// Here's why the segments are ordered in this way:
-/// BSS
-/// .bss and .data take up the lowest addresses so that it's more feasible
-/// to optimize loads and stores to what is presumably frequently-accessed
-/// memory, since loads and stores can be done in fewer instructions if the
-/// address fits into a half word.
-/// DATA
-/// .data comes after .bss so that all of the initialized segments - namely
-/// .data, .rodata, and .text - can all be contiguous in memory. It's a small
-/// optimization but may help keep things simple and future-proof.
-/// READ-ONLY DATA
-/// .rodata comes before other segments for the same reason that .bss and
-/// .data are in the lowest addresses - to optimize loads, at least for
-/// programs where .rodata is still addressable via a half word. It comes
-/// after .bss and .data because of the presumption that read-and-write
-/// memory is likely to be addressed more often than read-only memory.
-/// Keeping the read-only segments contiguous (.rodata and .text) may also
-/// help to keep things simple and future-proof.
-/// TEXT
-/// .text is the last of the initialized segments for the reason that
-/// jumps and branches are all expected to use relative addressing, and
-/// meaning it's not very relevant where in the address space the .text
-/// segment is located.
-/// STACK
-/// .stack comes late in the address space because, practically speaking,
-/// loads and stores will almost always if not unfailingly be relative to a
-/// stack pointer stored in a register, making absolute addressing unimportant.
-/// HEAP
-/// .heap comes late in the address space for a similar reason as the .stack;
-/// loads and stores will usually if not always be relative to a pointer to
-/// a location in the heap, stored in a register or elsewhere. The primary
-/// reason for the .heap to be the last segment, though, and for it to not
-/// share a segment with the .stack, is to leave the option open to expand
-/// the heap into higher addresses if a program requests more heap memory
-/// during runtime, or to shrink the heap down to a lower maximum address if
-/// a program relinquishes heap memory during runtime.
-enum CapsuleProgramSegmentType: uint {
-    @("none") None = cast(uint) CapsuleObject.Section.Type.None,
-    @("bss") BSS = cast(uint) CapsuleObject.Section.Type.BSS,
-    @("data") Data = cast(uint) CapsuleObject.Section.Type.Data,
-    @("rodata") ReadOnlyData = cast(uint) CapsuleObject.Section.Type.ReadOnlyData,
-    @("text") Text = cast(uint) CapsuleObject.Section.Type.Text,
-    @("stack") Stack,
-    @("heap") Heap,
-}
-
 struct CapsuleProgramSegmentProperties {
-    alias Type = CapsuleProgramSegmentType;
+    alias Type = CapsuleObject.Section.Type;
     
     /// Represent properties of a missing or absent segment.
     static enum None = typeof(this)(Type.None, false, false, false);
-    /// Represent the properties of a bss segment.
-    static enum BSS = typeof(this)(Type.BSS, false, true, false);
-    /// Represent the properties of a data segment.
-    static enum Data = typeof(this)(Type.Data, true, true, false);
-    /// Represent the properties of a rodata segment.
-    static enum ReadOnlyData = typeof(this)(Type.ReadOnlyData, true, false, false);
     /// Represent the properties of a text segment.
     static enum Text = typeof(this)(Type.Text, true, false, true);
-    /// Represent the properties of a stack segment.
-    static enum Stack = typeof(this)(Type.Stack, false, true, false);
-    /// Represent the properties of a heap segment.
-    static enum Heap = typeof(this)(Type.Heap, false, true, false);
+    /// Represent the properties of a rodata segment.
+    static enum ReadOnlyData = typeof(this)(Type.ReadOnlyData, true, false, false);
+    /// Represent the properties of a data segment.
+    static enum Data = typeof(this)(Type.Data, true, true, false);
+    /// Represent the properties of a bss segment.
+    static enum BSS = typeof(this)(Type.BSS, false, true, false);
     
     /// Type of the segment whose properties are being represented.
     Type type;
@@ -84,12 +33,10 @@ struct CapsuleProgramSegmentProperties {
     
     static typeof(this) get(in Type type) {
         switch(type) {
-            case Type.BSS: return typeof(this).BSS;
-            case Type.Data: return typeof(this).Data;
-            case Type.ReadOnlyData: return typeof(this).ReadOnlyData;
             case Type.Text: return typeof(this).Text;
-            case Type.Stack: return typeof(this).Stack;
-            case Type.Heap: return typeof(this).Heap;
+            case Type.ReadOnlyData: return typeof(this).ReadOnlyData;
+            case Type.Data: return typeof(this).Data;
+            case Type.BSS: return typeof(this).BSS;
             default: return typeof(this).None;
         }
     }
@@ -152,7 +99,7 @@ struct CapsuleProgramAsset {
 struct CapsuleProgramSegment {
     nothrow @safe @nogc:
     
-    alias Type = CapsuleProgramSegmentType;
+    alias Type = CapsuleObject.Section.Type;
     
     /// The type of segment, e.g. bss, data, text
     Type type;
@@ -172,7 +119,7 @@ struct CapsuleProgramSegment {
     bool ok() const {
         return (
             // Must have a known segment type
-            (this.type !is Type.None && this.type <= Type.Heap) &&
+            (this.type !is Type.None && this.type <= Type.BSS) &&
             // Initialized sections must have consistent lengths
             (!this.isInitialized || this.length == this.bytes.length) &&
             // Segment must lie entirely within addressable memory
@@ -197,12 +144,10 @@ struct CapsuleProgramSegment {
     static bool typeIsInitialized(in Type type) {
         switch(type) {
             case Type.None: return false;
-            case Type.BSS: return false;
-            case Type.Data: return true;
-            case Type.ReadOnlyData: return true;
             case Type.Text: return true;
-            case Type.Stack: return false;
-            case Type.Heap: return false;
+            case Type.ReadOnlyData: return true;
+            case Type.Data: return true;
+            case Type.BSS: return false;
             default: return false;
         }
     }
@@ -239,18 +184,14 @@ struct CapsuleProgram {
     /// Timestamp as a signed number of seconds since Unix epoch
     long timestamp = 0;
     
-    /// Information about the program's bss segment.
-    CapsuleProgramSegment bssSegment;
-    /// Information about the program's data segment.
-    CapsuleProgramSegment dataSegment;
-    /// Information about the program's rodata segment.
-    CapsuleProgramSegment readOnlyDataSegment;
     /// Information about the program's text segment.
     CapsuleProgramSegment textSegment;
-    /// Information about the program's stack segment.
-    CapsuleProgramSegment stackSegment;
-    /// Information about the program's heap segment.
-    CapsuleProgramSegment heapSegment;
+    /// Information about the program's rodata segment.
+    CapsuleProgramSegment readOnlyDataSegment;
+    /// Information about the program's data segment.
+    CapsuleProgramSegment dataSegment;
+    /// Information about the program's bss segment.
+    CapsuleProgramSegment bssSegment;
     
     ///
     string[] names = null;
@@ -264,37 +205,79 @@ struct CapsuleProgram {
     bool ok() const {
         return (
             // Entry point offset is valid?
-            this.entryOffset < this.length &&
+            this.entryOk &&
             // Total memory length is valid?
-            this.length <= int.max &&
-            // Each segment individually is valid?
-            this.bssSegment.ok && this.dataSegment.ok &&
-            this.readOnlyDataSegment.ok && this.textSegment.ok &&
-            this.stackSegment.ok && this.heapSegment.ok &&
-            // Segments have the correct type information?
-            this.bssSegment.type is Segment.Type.BSS &&
-            this.dataSegment.type is Segment.Type.Data &&
-            this.readOnlyDataSegment.type is Segment.Type.ReadOnlyData &&
-            this.textSegment.type is Segment.Type.Text &&
-            this.stackSegment.type is Segment.Type.Stack &&
-            this.heapSegment.type is Segment.Type.Heap &&
+            this.lengthOk &&
+            // Each segment individually is valid and has the correct type?
+            this.textSegmentOk &&
+            this.readOnlyDataSegmentOk &&
+            this.dataSegmentOk &&
+            this.bssSegmentOk &&
             // Segment offsets and lengths put them in the correct order?
-            this.dataSegment.offset >= this.bssSegment.end &&
-            this.readOnlyDataSegment.offset >= this.dataSegment.end &&
-            this.textSegment.offset >= this.readOnlyDataSegment.end &&
-            this.stackSegment.offset >= this.textSegment.end &&
-            this.heapSegment.offset >= this.stackSegment.end &&
+            this.segmentOrderOk &&
             // Lists of things are of acceptable lengths?
-            this.names.length <= uint.max &&
-            this.symbols.length <= uint.max &&
+            this.namesOk &&
+            this.symbolsOk &&
             // Source map must be valid, if there is one
-            this.sourceMap.locationListIsSorted()
+            this.sourceMapOk
         );
+    }
+    
+    bool entryOk() const {
+        return this.entryOffset < this.length;
+    }
+    
+    bool lengthOk() const {
+        return this.length <= int.max;
+    }
+    
+    bool textSegmentOk() const {
+        return this.textSegment.ok && (
+            this.textSegment.type is Segment.Type.Text
+        );
+    }
+    
+    bool readOnlyDataSegmentOk() const {
+        return this.readOnlyDataSegment.ok && (
+            this.readOnlyDataSegment.type is Segment.Type.ReadOnlyData
+        );
+    }
+    
+    bool dataSegmentOk() const {
+        return this.dataSegment.ok && (
+            this.dataSegment.type is Segment.Type.Data
+        );
+    }
+    
+    bool bssSegmentOk() const {
+        return this.bssSegment.ok && (
+            this.bssSegment.type is Segment.Type.BSS
+        );
+    }
+    
+    bool segmentOrderOk() const {
+        return (
+            this.readOnlyDataSegment.offset >= this.textSegment.end &&
+            this.dataSegment.offset >= this.readOnlyDataSegment.end &&
+            this.bssSegment.offset >= this.dataSegment.end
+        );
+    }
+    
+    bool namesOk() const {
+        return this.names.length <= uint.max;
+    }
+    
+    bool symbolsOk() const {
+        return this.symbols.length <= uint.max;
+    }
+    
+    bool sourceMapOk() const {
+        return this.sourceMap.locationListIsSorted();
     }
     
     /// Get the total length in bytes of the program's memory.
     uint length() const {
-        return this.heapSegment.offset + this.heapSegment.length;
+        return this.bssSegment.end;
     }
     
     /// Given a name index, get the corresponding name string.
@@ -316,23 +299,19 @@ struct CapsuleProgram {
     }
     
     auto getContainingSegment(in uint address) const {
-        if(this.bssSegment.containsAddress(address)) return this.bssSegment;
-        else if(this.dataSegment.containsAddress(address)) return this.dataSegment;
+        if(this.textSegment.containsAddress(address)) return this.textSegment;
         else if(this.readOnlyDataSegment.containsAddress(address)) return this.readOnlyDataSegment;
-        else if(this.textSegment.containsAddress(address)) return this.textSegment;
-        else if(this.stackSegment.containsAddress(address)) return this.stackSegment;
-        else if(this.heapSegment.containsAddress(address)) return this.heapSegment;
+        else if(this.dataSegment.containsAddress(address)) return this.dataSegment;
+        else if(this.bssSegment.containsAddress(address)) return this.bssSegment;
         else return Segment.init;
     }
     
     auto getSegmentWithType(in Segment.Type type) const {
         switch(type) {
-            case Segment.Type.BSS: return this.bssSegment;
-            case Segment.Type.Data: return this.dataSegment;
-            case Segment.Type.ReadOnlyData: return this.readOnlyDataSegment;
             case Segment.Type.Text: return this.textSegment;
-            case Segment.Type.Stack: return this.stackSegment;
-            case Segment.Type.Heap: return this.heapSegment;
+            case Segment.Type.ReadOnlyData: return this.readOnlyDataSegment;
+            case Segment.Type.Data: return this.dataSegment;
+            case Segment.Type.BSS: return this.bssSegment;
             default: return Segment.init;
         }
     }

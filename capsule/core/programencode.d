@@ -24,8 +24,6 @@ mixin template CapsuleProgramCoderMixin() {
     static const DataSegmentHeader = stringToInt("DATA");
     static const ReadOnlyDataSegmentHeader = stringToInt("RODT");
     static const TextSegmentHeader = stringToInt("TEXT");
-    static const StackSegmentHeader = stringToInt("STCK");
-    static const HeapSegmentHeader = stringToInt("HEAP");
     static const SourceHeader = stringToInt("SRCF");
     static const SourceLocationsHeader = stringToInt("SLOC");
 }
@@ -39,8 +37,6 @@ struct CapsuleProgramEncoder {
         assert(program.dataSegment.type is CapsuleProgram.Segment.Type.Data);
         assert(program.readOnlyDataSegment.type is CapsuleProgram.Segment.Type.ReadOnlyData);
         assert(program.textSegment.type is CapsuleProgram.Segment.Type.Text);
-        assert(program.stackSegment.type is CapsuleProgram.Segment.Type.Stack);
-        assert(program.heapSegment.type is CapsuleProgram.Segment.Type.Heap);
         FileHeader fileHeader = {
             name: ProgramHeader,
             versionName: FileVersion_2020_05_14,
@@ -142,28 +138,10 @@ struct CapsuleProgramEncoder {
                 program.textSegment.checksum,
             ),
         };
-        FileSectionHeader stack = {
-            name: StackSegmentHeader,
-            noContent: true,
-            data: typeof(this).encodeFileSectionHeaderData(
-                program.stackSegment.offset,
-                program.stackSegment.length, 
-                program.stackSegment.checksum,
-            ),
-        };
-        FileSectionHeader heap = {
-            name: HeapSegmentHeader,
-            noContent: true,
-            data: typeof(this).encodeFileSectionHeaderData(
-                program.heapSegment.offset,
-                program.heapSegment.length, 
-                program.heapSegment.checksum,
-            ),
-        };
         FileSectionHeader[] fileSections = [
             timestamp, comment, title, credit,
             names, symbols, sourceLocations,
-            entry, bss, data, readOnlyData, text, stack, heap,
+            entry, text, readOnlyData, data, bss,
         ];
         for(uint i = 0; i < program.sourceMap.sources.length; i++) {
             const source = program.sourceMap.sources[i];
@@ -333,8 +311,6 @@ struct CapsuleProgramDecoder {
             (header) => (this.readDataSegmentSection(header)),
             (header) => (this.readReadOnlyDataSegmentSection(header)),
             (header) => (this.readTextSegmentSection(header)),
-            (header) => (this.readStackSegmentSection(header)),
-            (header) => (this.readHeapSegmentSection(header)),
         ];
         this.readFileContent(fileHeader, readers);
         return this;
@@ -494,22 +470,6 @@ struct CapsuleProgramDecoder {
         );
         return true;
     }
-    
-    bool readStackSegmentSection(in FileSectionHeader header) {
-        if(header.name != StackSegmentHeader) return false;
-        this.program.stackSegment = this.readSegmentSection(
-            header, Segment.Type.Stack
-        );
-        return true;
-    }
-    
-    bool readHeapSegmentSection(in FileSectionHeader header) {
-        if(header.name != HeapSegmentHeader) return false;
-        this.program.heapSegment = this.readSegmentSection(
-            header, Segment.Type.Heap
-        );
-        return true;
-    }
 }
 
 private version(unittest) {
@@ -561,20 +521,6 @@ unittest {
         bytes: [1, 2, 3, 4, 5, 6, 7, 8],
     };
     original.textSegment = text;
-    CapsuleProgram.Segment stack = {
-        type: CapsuleProgram.Segment.Type.Stack,
-        offset: 32,
-        length: 32,
-        checksum: 0,
-    };
-    original.stackSegment = stack;
-    CapsuleProgram.Segment heap = {
-        type: CapsuleProgram.Segment.Type.Heap,
-        offset: 64,
-        length: 0,
-        checksum: 0,
-    };
-    original.heapSegment = heap;
     // Add debug data
     original.names = ["one", "two", "three", "four", "five", "six"];
     CapsuleProgram.Symbol sym0 = {

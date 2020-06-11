@@ -107,24 +107,6 @@ struct CapsuleLinkerConfig {
     )
     string programComment = null;
     
-    @(CapsuleConfigAttribute!uint("stack-length", "stlen")
-        .setOptional(0)
-        .setHelpText([
-            "Length in bytes of the program's stack segment. ",
-            "Defaults to a length of zero if not specified."
-        ])
-    )
-    uint stackSegmentLength = 0;
-    
-    @(CapsuleConfigAttribute!uint("heap-length", "hplen")
-        .setOptional(0)
-        .setHelpText([
-            "Length in bytes of the program's heap segment. ",
-            "Defaults to a length of zero if not specified."
-        ])
-    )
-    uint heapSegmentLength = 0;
-    
     @(CapsuleConfigAttribute!bool("verbose", "v")
         .setOptional(false)
         .setHelpText([
@@ -255,8 +237,6 @@ CapsuleApplicationStatus link(string[] args) {
     linker.programTitle = config.programTitle;
     linker.programCredit = config.programCredit;
     linker.programComment = config.programComment;
-    linker.stackSegmentLength = config.stackSegmentLength;
-    linker.heapSegmentLength = config.heapSegmentLength;
     linker.includeDebugSymbols = config.writeDebugInfo;
     linker.includeDebugSources = config.writeDebugInfo;
     linker.link();

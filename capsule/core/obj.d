@@ -8,10 +8,10 @@ nothrow @safe @nogc public:
 
 enum CapsuleObjectSectionType: ushort {
     @("none") None = 0x0000,
-    @("bss") BSS = 0x2000,
-    @("data") Data = 0x4000,
-    @("rodata") ReadOnlyData = 0x6000,
-    @("text") Text = 0x8000,
+    @("text") Text = 0x2000,
+    @("rodata") ReadOnlyData = 0x4000,
+    @("data") Data = 0x6000,
+    @("bss") BSS = 0x8000,
 }
 
 enum CapsuleObjectSymbolType: ushort {
@@ -324,14 +324,14 @@ struct CapsuleObjectReference {
             case Type.PCRelativeAddressNearLowHalf: goto case;
             case Type.PCRelativeAddressHighHalf: goto case;
             case Type.PCRelativeAddressSoloHighHalf: goto case;
-            case Type.PCRelativeAddressLowHalf: return true;
+            case Type.PCRelativeAddressLowHalf: goto case;
             case Type.EndPCRelativeAddressHalf: goto case;
             case Type.EndPCRelativeAddressWord: goto case;
             case Type.EndPCRelativeAddressNearLowHalf: goto case;
             case Type.EndPCRelativeAddressHighHalf: goto case;
             case Type.EndPCRelativeAddressSoloHighHalf: goto case;
             case Type.EndPCRelativeAddressLowHalf: return true;
-            default: return 0;
+            default: return false;
         }
     }
     
@@ -343,7 +343,7 @@ struct CapsuleObjectReference {
             case Type.PCRelativeAddressLowHalf: goto case;
             case Type.EndPCRelativeAddressNearLowHalf: goto case;
             case Type.EndPCRelativeAddressLowHalf: return true;
-            default: return 0;
+            default: return false;
         }
     }
     
@@ -354,7 +354,7 @@ struct CapsuleObjectReference {
         switch(type) {
             case Type.PCRelativeAddressNearLowHalf: goto case;
             case Type.EndPCRelativeAddressNearLowHalf: return true;
-            default: return 0;
+            default: return false;
         }
     }
     
@@ -460,7 +460,7 @@ struct CapsuleObjectReference {
     }
     
     /// Get the number of bytes starting from the sum of the reference's
-    /// offset or address and its `typeOffset` that are affected by
+    /// offset or address and its `typeOffset` that are overwritten when
     /// resolving a reference.
     uint typeLength() const {
         return typeof(this).typeLength(this.type);

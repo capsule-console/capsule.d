@@ -1,6 +1,4 @@
 ; Test stack-related operations.
-; Requires that the linker be invoked with a --stack-length of at least
-; eight bytes.
 
 .extern write_stringz
 
@@ -8,12 +6,15 @@
 .const stdio.init, 0x3000
 .const stdio.put_byte, 0x3002
 
+.bss
+    stack: .resb 64
+
 .text
 .entry
     ; Ensure stdio is active
     ecalli Z, Z, stdio.init
     ; Initialize the stack pointer and frame pointer
-    la B, .stack.end
+    la B, stack[end_pcrel_word]
     mv S, B
     ; Push the characters of "Hello! \0" onto the stack one-by-one
     li X, 0     addi S, S, -1 sb X, S
