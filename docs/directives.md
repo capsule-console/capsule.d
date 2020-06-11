@@ -10,16 +10,18 @@ final executable program file.
 
 ## Key concepts
 
-A **directive** is any lower-case identifier preceded by a single period character `.`, for example _.text_, and sometimes followed
+A **directive** is any lower-case identifier preceded by a single
+period character `.`, for example _.text_, and sometimes followed
 by one or more comma-separated arguments.
 
 A **section** is an abstract structure in which data or code
 can be located. Different types of sections can be initialized
-or uninitialized, executable or non-executable, read-only or read-write. Sections of a same type will ultimately be all
+or uninitialized, executable or non-executable, read-only or read-write.
+Sections of a same type will ultimately be all
 put together in a series in a segment of that type by the
 linker program (clink).
 The full list of directives which begin a new section are:
-**bss**, **data**, **rodata**, and **text**.
+_.bss__, _.data__, _.rodata__, and _.text__.
 
 A **symbol** is a name assigned by the programmer to some value
 or some location in the program.
@@ -60,6 +62,7 @@ following data will be aligned to a word boundary.
 When used in an initialized section, the _fill_ value indicates what
 value bytes should be if bytes must be inserted in order to align the
 following data on the correct boundary.
+When used in an uninitialized, the _fill_ value must be zero.
 
 Sections are aligned to a word boundary by default, when they
 contain no align directives.
@@ -76,7 +79,7 @@ at compilation time. They cannot be references to symbols.
 
 ``` casm
 .data
-    .align 8 .word 0x12345678, 0xfedcba98
+    .align 8, 0x00 .word 0x12345678, 0xfedcba98
 ```
 
 ## .bss
