@@ -100,17 +100,9 @@ struct CapsuleObjectEncoder {
             entries: cast(uint) object.references.length,
             noContent: object.references.length == 0,
         };
-        FileSectionHeader sourceLocations = {
-            name: SourceLocationsHeader,
-            omitSection: object.sectionSourceLocations.length == 0,
-            length: typeof(this).getSourceLocationsContentLength(object.sectionSourceLocations),
-            data: typeof(this).encodeFileSectionHeaderData(
-                cast(uint) object.sectionSourceLocations.length
-            ),
-        };
         FileSectionHeader[] fileSections = [
             timestamp, sourceUri, sourceHash, comment,
-            entry, names, symbols, references, sourceLocations,
+            entry, names, symbols, references,
         ];
         for(uint i = 0; i < object.sections.length; i++) {
             const objSection = object.sections[i];
@@ -146,6 +138,19 @@ struct CapsuleObjectEncoder {
             };
             fileSections ~= sourceSection;
         }
+        for(uint i = 0; i < object.sectionSourceLocations.length; i++) {
+            const locations = object.sectionSourceLocations[i];
+            FileSectionHeader sourceLocations = {
+                name: SourceLocationsHeader,
+                omitSection: (locations.length == 0),
+                entryLength: typeof(this).SourceLocationEncodedLength,
+                entries: cast(uint) locations.length,
+                data: typeof(this).encodeFileSectionHeaderData(
+                    i, cast(uint) locations.length
+                ),
+            };
+            fileSections ~= sourceLocations;
+        }
         bool withHeader(
             in FileSectionHeader header, in uint name,
             void delegate() write
@@ -174,15 +179,23 @@ struct CapsuleObjectEncoder {
             (header) => withHeader(header, ReferencesHeader,
                 () => this.writeReferencesContent(object.references)
             ),
-            (header) => withHeader(header, SourceLocationsHeader,
-                () => this.writeSourceLocationsContent(object.sectionSourceLocations)
-            ),
-            (header) => withHeader(header, SectionHeader,
-                () => this.writeSectionContent(object.sections[header.intData[0]], header)
-            ),
-            (header) => withHeader(header, SourceHeader,
-                () => this.writeSourceContent(object.sources[header.intData[0]], header)
-            ),
+            (header) => withHeader(header, SourceLocationsHeader, () {
+                const uint i = header.intData[0];
+                if(i >= object.sectionSourceLocations.length) assert(false);
+                return this.writeSourceLocationsContent(
+                    object.sectionSourceLocations[i]
+                );
+            }),
+            (header) => withHeader(header, SectionHeader, () {
+                const uint i = header.intData[0];
+                if(i >= object.sections.length) assert(false);
+                return this.writeSectionContent(object.sections[i], header);
+            }),
+            (header) => withHeader(header, SourceHeader, () {
+                const uint i = header.intData[0];
+                if(i >= object.sources.length) assert(false);
+                return this.writeSourceContent(object.sources[i], header);
+            }),
         ];
         this.writeFile(fileHeader, fileSections, writers);
     }
@@ -233,6 +246,8 @@ struct CapsuleObjectEncoder {
         }
     }
     
+    enum uint SourceLocationEncodedLength = 24;
+    
     static uint getSourceLocationsContentLength(
         in CapsuleObject.Source.Location[][] sectionSourceLocations
     ) {
@@ -244,18 +259,15 @@ struct CapsuleObjectEncoder {
     }
     
     void writeSourceLocationsContent(
-        in CapsuleObject.Source.Location[][] sectionSourceLocations
+        in CapsuleObject.Source.Location[] locations
     ) {
-        foreach(locations; sectionSourceLocations) {
-            this.writeInt(cast(uint) locations.length);
-            foreach(location; locations) {
-                this.writeInt(location.source);
-                this.writeInt(location.startAddress);
-                this.writeInt(location.endAddress);
-                this.writeInt(location.contentStartIndex);
-                this.writeInt(location.contentEndIndex);
-                this.writeInt(location.contentLineNumber);
-            }
+        foreach(location; locations) {
+            this.writeInt(location.source);
+            this.writeInt(location.startAddress);
+            this.writeInt(location.endAddress);
+            this.writeInt(location.contentStartIndex);
+            this.writeInt(location.contentEndIndex);
+            this.writeInt(location.contentLineNumber);
         }
     }
     
@@ -366,7 +378,7 @@ struct CapsuleObjectDecoder {
     bool readNamesSection(in FileSectionHeader header) @trusted {
         if(header.name != NamesHeader) return false;
         this.object.names.length = header.entries;
-        for(uint i = 0; i < header.entries; i++) {
+        for(uint i = 0; i < header.entries && this.ok; i++) {
             const nameLength = this.readInt();
             this.object.names[i] = cast(string) this.readPaddedBytes(nameLength);
         }
@@ -387,7 +399,7 @@ struct CapsuleObjectDecoder {
     bool readSymbolsSection(in FileSectionHeader header) {
         if(header.name != SymbolsHeader) return false;
         this.object.symbols.length = header.entries;
-        for(uint i = 0; i < header.entries; i++) {
+        for(uint i = 0; i < header.entries && this.ok; i++) {
             this.object.symbols[i] = this.readSymbol();
         }
         return true;
@@ -408,30 +420,39 @@ struct CapsuleObjectDecoder {
     bool readReferencesSection(in FileSectionHeader header) {
         if(header.name != ReferencesHeader) return false;
         this.object.references.length = header.entries;
-        for(uint i = 0; i < header.entries; i++) {
+        for(uint i = 0; i < header.entries && this.ok; i++) {
             this.object.references[i] = this.readReference();
         }
         return true;
     }
     
+    CapsuleObject.Source.Location readSourceLocation() {
+        CapsuleObject.Source.Location location;
+        location.source = this.readInt();
+        location.startAddress = this.readInt();
+        location.endAddress = this.readInt();
+        location.contentStartIndex = this.readInt();
+        location.contentEndIndex = this.readInt();
+        location.contentLineNumber = this.readInt();
+        return location;
+    }
+    
     bool readSourceLocationsSection(in FileSectionHeader header) {
         if(header.name != SourceLocationsHeader) return false;
-        const numSections = header.intData[0];
-        this.object.sectionSourceLocations.length = numSections;
-        for(size_t i = 0; i < numSections; i++) {
-            const numLocations = this.readInt();
-            this.object.sectionSourceLocations[i].length = numLocations;
-            for(size_t j = 0; j < numLocations; j++) {
-                CapsuleObject.Source.Location location;
-                location.source = this.readInt();
-                location.startAddress = this.readInt();
-                location.endAddress = this.readInt();
-                location.contentStartIndex = this.readInt();
-                location.contentEndIndex = this.readInt();
-                location.contentLineNumber = this.readInt();
-                this.object.sectionSourceLocations[i][j] = location;
-            }
+        CapsuleObject.Source.Location[] locations;
+        const index = header.intData[0];
+        const length = header.intData[1];
+        for(uint i = 0; i < length && this.ok; i++) {
+            locations ~= this.readSourceLocation();
         }
+        if(index >= uint.max) {
+            this.setStatus(Status.BadSectionContent);
+            return true;
+        }
+        if(index >= this.object.sectionSourceLocations.length) {
+            this.object.sectionSourceLocations.length = 1 + index;
+        }
+        this.object.sectionSourceLocations[index] = locations;
         return true;
     }
     
