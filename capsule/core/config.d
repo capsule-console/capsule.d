@@ -168,7 +168,7 @@ auto parseCapsuleConfigAttribute(T: bool, Config)(
             return Result(true, cast(bool) value, 1);
         }
         else if(!isIni && (!args[argIndex].length || args[argIndex][0] == '-')) {
-            return Result(true, false, 0);
+            return Result(true, true, 0);
         }
         else {
             return Result(false);
