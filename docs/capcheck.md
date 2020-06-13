@@ -225,14 +225,14 @@ The **caseof** property is intended for when the same program should be
 built once but run and tested multiple times with different inputs.
 
 The checking tool ignores build-related properties such as _comment_,
-_source_, _casma-rgs_, or _clinka-rgs_ in section with a _caseof_ property.
+_source_, _casm-args_, or _clink-args_ in section with a _caseof_ property.
 Instead, the program built by the case named by the _caseof_ property
 will be run based on any input or expected output information given
 in the test case section.
 
 Note that any test section with one or more _caseof_ references pointing
 to it will be treated only as a build configuration, and test case
-properties such as _stdin_, _stdout_, or _capsulea-rgs_ will be ignored
+properties such as _stdin_, _stdout_, or _capsule-args_ will be ignored
 there.
 
 ``` ini
