@@ -214,7 +214,14 @@ struct CapsuleAsmParser {
             node = Node(location, Node.Type.Instruction);
             node.instruction.opcode = cast(ubyte) opcode;
         }
-        return this.parseInstructionArgs(node);
+        const expectArgs = node.instructionArgs;
+        if(expectArgs) {
+            return this.parseInstructionArgs(node);
+        }
+        else {
+            node.location = this.endLocation(node.location);
+            return node;
+        }
     }
     
     

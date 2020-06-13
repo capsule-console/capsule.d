@@ -277,4 +277,11 @@ struct CapsuleInstructionArgs {
             return RegisterParameter.None;
         }
     }
+    
+    bool opCast(T: bool)() const {
+        return (
+            this.registers !is Registers.None ||
+            this.immediate !is Immediate.Never
+        );
+    }
 }
