@@ -67,12 +67,16 @@ contexts:
     - match: (?i)(\b(l[bh]u?|lw|s[bhw])\b[ \t]*)
       scope: support.function.source.memory.casm
       push: instruction_arguments
-    - match: (?i)(\b(jalr?|beq|bne|bltu?|bgeu?|ecall|ebreak|rfe)\b[ \t]*)
+    - match: (?i)(\b(jalr?|beq|bne|bltu?|bgeu?|ecall)\b[ \t]*)
       scope: support.function.control.casm
       push: instruction_arguments
-    - match: (?i)(\b(nop|mv|not|neg|nandi?|nori?|xnori?|andn|orn|xorn|slli|srli|srai|addi|c[lt]o|seqz|snez|sltz|sgtz|l[ia])\b[ \t]*)
+    - match: (?i)(\b(ebreak)\b[ \t]*)
+      scope: support.function.control.ebreak.casm
+    - match: (?i)(\b(mv|not|neg|nandi?|nori?|xnori?|andn|orn|xorn|slli|srli|srai|addi|c[lt]o|seqz|snez|sltz|sgtz|l[ia])\b[ \t]*)
       scope: support.function.source.pseudo.casm
       push: instruction_arguments
+    - match: (?i)(\b(nop)\b[ \t]*)
+      scope: support.function.source.pseudo.nop.casm
     - match: (?i)(\b(l[bh]u?a|lwa|s[bhw]a)\b[ \t]*)
       scope: support.function.source.memory.pseudo.casm
       push: instruction_arguments
