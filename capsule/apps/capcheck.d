@@ -376,7 +376,6 @@ CapsuleApplicationStatus check(string[] args) {
             write("BUILD FAIL: ", test.name ~ " (" ~ statusName ~ ") (");
             writems(buildms);
             writeln(")");
-            testsFailed++;
             continue;
         }
         // Run each test program
