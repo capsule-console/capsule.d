@@ -1,0 +1,76 @@
+; Test bge (Branch if greater than or equal signed)
+; Add imm to PC if rs1 >= rs2
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li A, 'N'
+    li B, 'Y'
+    ; Positive >= Positive (N)
+    addi X, Z, 99
+    addi Y, Z, 100
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Positive !>= Positive (Y)
+    addi X, Z, 60
+    addi Y, Z, 15
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Positive == Positive (Y)
+    addi X, Z, 3_500
+    addi Y, Z, 3_500
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Negative >= Negative (N)
+    addi X, Z, -90
+    addi Y, Z, -10
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Negative !>= Negative (Y)
+    addi X, Z, -75
+    addi Y, Z, -80
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Negative == Negative (Y)
+    addi X, Z, -1
+    addi Y, Z, -1
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Negative >= Positive (N)
+    addi X, Z, -50
+    addi Y, Z, +50
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Positive !>= Negative (Y)
+    addi X, Z, +25
+    addi Y, Z, -16
+    bge X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; All done
+    ecalli Z, Z, meta.exit_ok
+
+
+
+
+

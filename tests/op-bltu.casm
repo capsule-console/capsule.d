@@ -1,0 +1,76 @@
+; Test bltu (Branch if less than unsigned)
+; Add imm to PC if rs1 < rs2
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li A, 'N'
+    li B, 'Y'
+    ; Y
+    addi X, Z, 0
+    addi Y, Z, 1
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Y
+    addi X, Z, 0
+    addi Y, Z, 0xffffffff
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Y
+    addi X, Z, 1234
+    addi Y, Z, 5678
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; N
+    addi X, Z, 1
+    addi Y, Z, 0
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; N
+    addi X, Z, 0xffffffff
+    addi Y, Z, 0
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; N
+    addi X, Z, 6000
+    addi Y, Z, 1200
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; N
+    addi X, Z, 512
+    addi Y, Z, 512
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; N
+    addi X, Z, 0x80000000
+    addi Y, Z, 0x80000000
+    bltu X, Y, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; All done
+    ecalli Z, Z, meta.exit_ok
+
+
+
+
+

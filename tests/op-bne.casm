@@ -1,0 +1,23 @@
+; Test bne (Branch if not equal)
+; Add imm to PC if rs1 != rs2
+
+.const meta.exit_ok, 0x0001
+.const meta.exit_error, 0x0002
+
+.text
+.entry
+    ; Registers are not equal; expect branch
+    addi X, Z, 99
+    addi Y, Z, 100
+    bne X, Y, bne_ok_1
+bne_error_1:    
+    ecalli Z, Z, meta.exit_error
+bne_ok_1:
+    ; Registers are equal; expect to proceed past the branch
+    addi X, Z, 15
+    addi Y, Z, 15
+    bne X, Y, bne_error_2
+bne_ok_2:
+    ecalli Z, Z, meta.exit_ok
+bne_error_2:
+    ecalli Z, Z, meta.exit_error

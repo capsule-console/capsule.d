@@ -1,0 +1,34 @@
+; Test auipc (add upper immediate to program counter)
+; Store PC + (imm << 16) to rd 
+
+.const meta.exit_ok, 0x0001
+.const meta.exit_error, 0x0002
+
+.text
+.entry
+    ; Two auipc instructions 4 bytes apart
+    auipc X, 0
+    auipc Y, 0
+    sub X, Y, X
+    addi X, X, -4
+    bnez X, auipc_error
+    ; Two auipc instructions 12 bytes apart
+    auipc X, 0
+    nop
+    nop
+    auipc Y, 0
+    sub X, Y, X
+    addi X, X, -12
+    bnez X, auipc_error
+    ; Two auipc instructions 64 bytes apart
+    auipc X, 0
+    nop nop nop nop nop nop nop nop
+    nop nop nop nop nop nop nop
+    auipc Y, 0
+    sub X, Y, X
+    addi X, X, -64
+    bnez X, auipc_error
+auipc_ok:
+    ecalli Z, Z, meta.exit_ok
+auipc_error:
+    ecalli Z, Z, meta.exit_error
