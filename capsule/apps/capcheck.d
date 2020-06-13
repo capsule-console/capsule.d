@@ -305,7 +305,7 @@ CapsuleApplicationStatus check(string[] args) {
                         name: section.name,
                         stdin: section.get("stdin"),
                         stdout: section.get("stdout"),
-                        capsuleArgs: section.get("capsuleargs"),
+                        capsuleArgs: section.get("capsule-args"),
                         status: expectStatus,
                     };
                     foundTest = true;
@@ -324,8 +324,8 @@ CapsuleApplicationStatus check(string[] args) {
             name: section.name,
             comment: section.get("comment"),
             sources: section.all("source"),
-            casmArgs: section.get("casmargs"),
-            clinkArgs: section.get("clinkargs"),
+            casmArgs: section.get("casm-args"),
+            clinkArgs: section.get("clink-args"),
         };
         if(section.get("stdin") || section.get("stdout") || section.get("status")) {
             const expectStatus = (
@@ -335,7 +335,7 @@ CapsuleApplicationStatus check(string[] args) {
                 name: section.name,
                 stdin: section.get("stdin"),
                 stdout: section.get("stdout"),
-                capsuleArgs: section.get("capsuleargs"),
+                capsuleArgs: section.get("capsule-args"),
                 status: expectStatus,
             };
             test.cases ~= testCase;

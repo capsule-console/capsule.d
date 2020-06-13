@@ -215,9 +215,9 @@ appear in a section in the capcheck INI configuration file:
 - **status**: Expected program exit status
 - **comment**: Program file comment
 - **source**: Path to a source code file
-- **casmargs**: Extra **casm** arguments
-- **clinkargs**: Extra **clink** arguments
-- **capsuleargs**: Extra **capsule** arguments
+- **casm-args**: Extra **casm** arguments
+- **clink-args**: Extra **clink** arguments
+- **capsule-args**: Extra **capsule** arguments
 
 #### caseof
 
@@ -225,14 +225,14 @@ The **caseof** property is intended for when the same program should be
 built once but run and tested multiple times with different inputs.
 
 The checking tool ignores build-related properties such as _comment_,
-_source_, _casmargs_, or _clinkargs_ in section with a _caseof_ property.
+_source_, _casma-rgs_, or _clinka-rgs_ in section with a _caseof_ property.
 Instead, the program built by the case named by the _caseof_ property
 will be run based on any input or expected output information given
 in the test case section.
 
 Note that any test section with one or more _caseof_ references pointing
 to it will be treated only as a build configuration, and test case
-properties such as _stdin_, _stdout_, or _capsuleargs_ will be ignored
+properties such as _stdin_, _stdout_, or _capsulea-rgs_ will be ignored
 there.
 
 ``` ini
@@ -308,22 +308,22 @@ stdout=0 1 -1 1 1 2147483647 0 2147483647 256
 status=Ok
 ```
 
-#### casmargs
+#### casm-args
 
-The **casmargs** property is recognized when building a test program.
+The **casm-args** property is recognized when building a test program.
 It can be used to specify additional arguments that should be passed
 on the command line when running the Capsule assembler (casm)
 .
 
-#### clinkargs
+#### clink-args
 
-The **clinkargs** property is recognized when building a test program.
+The **clink-args** property is recognized when building a test program.
 It can be used to specify additional arguments that should be passed
 on the command line when running the Capsule linker (clink).
 
-#### capsuleargs
+#### capsule-args
 
-The **capsuleargs** property is recognized for each execution of a test program.
+The **capsule-args** property is recognized for each execution of a test program.
 It can be used to specify additional arguments that should be passed
 on the command line when running the Capsule virtual machine (capsule).
 
