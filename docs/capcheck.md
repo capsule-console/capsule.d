@@ -212,6 +212,7 @@ appear in a section in the capcheck INI configuration file:
 - **caseof**: Reuse a build needed by multiple test cases
 - **stdin**: Run with some stdin
 - **stdout**: Expected stdout
+- **status**: Expected program exit status
 - **comment**: Program file comment
 - **source**: Path to a source code file
 - **casmargs**: Extra **casm** arguments
@@ -266,6 +267,21 @@ It indicates what the program is expected to write to standard output
 during execution.
 If what is actually written does not match the data indicated by a test's
 _stdout_ property, then capcheck considers the test to be a failure.
+
+#### status
+
+The **status** property is recognized for each execution of a test program.
+It indicates what exit status code the program is expected to terminate with.
+When the _status_ attribute is not explicitly specified, the program is
+expected to exit with the **Ok** status, i.e. to run without errors.
+
+The list of meaningful program exit status names is:
+
+- **Ok**: Program execution completed without errors.
+- **ExecutionExitError**: Program signaled an abnormal exit.
+- **ExecutionError**: An unusual error occurred while running the program.
+- **ExecutionAborted**: Program aborted because of an unhandled exception.
+- **ExecutionTerminated**: Program responded to an external signal to quit execution.
 
 #### comment
 
