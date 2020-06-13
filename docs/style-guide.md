@@ -1,4 +1,4 @@
-# Capsule Style Guide
+# Capsule Implementation Style Guide
 
 Code is indented with four spaces.
 

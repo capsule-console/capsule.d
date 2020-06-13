@@ -1,4 +1,4 @@
-# Capsule Debugger
+# Capsule Debugger Documentation
 
 Capsule programs can be run in a debugging environment by
 passing the `--debug` or `-db` flag as a command line argument

@@ -377,6 +377,7 @@ will normally result in a warning.
     my_half_words: .padh 8, 0x1234
     my_words: .padw 4, 0xff00ff00
 ```
+
 ## .priority
 
 _.priority [priority]_

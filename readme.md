@@ -12,6 +12,16 @@ a ["copyleft"](https://en.wikipedia.org/wiki/Copyleft) software license.
 
 This repository contains an assembler, linker, and virtual machine for compiling and running Capsule bytecode, all written in the [D programming language](https://dlang.org/).
 
+## Documentation
+
+This project's documentation is located in the
+[docs/](https://github.com/capsule-console/capsule.d/blob/master/docs)
+directory.
+
+The docs directory contains a
+[**Capsule Documentation Index**](https://github.com/capsule-console/capsule.d/blob/master/docs/index.md)
+listing and explaining the contents of each documentation file.
+
 ## Quick Introduction
 
 The Capsule instruction set is similar to [RISC-V](https://riscv.org/specifications/),
@@ -22,9 +32,6 @@ Capsule bytecode uses only eight registers, one of them a hard-wired zero.
 All Capsule instructions are encoded the same way ⁠— with a 7-bit opcode, three
 3-bit registers, and one 16-bit immediate ⁠— even if not all of those fields are
 meaningful to a particular instruction.
-
-For more detailed information, refer to the documentation in this repository's
-[docs/](https://github.com/capsule-console/capsule.d/blob/master/docs) directory.
 
 Here is a self-contained "hello world" program written in Capsule assembly:
 
@@ -63,10 +70,10 @@ end:
 This repository is configured to be built with [**dub**](https://dub.pm/index.html).
 With dub installed, run one of the following commands in a CLI with the repository root as your working directory to build a particular binary:
 
-- Capsule virtual machine `capsule`: `dub --config=capsule --build=release`
-- Capsule assembler `casm`: `dub --config=casm --build=release`
-- Capsule linker `clink`: `dub --config=clink --build=release`
-- Capsule test runner `capcheck`: `dub --config=capcheck --build=release`
+- Capsule virtual machine **capsule**: `dub --config=capsule --build=release`
+- Capsule assembler **casm**: `dub --config=casm --build=release`
+- Capsule linker **clink**: `dub --config=clink --build=release`
+- Capsule implementation checker **capcheck**: `dub --config=capcheck --build=release`
 
 ## Contributing
 

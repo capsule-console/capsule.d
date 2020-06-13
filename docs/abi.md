@@ -1,4 +1,4 @@
-# Standard Application Binary Interface for Capsule Bytecode
+# Standard Application Binary Interface (ABI) for Capsule Bytecode
 
 Capsule bytecode recognizes eight registers.
 
@@ -15,7 +15,7 @@ conventional uses by the standard ABI.
 | A    | Function argument & return value   | caller    |
 | B    | Stack frame pointer                | callee    |
 | C    | Saved register                     | callee    |
-| R    | Return address                     | callee    |
+| R    | Return address                     | caller    |
 | S    | Stack pointer                      | callee    |
 | X    | Temporary register                 | caller    |
 | Y    | Temporary register                 | caller    |
@@ -28,7 +28,10 @@ stack pointer register S and stack frame pointer register B.
 Word-sized return values are given in registers A, X, and Y.
 Other or additional return values are saved on the stack.
 
-Functions are not obligated to preserve the A, X, or Y registers
+Functions are not obligated to preserve the A, X, Y, or R registers
 across function boundaries.
-They are, however, obligated to preserve the B, C, R, and S registers
+They are, however, obligated to preserve the B, C, and S registers
 across function boundaries.
+
+The caller is responsible for cleaning up arguments that were
+placed on the stack.
