@@ -265,7 +265,7 @@ struct CapsuleLinkerSymbolMap {
                 symbol.name == name
             ) {
                 closestIndex = i;
-                closestOffset = offset - symbol.localValue;
+                closestOffset = symbol.localValue - offset;
             }
         }
         if(closestIndex < localSymbols.length) {

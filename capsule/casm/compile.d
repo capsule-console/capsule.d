@@ -416,9 +416,12 @@ struct CapsuleAsmCompiler {
         this.addSection(FileLocation.init, SectionType.None);
     }
     
-    void addReferenceStatus(in Status status, in Reference reference) {
+    void addReferenceStatus(in Status status, in Reference reference) @trusted {
         const typeName = getEnumMemberAttribute!string(reference.type);
-        const context = reference.name ~ "[" ~ typeName ~ "]";
+        const localType = cast(string) (reference.localType ?
+            [cast(char) reference.localType] : null
+        );
+        const context = (reference.name ~ localType ~ "[" ~ typeName ~ "]");
         this.addStatus(reference.location, status, context);
     }
     
@@ -838,7 +841,7 @@ struct CapsuleAsmCompiler {
                     label.name == name
                 ) {
                     closestIndex = i;
-                    closestOffset = offset - label.offset;
+                    closestOffset = label.offset - offset;
                 }
             }
         }
