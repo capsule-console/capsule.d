@@ -23,19 +23,25 @@ public:
 enum string CapsuleCheckVersionName = "20200514";
 
 struct CapsuleCheckConfig {
+    alias Test = CapsuleCheckTest;
+    alias TestCase = CapsuleCheckTestCase;
+    
     enum string[] UsageText = [
         "Capsule check (capcheck) version " ~ CapsuleCheckVersionName,
-        "Run a suite of tests against a Capsule implementation ",
-        "in order to verify its behavior.",
+        "Run a suite of tests against a Capsule implementation in",
+        "order to verify its behavior.",
+        "The first argument must be a path to a capcheck INI",
+        "configuration file.",
         "Usage:",
-        "  capcheck <file> [<option>...]",
+        "  capcheck <ini-file> [<option>...]",
     ];
     
     @(CapsuleConfigAttribute!string("output", "o")
         .setOptional(null)
         .setHelpText([
-            "Object and program files built from test sources ",
-            "will be saved inside this directory."
+            "Object and program files built from test sources",
+            "will be saved inside this directory, as well as any",
+            "logs or other outputted files."
         ])
     )
     string outputPath;
@@ -52,7 +58,7 @@ struct CapsuleCheckConfig {
     @(CapsuleConfigAttribute!string("casm")
         .setOptional("casm")
         .setHelpText([
-            "Command or path to binary to use when compiling Capsule ",
+            "Command or path to binary to use when compiling Capsule",
             "assembly source code files."
         ])
     )
@@ -61,7 +67,7 @@ struct CapsuleCheckConfig {
     @(CapsuleConfigAttribute!string("clink")
         .setOptional("clink")
         .setHelpText([
-            "Command or path to binary to use when linking compiled ",
+            "Command or path to binary to use when linking compiled",
             "Capsule object files."
         ])
     )
@@ -70,20 +76,21 @@ struct CapsuleCheckConfig {
     @(CapsuleConfigAttribute!string("capsule")
         .setOptional("capsule")
         .setHelpText([
-            "Command or path to binary to use for executing compiled ",
+            "Command or path to binary to use for executing compiled",
             "Capsule program files."
         ])
     )
     string capsuleCommand;
     
-    @(CapsuleConfigAttribute!string("only")
+    @(CapsuleConfigAttribute!(string[])("only")
         .setOptional(null)
         .setHelpText([
-            "Run the first test case with the specified name, if there ",
-            "is one, and don't run any others."
+            "Run only those tests whose name is the same as the one",
+            "or more strings given with this option. Do not run tests",
+            "whose names are not listed."
         ])
     )
-    string onlyTestName;
+    string[] onlyTestNames;
     
     @(CapsuleConfigAttribute!bool("verbose", "v")
         .setOptional(false)
@@ -96,7 +103,7 @@ struct CapsuleCheckConfig {
     @(CapsuleConfigAttribute!bool("very-verbose", "vv")
         .setOptional(false)
         .setHelpText([
-            "When set, the checker will log quite a lot more messages ",
+            "When set, the checker will log quite a lot more messages",
             "than usual.",
         ])
     )
@@ -109,6 +116,30 @@ struct CapsuleCheckConfig {
         ])
     )
     bool silent;
+    
+    bool shouldRunTest(in Test test) {
+        if(!this.onlyTestNames.length) {
+            return true;
+        }
+        foreach(name; this.onlyTestNames) {
+            if(test.hasNameMatch(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    bool shouldRunTestCase(in Test test, in TestCase testCase) {
+        if(!this.onlyTestNames.length) {
+            return true;
+        }
+        foreach(name; this.onlyTestNames) {
+            if(test.name == name || testCase.name == name) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 bool verbose = false;
@@ -148,10 +179,9 @@ struct CapsuleCheckTest {
     string[] sources = null;
     string casmArgs = null;
     string clinkArgs = null;
-    string capsuleArgs = null;
     Case[] cases = null;
     
-    bool hasNameMatch(in string name) {
+    bool hasNameMatch(in string name) const {
         if(name == this.name) {
             return true;
         }
@@ -171,6 +201,7 @@ struct CapsuleCheckTestCase {
     Status status = Status.Ok;
     string stdin = null;
     string stdout = null;
+    string capsuleArgs = null;
 }
 
 /// Helper to escape a string to be used as a command line argument
@@ -274,6 +305,7 @@ CapsuleApplicationStatus check(string[] args) {
                         name: section.name,
                         stdin: section.get("stdin"),
                         stdout: section.get("stdout"),
+                        capsuleArgs: section.get("capsuleargs"),
                         status: expectStatus,
                     };
                     foundTest = true;
@@ -294,7 +326,6 @@ CapsuleApplicationStatus check(string[] args) {
             sources: section.all("source"),
             casmArgs: section.get("casmargs"),
             clinkArgs: section.get("clinkargs"),
-            capsuleArgs: section.get("capsuleargs"),
         };
         if(section.get("stdin") || section.get("stdout") || section.get("status")) {
             const expectStatus = (
@@ -304,6 +335,7 @@ CapsuleApplicationStatus check(string[] args) {
                 name: section.name,
                 stdin: section.get("stdin"),
                 stdout: section.get("stdout"),
+                capsuleArgs: section.get("capsuleargs"),
                 status: expectStatus,
             };
             test.cases ~= testCase;
@@ -322,7 +354,7 @@ CapsuleApplicationStatus check(string[] args) {
             continue;
         }
         // Handle the --only CLI option filtering out this entire test
-        if(config.onlyTestName.length && !test.hasNameMatch(config.onlyTestName)) {
+        if(!config.shouldRunTest(test)) {
             continue;
         }
         // Build the test program
@@ -350,10 +382,7 @@ CapsuleApplicationStatus check(string[] args) {
         // Run each test program
         foreach(testCase; test.cases) {
             // Handle the --only CLI option filtering out this test case
-            if(config.onlyTestName.length &&
-                config.onlyTestName != test.name &&
-                config.onlyTestName != testCase.name
-            ) {
+            if(!config.shouldRunTestCase(test, testCase)) {
                 continue;
             }
             // Run the test
@@ -431,9 +460,9 @@ struct CapsuleCheckTestBuilder {
     void build() {
         string objPaths = "";
         const cmdLogFlag = (
-            silent ? "" :
+            silent ? " --silent" :
             this.config.veryVerbose ? " -v" :
-            !verbose ? " --silent" : ""
+            verbose ? "" : " --silent"
         );
         // Compile each source file
         foreach(source; this.test.sources) {
@@ -529,7 +558,7 @@ struct CapsuleCheckTestRunner {
             this.config.capsuleCommand ~ " " ~ escapeArg(programPath) ~
             " --stdout-path " ~ escapeArg(stdoutPath) ~
             (this.config.veryVerbose && !silent ? " -v" : "") ~
-            " " ~ this.test.capsuleArgs
+            " " ~ this.testCase.capsuleArgs
         );
         if(this.testCase.stdin.length) {
             this.runCmd ~= " -in " ~ escapeArg(this.testCase.stdin);

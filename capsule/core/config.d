@@ -26,6 +26,18 @@ static const string[] CapsuleConfigStatusStrings = [
 
 enum string CapsuleConfigStatusUnknownString = "Unknown config status";
 
+int getBooleanValue(in string text) {
+    if(text == "0" || text == "f" || text == "false") {
+        return false;
+    }
+    else if(text == "1" || text == "t" || text == "true") {
+        return true;
+    }
+    else {
+        return -1;
+    }
+}
+
 string capsuleConfigStatusToString(
     in CapsuleConfigStatus status, in string context = null
 ) {
@@ -147,15 +159,29 @@ struct ParseCapsuleConfigAttributeResult(T) {
 
 auto parseCapsuleConfigAttribute(T: bool, Config)(
     ref Config config, in CapsuleConfigAttribute!T attribute,
-    string[] args, in size_t argIndex
+    string[] args, in size_t argIndex, in bool isIni
 ) {
     alias Result = ParseCapsuleConfigAttributeResult!T;
-    return Result(true, true, 0);
+    if(args.length > argIndex) {
+        const value = getBooleanValue(args[argIndex]);
+        if(value >= 0) {
+            return Result(true, cast(bool) value, 1);
+        }
+        else if(!isIni && (!args[argIndex].length || args[argIndex][0] == '-')) {
+            return Result(true, false, 0);
+        }
+        else {
+            return Result(false);
+        }
+    }
+    else {
+        return Result(true, true, 0);
+    }
 }
 
 auto parseCapsuleConfigAttribute(T: int, Config)(
     ref Config config, in CapsuleConfigAttribute!T attribute,
-    string[] args, in size_t argIndex
+    string[] args, in size_t argIndex, in bool isIni
 ) if(is(T == int) && !isEnumType!T) {
     alias Result = ParseCapsuleConfigAttributeResult!T;
     if(argIndex >= args.length) {
@@ -167,7 +193,7 @@ auto parseCapsuleConfigAttribute(T: int, Config)(
 
 auto parseCapsuleConfigAttribute(T: uint, Config)(
     ref Config config, in CapsuleConfigAttribute!T attribute,
-    string[] args, in size_t argIndex
+    string[] args, in size_t argIndex, in bool isIni
 ) if(is(T == uint) && !isEnumType!T) {
     alias Result = ParseCapsuleConfigAttributeResult!T;
     if(argIndex >= args.length) {
@@ -179,7 +205,7 @@ auto parseCapsuleConfigAttribute(T: uint, Config)(
 
 auto parseCapsuleConfigAttribute(T, Config)(
     ref Config config, in CapsuleConfigAttribute!T attribute,
-    string[] args, in size_t argIndex
+    string[] args, in size_t argIndex, in bool isIni
 ) if(isEnumType!T) {
     alias Result = ParseCapsuleConfigAttributeResult!T;
     if(argIndex >= args.length) {
@@ -195,7 +221,7 @@ auto parseCapsuleConfigAttribute(T, Config)(
 
 auto parseCapsuleConfigAttribute(T: string, Config)(
     ref Config config, in CapsuleConfigAttribute!T attribute,
-    string[] args, in size_t argIndex
+    string[] args, in size_t argIndex, in bool isIni
 ) {
     alias Result = ParseCapsuleConfigAttributeResult!T;
     if(argIndex < args.length) {
@@ -208,7 +234,7 @@ auto parseCapsuleConfigAttribute(T: string, Config)(
 
 auto parseCapsuleConfigAttribute(T: string[], Config)(
     ref Config config, in CapsuleConfigAttribute!T attribute,
-    string[] args, in size_t argIndex
+    string[] args, in size_t argIndex, in bool isIni
 ) {
     alias Result = ParseCapsuleConfigAttributeResult!T;
     size_t i = argIndex;
@@ -272,7 +298,7 @@ auto loadCapsuleConfig(Config)(
             if(attr.fullName in iniSection) {
                 auto values = iniSection.all(attr.fullName);
                 auto attrResult = parseCapsuleConfigAttribute!Value(
-                    result.config, attr, values, 0
+                    result.config, attr, values, 0, true
                 );
                 mixin(`result.config.` ~ member ~ ` = attrResult.value;`);
                 if(!attrResult.ok) {
@@ -311,7 +337,7 @@ auto loadCapsuleConfig(Config)(
                     (shortName && shortName == attr.shortName)
                 ) {
                     auto attrResult = parseCapsuleConfigAttribute!Value(
-                        result.config, attr, args, i
+                        result.config, attr, args, i, false
                     );
                     mixin(`result.config.` ~ member ~ ` = attrResult.value;`);
                     i += attrResult.argsLength;
