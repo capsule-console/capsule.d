@@ -293,11 +293,11 @@ CapsuleApplicationStatus check(string[] args) {
     CapsuleCheckTest[] tests;
     uint totalTestCases = 0;
     foreach(section; ini.sections) {
-        // Sections marked "caseof" get added to Test objects
-        if(section.get("caseof").length) {
+        // Sections marked "case-of" get added to Test objects
+        if(section.get("case-of").length) {
             bool foundTest = false;
             foreach(ref test; tests) {
-                if(test.name == section.get("caseof")) {
+                if(test.name == section.get("case-of")) {
                     const expectStatus = (
                         getEnumMemberByName!Status(section.get("status"))
                     );
@@ -315,7 +315,7 @@ CapsuleApplicationStatus check(string[] args) {
                 }
             }
             if(!foundTest) {
-                writeln("Unmatched \"caseof\" setting in section: ", section.name);
+                writeln("Unmatched \"case-of\" setting in section: ", section.name);
             }
             continue;
         }

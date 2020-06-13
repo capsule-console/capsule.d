@@ -209,7 +209,7 @@ A test case is identified by the name of the section that defines it.
 Here is a brief list of the properties that are recognized when they
 appear in a section in the capcheck INI configuration file:
 
-- **caseof**: Reuse a build needed by multiple test cases
+- **case-of**: Reuse a build needed by multiple test cases
 - **stdin**: Run with some stdin
 - **stdout**: Expected stdout
 - **status**: Expected program exit status
@@ -219,18 +219,18 @@ appear in a section in the capcheck INI configuration file:
 - **clink-args**: Extra **clink** arguments
 - **capsule-args**: Extra **capsule** arguments
 
-#### caseof
+#### case-of
 
-The **caseof** property is intended for when the same program should be
+The **case-of** property is intended for when the same program should be
 built once but run and tested multiple times with different inputs.
 
 The checking tool ignores build-related properties such as _comment_,
-_source_, _casm-args_, or _clink-args_ in section with a _caseof_ property.
-Instead, the program built by the case named by the _caseof_ property
+_source_, _casm-args_, or _clink-args_ in section with a _case-of_ property.
+Instead, the program built by the case named by the _case-of_ property
 will be run based on any input or expected output information given
 in the test case section.
 
-Note that any test section with one or more _caseof_ references pointing
+Note that any test section with one or more _case-of_ references pointing
 to it will be treated only as a build configuration, and test case
 properties such as _stdin_, _stdout_, or _capsule-args_ will be ignored
 there.
@@ -241,15 +241,15 @@ comment=Example build info for a program reused by multiple test cases
 source=source/code.casm
 source=lib/some-dependency.casm
 [build-info.abc]
-caseof=build-info
+case-of=build-info
 stdin=abc
 stdout=123
 [build-info.def]
-caseof=build-info
+case-of=build-info
 stdin=def
 stdout=546
 [build-info.ghi]
-caseof=build-info
+case-of=build-info
 stdin=ghi
 stdout=789
 ```
@@ -358,17 +358,17 @@ source=lib/read-int.casm
 source=lib/write-int.casm
 source=lib/write-stringz.casm
 [collatz.512]
-caseof=collatz
+case-of=collatz
 stdin=512
 stdout=512 256 128 64 32 16 8 4 2 1
 status=Ok
 [collatz.19]
-caseof=collatz
+case-of=collatz
 stdin=19
 stdout=19 58 29 88 44 22 11 34 17 52 26 13 40 20 10 5 16 8 4 2 1
 status=Ok
 [collatz.1]
-caseof=collatz
+case-of=collatz
 stdin=1
 stdout=1
 status=Ok
