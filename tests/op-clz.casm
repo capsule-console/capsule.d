@@ -1,0 +1,112 @@
+; Test clz (count leading zeroes) with a range of values
+; Store the result of clz(rs1) to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 20
+    li X, 0x00000000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1f
+    li X, 0x00000001
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1e
+    li X, 0x00000003
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1d
+    li X, 0x00000006
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1d
+    li X, 0x00000007
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1c
+    li X, 0x0000000a
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1c
+    li X, 0x00000009
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1c
+    li X, 0x0000000f
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1a
+    li X, 0x0000003f
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 19
+    li X, 0x0000007f
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 18
+    li X, 0x00000080
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 18
+    li X, 0x000000c6
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 12
+    li X, 0x000020ff
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 11
+    li X, 0x00005777
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, 0x00008000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, 0x0000f0f0
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; c
+    li X, 0x000800ff
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; b
+    li X, 0x00100000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; a
+    li X, 0x00200000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 9
+    li X, 0x00400000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8
+    li X, 0x00800000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8
+    li X, 0x00ffffff
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 7
+    li X, 0x01dddddd
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 6
+    li X, 0x03ffabcd
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 5
+    li X, 0x07ffffff
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 4
+    li X, 0x0800ff00
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 3
+    li X, 0x10000000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 2
+    li X, 0x33333333
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 0x7fffffff
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x80000000
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x80001234
+    clz A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0xffffffff
+    clz A, X call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok
