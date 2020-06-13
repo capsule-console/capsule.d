@@ -248,16 +248,6 @@ struct CapsuleObjectEncoder {
     
     enum uint SourceLocationEncodedLength = 24;
     
-    static uint getSourceLocationsContentLength(
-        in CapsuleObject.Source.Location[][] sectionSourceLocations
-    ) {
-        uint length = 4 * cast(uint) sectionSourceLocations.length;
-        foreach(locations; sectionSourceLocations) {
-            length += 24 * locations.length;
-        }
-        return length;
-    }
-    
     void writeSourceLocationsContent(
         in CapsuleObject.Source.Location[] locations
     ) {
