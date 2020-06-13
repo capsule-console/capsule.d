@@ -1,0 +1,55 @@
+; Test sltiu (Set less than immediate unsigned)
+; Store 1 to rd if rs1 < imm, otherwise store 2 to rd
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li A, 'N'
+    li B, 'Y'
+    ; 1
+    addi X, Z, 0
+    sltiu X, X, 1
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 1
+    addi X, Z, 0
+    sltiu X, X, 0xffffffff
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 1
+    addi X, Z, 1234
+    sltiu X, X, 5678
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    addi X, Z, 1
+    sltiu X, X, 0
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    addi X, Z, 0xffffffff
+    sltiu X, X, 0
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    addi X, Z, 6000
+    sltiu X, X, 1200
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    addi X, Z, 512
+    sltiu X, X, 512
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    addi X, Z, 0x80000000
+    sltiu X, X, 0x80000000
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; All done
+    ecalli Z, Z, meta.exit_ok
