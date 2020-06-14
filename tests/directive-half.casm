@@ -1,0 +1,46 @@
+; Test the .half directive.
+; Inserts half words at the current location in memory.
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_half, 0x3002
+
+.rodata
+test_data:
+    .half 0x1234, 0x5678, 0x9abc, 0xdef0
+    .half 0xfedc, 0xba98, 0x7654, 0x3210
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    la C, test_data
+    ; 56781234
+    lw A, C, 0
+    call R, write_hex ecalli Z, B, stdio.put_half
+    ; def09abc
+    lw A, C, 4
+    call R, write_hex ecalli Z, B, stdio.put_half
+    ; ba98fedc
+    lw A, C, 8
+    call R, write_hex ecalli Z, B, stdio.put_half
+    ; 32107654
+    lw A, C, 12
+    call R, write_hex ecalli Z, B, stdio.put_half
+    ; 1234
+    lhu A, C, 0
+    call R, write_hex ecalli Z, B, stdio.put_half
+    ; fedc
+    lhu A, C, 8
+    call R, write_hex ecalli Z, B, stdio.put_half
+    ; 34
+    lbu A, C, 0
+    call R, write_hex ecalli Z, B, stdio.put_half
+    ; 12
+    lbu A, C, 1
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

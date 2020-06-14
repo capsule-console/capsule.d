@@ -1,0 +1,34 @@
+; Test the .byte directive.
+; Inserts bytes at the current location in memory.
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.rodata
+test_data:
+    .byte 0x11, 0x22, 0x33, 0x44
+    .byte 0x55, 0x66, 0x77, 0x88
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    la C, test_data
+    ; 44332211
+    lw A, C, 0
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 4433
+    lhu A, C, 2
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 44
+    lbu A, C, 3
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 88776655
+    lw A, C, 4
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok
