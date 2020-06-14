@@ -1,0 +1,70 @@
+; Test addi (add immediate) with a range of values
+; Store the result of rs1 + imm to rd
+
+.extern write_int
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    li B, ' '
+    ; 0
+    addi A, Z, 0 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 16
+    addi A, Z, 16 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 16
+    li X, 16
+    addi A, X, 0 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 16
+    li X, 16
+    addi A, X, 0 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 30
+    li X, 16
+    addi A, X, 14 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 2
+    li X, 1
+    addi A, X, 1 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 101
+    li X, 1
+    addi A, X, 100 call R, write_int ecalli Z, B, stdio.put_byte
+    ; -6
+    li X, -3
+    addi A, X, -3 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, +30_000
+    addi A, X, -30_000 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, -30_000
+    addi A, X, +30_000 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, +30
+    addi A, X, -20 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0xffffffff
+    addi A, X, 1 call R, write_int ecalli Z, B, stdio.put_byte
+    ; 65535
+    li X, 0
+    addi A, X, 0xffff call R, write_int ecalli Z, B, stdio.put_byte
+    ; 65536
+    li X, 1
+    addi A, X, 0xffff call R, write_int ecalli Z, B, stdio.put_byte
+    ; 65537
+    li X, 2
+    addi A, X, 0xffff call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 1
+    addi A, X, 0xffffffff call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 2
+    addi A, X, 0xffffffff call R, write_int
+    ; All done
+    ecalli Z, Z, meta.exit_ok
