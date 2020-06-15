@@ -211,6 +211,10 @@ enum CapsuleAsmMessageStatus: uint {
     InstructionArgsUnexpectedImmediate,
     @('W', "Instruction argument list is missing an expected immediate value.")
     InstructionArgsMissingImmediate,
+    @('E', "Invalid destination register argument for pseudo-instruction.")
+    PseudoInstructionBadDstRegisterArgs,
+    @('E', "Pseudo-instruction does not allow using the same register as both source and destination.")
+    PseudoInstructionBadSrcDstRegisterArgs,
     @('E', "Wrong checksum.")
     WrongChecksum,
     @('E', "Wrong section checksum.")

@@ -1184,6 +1184,13 @@ struct CapsuleAsmCompiler {
                 Node(loc, Opcode.LoadUpperImmediate, rd, 0, 0, high)
             );
         }
+        void emitSameSrcDstStatus() {
+            this.addStatus(
+                node.location,
+                Status.PseudoInstructionBadSrcDstRegisterArgs,
+                node.getName()
+            );
+        }
         if(pseudoType is PseudoType.NoOperation) {
             emit(Node(loc, Opcode.Add, 0, 0, 0));
         }
@@ -1245,6 +1252,7 @@ struct CapsuleAsmCompiler {
             emit(Node(loc, Opcode.Add, rd, rs1, 0, immediate));
         }
         else if(pseudoType is PseudoType.AddWordImmediate) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
@@ -1253,47 +1261,56 @@ struct CapsuleAsmCompiler {
             }
         }
         else if(pseudoType is PseudoType.AndWordImmediate) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
-            const rdz = values.high ? rd : 0;
+            const addrdz = values.high ? rd : 0;
+            const endrdz = (values.low || values.high) ? rd : 0;
             emitHighHalf(values.high);
-            if(rs1 || values.low || !values.high) {
-                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            if(values.low) {
+                emit(Node(loc, Opcode.Add, rd, addrdz, 0, values.low));
             }
-            emit(Node(loc, Opcode.And, rd, rs1, rd));
+            emit(Node(loc, Opcode.And, rd, rs1, endrdz));
         }
         else if(pseudoType is PseudoType.OrWordImmediate) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
-            const rdz = values.high ? rd : 0;
+            const addrdz = values.high ? rd : 0;
+            const endrdz = (values.low || values.high) ? rd : 0;
             emitHighHalf(values.high);
-            if(rs1 || values.low || !values.high) {
-                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            if(values.low) {
+                emit(Node(loc, Opcode.Add, rd, addrdz, 0, values.low));
             }
-            emit(Node(loc, Opcode.Or, rd, rs1, rd));
+            emit(Node(loc, Opcode.Or, rd, rs1, endrdz));
         }
         else if(pseudoType is PseudoType.XorWordImmediate) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
-            const rdz = values.high ? rd : 0;
+            const addrdz = values.high ? rd : 0;
+            const endrdz = (values.low || values.high) ? rd : 0;
             emitHighHalf(values.high);
-            if(rs1 || values.low || !values.high) {
-                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            if(values.low) {
+                emit(Node(loc, Opcode.Add, rd, addrdz, 0, values.low));
             }
-            emit(Node(loc, Opcode.Xor, rd, rs1, rd));
+            emit(Node(loc, Opcode.Xor, rd, rs1, endrdz));
         }
         else if(pseudoType is PseudoType.SetLessThanWordImmediateSigned) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
-            const rdz = values.high ? rd : 0;
+            const addrdz = values.high ? rd : 0;
+            const endrdz = (values.low || values.high) ? rd : 0;
             emitHighHalf(values.high);
-            if(rs1 || values.low || !values.high) {
-                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            if(values.low) {
+                emit(Node(loc, Opcode.Add, rd, addrdz, 0, values.low));
             }
-            emit(Node(loc, Opcode.SetLessThanSigned, rd, rs1, rd));
+            emit(Node(loc, Opcode.SetLessThanSigned, rd, rs1, endrdz));
         }
         else if(pseudoType is PseudoType.SetLessThanWordImmediateUnsigned) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            if(rs1 || values.low || !values.high) {
-                emit(Node(loc, Opcode.Add, rd, rdz, rs1, values.low));
+            if(values.low) {
+                emit(Node(loc, Opcode.Add, rd, rdz, 0, values.low));
             }
             emit(Node(loc, Opcode.SetLessThanUnsigned, rd, rs1, rd));
         }
@@ -1322,7 +1339,7 @@ struct CapsuleAsmCompiler {
         }
         else if(pseudoType is PseudoType.SetGreaterEqualZero) {
             emit(Node(loc, Opcode.SetLessThanSigned, rd, rs1, 0));
-            emit(Node(loc, Opcode.SetLessThanImmediateUnsigned, rd, rs1, 0, Number(1)));
+            emit(Node(loc, Opcode.SetLessThanImmediateUnsigned, rd, rd, 0, Number(1)));
         }
         else if(pseudoType is PseudoType.LoadImmediate) {
             const values = this.getNumberHalves(immediate);
@@ -1371,18 +1388,21 @@ struct CapsuleAsmCompiler {
             emit(Node(loc, Opcode.LoadWord, rd, rdz, 0, values.low));
         }
         else if(pseudoType is PseudoType.StoreByte) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
             emit(Node(loc, Opcode.StoreByte, 0, rs1, rdz, values.low));
         }
         else if(pseudoType is PseudoType.StoreHalfWord) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
             emit(Node(loc, Opcode.StoreHalfWord, 0, rs1, rdz, values.low));
         }
         else if(pseudoType is PseudoType.StoreWord) {
+            if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
@@ -1466,6 +1486,11 @@ struct CapsuleAsmCompiler {
         else if(pseudoType is PseudoType.ExtensionCallImmediate) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
+            if(values.high) this.addStatus(
+                node.location,
+                Status.PseudoInstructionBadDstRegisterArgs,
+                node.getName()
+            );
             emitHighHalf(values.high);
             emit(Node(loc, Opcode.ExtensionCall, rd, rs1, rdz, values.low));
         }

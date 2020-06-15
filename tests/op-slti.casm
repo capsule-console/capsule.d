@@ -49,5 +49,20 @@
     slti X, X, -16
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
+    ; -2 !< -1 (1)
+    addi X, Z, -2
+    slti X, X, 0xffff
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; -1 !< -1 (0)
+    addi X, Z, -1
+    slti X, X, 0xffff
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0 !< -1 (0)
+    addi X, Z, 0
+    slti X, X, 0xffff
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
     ; All done
     ecalli Z, Z, meta.exit_ok

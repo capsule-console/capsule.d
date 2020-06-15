@@ -1,0 +1,60 @@
+; Test andwi (bitwise AND word immediate) with a range of values
+; Store the result of rs1 & immediate to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 0
+    li X, 0x00000000
+    andwi A, X, 0x00000000
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 0x00000001
+    andwi A, X, 0x00000001
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x00000000
+    andwi A, X, 0xffff
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0xffffffff
+    andwi A, X, 0x00000000
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ffff
+    li X, 0xffffffff
+    andwi A, X, 0xffff
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ffffffff
+    li X, 0xffffffff
+    andwi A, X, 0xffffffff
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x8421c33c
+    andwi A, X, 0x0000
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; c33c
+    li X, 0x8421c33c
+    andwi A, X, 0xffff
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8421c33c
+    li X, 0x8421c33c
+    andwi A, X, 0xffffffff
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8000
+    li X, 0x8421c33c
+    andwi A, X, 0x8000
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 33c
+    li X, 0x8421c33c
+    andwi A, X, 0x0fff
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok
