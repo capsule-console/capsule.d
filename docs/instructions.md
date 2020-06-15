@@ -137,9 +137,9 @@ particularly depending on the inputs.
 | lha rd,address        | Load signed half word from address    | auipc rd,address[pcrel_hi] <br> lh rd,rd,address[pcrel_near_lo] |
 | lhua rd,address       | Load unsigned half word from address  | auipc rd,address[pcrel_hi] <br> lha rd,rd,address[pcrel_near_lo] |
 | lwa rd,address        | Load word from address                | auipc rd,address[pcrel_hi] <br> lw rd,rd,address[pcrel_near_lo] |
-| sba rs1,address       | Store byte to address                 | auipc rd,address[pcrel_hi] <br> sb rd,rd,rs1,address[pcrel_near_lo] |
-| sha rs1,address       | Store half word to address            | auipc rd,address[pcrel_hi] <br> sh rd,rd,rs1,address[pcrel_near_lo] |
-| swa rs1,address       | Store word to address                 | auipc rd,address[pcrel_hi] <br> sw rd,rd,rs1,address[pcrel_near_lo] |
+| sba rd,rs1,address    | Store byte to address                 | auipc rd,address[pcrel_hi] <br> sb rs1,rd,address[pcrel_near_lo] |
+| sha rd,rs1,address    | Store half word to address            | auipc rd,address[pcrel_hi] <br> sh rs1,rd,address[pcrel_near_lo] |
+| swa rd,rs1,address    | Store word to address                 | auipc rd,address[pcrel_hi] <br> sw rs1,rd,address[pcrel_near_lo] |
 | seq rd,rs1,rs2        | Set if equal                          | sub rd,rs1,rs2 <br> sltiu rd,rd,1 |
 | sne rd,rs1,rs2        | Set if not equal                      | sub rd,rs1,rs2 <br> sltu rd,Z,rd |
 | sge rd,rs1,rs2        | Set if greater or equal signed        | slt rd,rs1,rs2 <br> xori rd,rd,1 |

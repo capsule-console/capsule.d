@@ -214,7 +214,7 @@ struct CapsuleInstructionArgs {
     );
     /// Examples: sba, sha, swa (pseudo-instructions)
     static enum StoreAddress = typeof(this)(
-        Registers.BothSources, Immediate.Always,
+        Registers.DestinationSource, Immediate.Always,
         ReferenceType.PCRelativeAddressWord,
     );
     /// Examples: addwi, andwi, orwi, sltwi, sltwiu (pseudo-instructions)
