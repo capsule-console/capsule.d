@@ -140,6 +140,14 @@ particularly depending on the inputs.
 | sba rs1,address       | Store byte to address                 | auipc rd,address[pcrel_hi] <br> sb rd,rd,rs1,address[pcrel_near_lo] |
 | sha rs1,address       | Store half word to address            | auipc rd,address[pcrel_hi] <br> sh rd,rd,rs1,address[pcrel_near_lo] |
 | swa rs1,address       | Store word to address                 | auipc rd,address[pcrel_hi] <br> sw rd,rd,rs1,address[pcrel_near_lo] |
+| seq rd,rs1,rs2        | Set if equal                          | sub rd,rs1,rs2 <br> sltiu rd,rd,1 |
+| sne rd,rs1,rs2        | Set if not equal                      | sub rd,rs1,rs2 <br> sltu rd,Z,rd |
+| sge rd,rs1,rs2        | Set if greater or equal signed        | slt rd,rs1,rs2 <br> xori rd,rd,1 |
+| sgeu rd,rs1,rs2       | Set if greater or equal unsigned      | sltu rd,rs1,rs2 <br> xori rd,rd,1 |
+| sgt rd,rs1,rs2        | Set if greater than signed            | slt rd,rs2,rs1 |
+| sgtu rd,rs1,rs2       | Set if greater than unsigned          | sltu rd,rs2,rs1 |
+| sle rd,rs1,rs2        | Set if less than or equal signed      | slt rd,rs2,rs1 <br> xori rd,rd,1 |
+| sleu rd,rs1,rs2       | Set if less than or equal unsigned    | sltu rd,rs2,rs1 <br> xori rd,rd,1 |
 | beqz rs1,offset       | Branch if equal to zero               | beq rs1,Z,offset |
 | bnez rs1,offset       | Branch if not equal to zero           | bne rs1,Z,offset |
 | blez rs1,offset       | Branch if less or equal to zero       | bge Z,rs1,offset |

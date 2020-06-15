@@ -1391,6 +1391,36 @@ struct CapsuleAsmCompiler {
         else if(pseudoType is PseudoType.BranchEqualZero) {
             emit(Node(loc, Opcode.BranchEqual, 0, rs1, 0, immediate));
         }
+        else if(pseudoType is PseudoType.SetEqual) {
+            emit(Node(loc, Opcode.Subtract, rd, rs1, rs2, immediate));
+            emit(Node(loc, Opcode.SetLessThanImmediateUnsigned, rd, rd, 0, Number(1)));
+        }
+        else if(pseudoType is PseudoType.SetNotEqual) {
+            emit(Node(loc, Opcode.Subtract, rd, rs1, rs2, immediate));
+            emit(Node(loc, Opcode.SetLessThanUnsigned, rd, 0, rd, Number(1)));
+        }
+        else if(pseudoType is PseudoType.SetGreaterEqualSigned) {
+            emit(Node(loc, Opcode.SetLessThanSigned, rd, rs1, rs2, immediate));
+            emit(Node(loc, Opcode.XorImmediate, rd, rd, 0, Number(1)));
+        }
+        else if(pseudoType is PseudoType.SetGreaterEqualUnsigned) {
+            emit(Node(loc, Opcode.SetLessThanUnsigned, rd, rs1, rs2, immediate));
+            emit(Node(loc, Opcode.XorImmediate, rd, rd, 0, Number(1)));
+        }
+        else if(pseudoType is PseudoType.SetGreaterSigned) {
+            emit(Node(loc, Opcode.SetLessThanSigned, rd, rs2, rs1, immediate));
+        }
+        else if(pseudoType is PseudoType.SetGreaterUnsigned) {
+            emit(Node(loc, Opcode.SetLessThanUnsigned, rd, rs2, rs1, immediate));
+        }
+        else if(pseudoType is PseudoType.SetLessEqualSigned) {
+            emit(Node(loc, Opcode.SetLessThanSigned, rd, rs2, rs1, immediate));
+            emit(Node(loc, Opcode.XorImmediate, rd, rd, 0, Number(1)));
+        }
+        else if(pseudoType is PseudoType.SetLessEqualUnsigned) {
+            emit(Node(loc, Opcode.SetLessThanUnsigned, rd, rs2, rs1, immediate));
+            emit(Node(loc, Opcode.XorImmediate, rd, rd, 0, Number(1)));
+        }
         else if(pseudoType is PseudoType.BranchNotEqualZero) {
             emit(Node(loc, Opcode.BranchNotEqual, 0, rs1, 0, immediate));
         }

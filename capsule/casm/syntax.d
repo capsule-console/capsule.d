@@ -91,6 +91,14 @@ enum CapsuleAsmPseudoInstructionType: uint {
     @("sba") StoreByte,
     @("sha") StoreHalfWord,
     @("swa") StoreWord,
+    @("seq") SetEqual,
+    @("sne") SetNotEqual,
+    @("sge") SetGreaterEqualSigned,
+    @("sgeu") SetGreaterEqualUnsigned,
+    @("sgt") SetGreaterSigned,
+    @("sgtu") SetGreaterUnsigned,
+    @("sle") SetLessEqualSigned,
+    @("sleu") SetLessEqualUnsigned,
     @("beqz") BranchEqualZero,
     @("bnez") BranchNotEqualZero,
     @("blez") BranchLessEqualZero,
@@ -243,6 +251,14 @@ auto getCapsulePseudoInstructionArgs(in CapsuleAsmPseudoInstructionType type) {
         case Type.StoreByte: return Args.StoreAddress;
         case Type.StoreHalfWord: return Args.StoreAddress;
         case Type.StoreWord: return Args.StoreAddress;
+        case Type.SetEqual: return Args.RegAllImmNever;
+        case Type.SetNotEqual: return Args.RegAllImmNever;
+        case Type.SetGreaterEqualSigned: return Args.RegAllImmNever;
+        case Type.SetGreaterEqualUnsigned: return Args.RegAllImmNever;
+        case Type.SetGreaterSigned: return Args.RegAllImmNever;
+        case Type.SetGreaterUnsigned: return Args.RegAllImmNever;
+        case Type.SetLessEqualSigned: return Args.RegAllImmNever;
+        case Type.SetLessEqualUnsigned: return Args.RegAllImmNever;
         case Type.BranchEqualZero: return Args.BranchCompareZero;
         case Type.BranchNotEqualZero: return Args.BranchCompareZero;
         case Type.BranchLessEqualZero: return Args.BranchCompareZero;
