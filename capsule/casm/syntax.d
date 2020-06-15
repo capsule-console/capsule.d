@@ -67,6 +67,12 @@ enum CapsuleAsmPseudoInstructionType: uint {
     @("srli") ShiftRightLogicalImmediate,
     @("srai") ShiftRightArithmeticImmediate,
     @("addi") AddImmediate,
+    @("addwi") AddWordImmediate,
+    @("andwi") AndWordImmediate,
+    @("orwi") OrWordImmediate,
+    @("xorwi") XorWordImmediate,
+    @("sltwi") SetLessThanWordImmediateSigned,
+    @("sltwiu") SetLessThanWordImmediateUnsigned,
     @("clo") CountLeadingOnes,
     @("cto") CountTrailingOnes,
     @("seqz") SetEqualZero,
@@ -212,7 +218,13 @@ auto getCapsulePseudoInstructionArgs(in CapsuleAsmPseudoInstructionType type) {
         case Type.ShiftLeftLogicalImmediate: return Args.RegDestSrcImmAlways;
         case Type.ShiftRightLogicalImmediate: return Args.RegDestSrcImmAlways;
         case Type.ShiftRightArithmeticImmediate: return Args.RegDestSrcImmAlways;
-        case Type.AddImmediate: return Args.AddImmediate;
+        case Type.AddImmediate: return Args.RegDestSrcImmAlways;
+        case Type.AddWordImmediate: return Args.PseudoWordImmediate;
+        case Type.AndWordImmediate: return Args.PseudoWordImmediate;
+        case Type.OrWordImmediate: return Args.PseudoWordImmediate;
+        case Type.XorWordImmediate: return Args.PseudoWordImmediate;
+        case Type.SetLessThanWordImmediateSigned: return Args.PseudoWordImmediate;
+        case Type.SetLessThanWordImmediateUnsigned: return Args.PseudoWordImmediate;
         case Type.CountLeadingOnes: return Args.RegDestSrcImmNever;
         case Type.CountTrailingOnes: return Args.RegDestSrcImmNever;
         case Type.SetEqualZero: return Args.RegDestSrcImmNever;

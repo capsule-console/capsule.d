@@ -51,20 +51,14 @@
     ; 0
     li X, 0xffffffff
     addi A, X, 1 call R, write_int ecalli Z, B, stdio.put_byte
-    ; 65535
+    ; -1
     li X, 0
-    addi A, X, 0xffff call R, write_int ecalli Z, B, stdio.put_byte
-    ; 65536
-    li X, 1
-    addi A, X, 0xffff call R, write_int ecalli Z, B, stdio.put_byte
-    ; 65537
-    li X, 2
     addi A, X, 0xffff call R, write_int ecalli Z, B, stdio.put_byte
     ; 0
     li X, 1
-    addi A, X, 0xffffffff call R, write_int ecalli Z, B, stdio.put_byte
+    addi A, X, 0xffff call R, write_int ecalli Z, B, stdio.put_byte
     ; 1
     li X, 2
-    addi A, X, 0xffffffff call R, write_int
+    addi A, X, 0xffff call R, write_int
     ; All done
     ecalli Z, Z, meta.exit_ok

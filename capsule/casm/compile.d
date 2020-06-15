@@ -1242,12 +1242,60 @@ struct CapsuleAsmCompiler {
             emit(Node(loc, Opcode.ShiftRightArithmetic, rd, rs1, 0, immediate));
         }
         else if(pseudoType is PseudoType.AddImmediate) {
+            emit(Node(loc, Opcode.Add, rd, rs1, 0, immediate));
+        }
+        else if(pseudoType is PseudoType.AddWordImmediate) {
+            const values = this.getNumberHalves(immediate);
+            const rdz = values.high ? rd : 0;
+            emitHighHalf(values.high);
+            if(rs1 || values.low || !values.high) {
+                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            }
+        }
+        else if(pseudoType is PseudoType.AndWordImmediate) {
+            const values = this.getNumberHalves(immediate);
+            const rdz = values.high ? rd : 0;
+            emitHighHalf(values.high);
+            if(rs1 || values.low || !values.high) {
+                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            }
+            emit(Node(loc, Opcode.And, rd, rs1, rd));
+        }
+        else if(pseudoType is PseudoType.OrWordImmediate) {
+            const values = this.getNumberHalves(immediate);
+            const rdz = values.high ? rd : 0;
+            emitHighHalf(values.high);
+            if(rs1 || values.low || !values.high) {
+                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            }
+            emit(Node(loc, Opcode.Or, rd, rs1, rd));
+        }
+        else if(pseudoType is PseudoType.XorWordImmediate) {
+            const values = this.getNumberHalves(immediate);
+            const rdz = values.high ? rd : 0;
+            emitHighHalf(values.high);
+            if(rs1 || values.low || !values.high) {
+                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            }
+            emit(Node(loc, Opcode.Xor, rd, rs1, rd));
+        }
+        else if(pseudoType is PseudoType.SetLessThanWordImmediateSigned) {
+            const values = this.getNumberHalves(immediate);
+            const rdz = values.high ? rd : 0;
+            emitHighHalf(values.high);
+            if(rs1 || values.low || !values.high) {
+                emit(Node(loc, Opcode.Add, rd, rs1, rdz, values.low));
+            }
+            emit(Node(loc, Opcode.SetLessThanSigned, rd, rs1, rd));
+        }
+        else if(pseudoType is PseudoType.SetLessThanWordImmediateUnsigned) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
             if(rs1 || values.low || !values.high) {
                 emit(Node(loc, Opcode.Add, rd, rdz, rs1, values.low));
             }
+            emit(Node(loc, Opcode.SetLessThanUnsigned, rd, rs1, rd));
         }
         else if(pseudoType is PseudoType.CountLeadingOnes) {
             emit(Node(loc, Opcode.XorImmediate, rd, rs1, 0, Number(-1)));

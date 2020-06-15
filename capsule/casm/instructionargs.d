@@ -217,8 +217,8 @@ struct CapsuleInstructionArgs {
         Registers.BothSources, Immediate.Always,
         ReferenceType.PCRelativeAddressWord,
     );
-    /// Examples: addi (pseudo-instruction)
-    static enum AddImmediate = typeof(this)(
+    /// Examples: addwi, andwi, orwi, sltwi, sltwiu (pseudo-instructions)
+    static enum PseudoWordImmediate = typeof(this)(
         Registers.DestinationSource, Immediate.Always,
         ReferenceType.AbsoluteWord,
     );

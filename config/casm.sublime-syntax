@@ -75,6 +75,9 @@ contexts:
     - match: (?i)(\b(mv|not|neg|nandi?|nori?|xnori?|andn|orn|xorn|slli|srli|srai|addi|c[lt]o|seqz|snez|sltz|sgtz|l[ia])\b[ \t]*)
       scope: support.function.source.pseudo.casm
       push: instruction_arguments
+    - match: (?i)(\b((add|and|or|xor)wi|sltwiu?)\b[ \t]*)
+      scope: support.function.source.pseudo.word.immediate.casm
+      push: instruction_arguments
     - match: (?i)(\b(nop)\b[ \t]*)
       scope: support.function.source.pseudo.nop.casm
     - match: (?i)(\b(l[bh]u?a|lwa|s[bhw]a)\b[ \t]*)
@@ -143,7 +146,7 @@ contexts:
       scope: constant.numeric.hexadecimal.casm
     - match: ((0[bB])([01]+))
       scope: constant.numeric.binary.casm
-    - match: (([+-])?([0-9]+))
+    - match: (([+-])?([0-9_]+))
       captures:
         2: keyword.operator.arithmetic
         3: constant.numeric.decimal.casm

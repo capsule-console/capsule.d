@@ -115,7 +115,13 @@ particularly depending on the inputs.
 | slli rd,rs1,imm       | Shift logical left by immediate       | sll rd,rs1,Z,imm |
 | srli rd,rs1,imm       | Shift logical right by immediate      | srl rd,rs1,Z,imm |
 | srai rd,rs1,imm       | Shift arithmetic right by immediate   | sra rd,rs1,Z,imm |
-| addi rd,rs1,imm       | Add immediate                         | lui rd,imm[hi] add rd,rd,rs1,imm[lo] |
+| addi rd,rs1,imm       | Add immediate                         | add rd,rs1,Z,imm |
+| addwi rd,rs1,word     | Add word immediate                    | lui rd,word[hi] <br> add rd,rs1,rd,word[lo] |
+| andwi rd,rs1,word     | Bitwise AND word immediate            | li rd,word <br> and rd,rs1,rd |
+| orwi rd,rs1,word      | Bitwise OR word immediate             | li rd,word <br> or rd,rs1,rd |
+| xorwi rd,rs1,word     | Bitwise XOR word immediate            | li rd,word <br> xor rd,rs1,rd |
+| sltwi rd,rs1,word     | Set less than signed word immediate   | li rd,word <br> slt rd,rs1,rd |
+| sltwiu rd,rs1,word    | Set less than unsigned word immediate | li rd,word <br> sltu rd,rs1,rd |
 | clo rd,rs1            | Count leading ones                    | xori rd,rs1,-1 <br> clz rd,rd |
 | cto rd,rs1            | Count trailing ones                   | xori rd,rs1,-1 <br> ctz rd,rd |
 | seqz rd,rs1           | Set if equal to zero                  | sltiu rd,rs1,1 |
