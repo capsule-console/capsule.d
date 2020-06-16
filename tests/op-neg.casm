@@ -1,0 +1,45 @@
+; Test neg (two's complement negation) with a range of values
+; Store the result of 0 - rs1 to rd
+
+.extern write_int
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    li B, ' '
+    ; 0
+    li A, 0
+    neg A, A call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li A, -1
+    neg A, A call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li A, +1
+    neg A, A call R, write_int ecalli Z, B, stdio.put_byte
+    ; 500000
+    li A, -500000
+    neg A, A call R, write_int ecalli Z, B, stdio.put_byte
+    ; -500000
+    li A, +500000
+    neg A, A call R, write_int ecalli Z, B, stdio.put_byte
+    ; 2147483647
+    li A, -2147483647
+    neg A, A call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483647
+    li A, +2147483647
+    neg A, A call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li A, -2147483648
+    neg A, A call R, write_int
+    ; All done
+    ecalli Z, Z, meta.exit_ok

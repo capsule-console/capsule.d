@@ -1,0 +1,44 @@
+; Test not (bitwise NOT, AKA one's complement negation) with a range of values
+; Store the result of rs1 ^ 0xFFFFFFFF to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; ffffffff
+    li X, 0x00000000
+    not A, X
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; fffffffe
+    li X, 0x00000001
+    not A, X
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 887700ff
+    li X, 0x7788ff00
+    not A, X
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0xffffffff
+    not A, X
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; ff
+    li X, 0xffffff00
+    not A, X
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; edcba987
+    li X, 0x12345678
+    not A, X
+    call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 12345678
+    li X, 0xedcba987
+    not A, X
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

@@ -1,0 +1,68 @@
+; Test sltwiu (Set if less than word immediate unsigned)
+; Store 1 to rd if rs1 < imm, otherwise store 0 to rd
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    ; 1
+    li X, 0
+    sltwiu A, X, 1
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 1
+    li X, 0
+    sltwiu A, X, 0xffff
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 1
+    li X, 0
+    sltwiu A, X, 0xffffffff
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 1
+    li X, 1234
+    sltwiu A, X, 5678
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 0
+    li X, 1
+    sltwiu A, X, 0
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 0
+    li X, 0xffffffff
+    sltwiu A, X, 0
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 0
+    li X, 6000
+    sltwiu A, X, 1200
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 0
+    li X, 512
+    sltwiu A, X, 512
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 0
+    li X, 0x4000
+    sltwiu A, X, 0x4000
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 0
+    li X, 0x8000
+    sltwiu A, X, 0x8000
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; 1
+    li X, 0x7f0000
+    sltwiu A, X, 0xff0000
+    addi A, A, '0'
+    ecalli Z, A, stdio.put_byte
+    ; All done
+    ecalli Z, Z, meta.exit_ok

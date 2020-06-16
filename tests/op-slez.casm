@@ -1,0 +1,53 @@
+; Test slez (Set if less than or equal to zero)
+; Store 1 to rd if rs1 <= 0, otherwise store 0 to rd
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    ; 1
+    li X, 0
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    li X, +1
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 1
+    li X, -1
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    li X, +60_000
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 1
+    li X, -60_000
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 0
+    li X, 0x7fffffff
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 1
+    li X, 0xffffffff
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 1
+    li X, 0x80000000
+    slez X, X
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; All done
+    ecalli Z, Z, meta.exit_ok

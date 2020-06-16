@@ -1,0 +1,112 @@
+; Test clo (count leading ones) with a range of values
+; Store the result of clo(rs1) to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 20
+    li X, 0xffffffff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1f
+    li X, 0xfffffffe
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1e
+    li X, 0xfffffffc
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1d
+    li X, 0xfffffff9
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1d
+    li X, 0xfffffff8
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1c
+    li X, 0xfffffff5
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1c
+    li X, 0xfffffff7
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1c
+    li X, 0xfffffff0
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1a
+    li X, 0xffffffc0
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 19
+    li X, 0xffffff80
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 18
+    li X, 0xffffff7f
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 18
+    li X, 0xffffff39
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 12
+    li X, 0xffffdf00
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 11
+    li X, 0xffffa888
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, 0xffff7fff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, 0xffff0f0f
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; c
+    li X, 0xfff7ff00
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; b
+    li X, 0xffefffff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; a
+    li X, 0xffdfffff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 9
+    li X, 0xffbfffff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8
+    li X, 0xff7fffff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8
+    li X, 0xff000000
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 7
+    li X, 0xfe222222
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 6
+    li X, 0xfc005432
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 5
+    li X, 0xf8000000
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 4
+    li X, 0xf7ff00ff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 3
+    li X, 0xefffffff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 2
+    li X, 0xcccccccc
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 0x80000000
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x7fffffff
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x7fffedcb
+    clo A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x00000000
+    clo A, X call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

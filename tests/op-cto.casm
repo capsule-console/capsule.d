@@ -1,0 +1,112 @@
+; Test cto (count leading ones) with a range of values
+; Store the result of cto(rs1) to rd
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x3000
+.const stdio.put_byte, 0x3002
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li B, ' '
+    ; 20
+    li X, 0xffffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1f
+    li X, 0x7fffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1e
+    li X, 0x3fffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1e
+    li X, 0xbfffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1d
+    li X, 0x1fffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1c
+    li X, 0x0fffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1b
+    li X, 0xf7ffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1a
+    li X, 0x03ffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 19
+    li X, 0xf9ffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 18
+    li X, 0x00ffffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 16
+    li X, 0xbbbfffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 14
+    li X, 0xeeefffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 11
+    li X, 0x00fdffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, 0xfff0ffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, 0x8888ffff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; e
+    li X, 0xffe3bfff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; d
+    li X, 0xefff9fff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; c
+    li X, 0x00000fff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; c
+    li X, 0x2f2f2fff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; a
+    li X, 0x0f0f0bff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 8
+    li X, 0x44ff44ff
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 7
+    li X, 0xffffff7f
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 6
+    li X, 0xedcbff3f
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 5
+    li X, 0x5432101f
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 4
+    li X, 0x6666666f
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 4
+    li X, 0x0000000f
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 3
+    li X, 0x80000007
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 2
+    li X, 0x7ffffffb
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 0xfffffff5
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 0xfffffffd
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0x00000000
+    cto A, X call R, write_hex ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0xfffffffe
+    cto A, X call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok
