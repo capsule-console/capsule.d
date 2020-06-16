@@ -72,8 +72,14 @@ contexts:
       push: instruction_arguments
     - match: (?i)(\b(ebreak)\b[ \t]*)
       scope: support.function.control.ebreak.casm
-    - match: (?i)(\b(mv|not|neg|nandi?|nori?|xnori?|andn|orn|xorn|slli|srli|srai|addi|c[lt]o|seqz|snez|sltz|sgtz|l[ia])\b[ \t]*)
+    - match: (?i)(\b(mv|not|neg|nandi?|nori?|xnori?|andn|orn|xorn|slli|srli|srai|addi|c[lt]o|l[ia])\b[ \t]*)
       scope: support.function.source.pseudo.casm
+      push: instruction_arguments
+    - match: (?i)(\b(s(eq|ne|leu?|g[et]u?))\b[ \t]*)
+      scope: support.function.source.pseudo.set.casm
+      push: instruction_arguments
+    - match: (?i)(\b(s(eq|ne|[lg][te])z)\b[ \t]*)
+      scope: support.function.source.pseudo.setz.casm
       push: instruction_arguments
     - match: (?i)(\b((add|and|or|xor)wi|sltwiu?)\b[ \t]*)
       scope: support.function.source.pseudo.word.immediate.casm
