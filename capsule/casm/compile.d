@@ -2090,4 +2090,3 @@ struct CapsuleAsmCompiler {
         );
     }
 }
-import capsule.core.stdio;
