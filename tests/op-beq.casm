@@ -7,15 +7,15 @@
 .text
 .entry
     ; Registers are equal; expect branch
-    addi X, Z, 100
-    addi Y, Z, 100
+    li X, 100
+    li Y, 100
     beq X, Y, beq_ok_1
 beq_error_1:    
     ecalli Z, Z, meta.exit_error
 beq_ok_1:
     ; Registers are not equal; expect to proceed past the branch
-    addi X, Z, 100
-    addi Y, Z, 99
+    li X, 100
+    li Y, 99
     beq X, Y, beq_error_2
 beq_ok_2:
     ecalli Z, Z, meta.exit_ok

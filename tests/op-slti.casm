@@ -1,5 +1,5 @@
-; Test slti (Set less than immediate signed)
-; Store 1 to rd if rs1 < imm, otherwise store 2 to rd
+; Test slti (Set if less than immediate signed)
+; Store 1 to rd if rs1 < imm, otherwise store 0 to rd
 
 .const meta.exit_ok, 0x0001
 .const stdio.init, 0x3000
@@ -10,57 +10,57 @@
     ; Initialize
     ecalli Z, Z, stdio.init
     ; Positive < Positive (1)
-    addi X, Z, 99
+    li X, 99
     slti X, X, 100
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; Positive !< Positive (0)
-    addi X, Z, 60
+    li X, 60
     slti X, X, 15
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; Positive == Positive (0)
-    addi X, Z, 3_500
+    li X, 3_500
     slti X, X, 3_500
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; Negative < Negative (1)
-    addi X, Z, -90
+    li X, -90
     slti X, X, -10
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; Negative !< Negative (0)
-    addi X, Z, -75
+    li X, -75
     slti X, X, -80
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; Negative == Negative (0)
-    addi X, Z, -1
+    li X, -1
     slti X, X, -1
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; Negative < Positive (1)
-    addi X, Z, -50
+    li X, -50
     slti X, X, +50
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; Positive !< Negative (0)
-    addi X, Z, +25
+    li X, +25
     slti X, X, -16
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; -2 !< -1 (1)
-    addi X, Z, -2
+    li X, -2
     slti X, X, 0xffff
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; -1 !< -1 (0)
-    addi X, Z, -1
+    li X, -1
     slti X, X, 0xffff
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 0 !< -1 (0)
-    addi X, Z, 0
+    li X, 0
     slti X, X, 0xffff
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte

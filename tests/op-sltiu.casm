@@ -1,5 +1,5 @@
-; Test sltiu (Set less than immediate unsigned)
-; Store 1 to rd if rs1 < imm, otherwise store 2 to rd
+; Test sltiu (Set if less than immediate unsigned)
+; Store 1 to rd if rs1 < imm, otherwise store 0 to rd
 
 .const meta.exit_ok, 0x0001
 .const stdio.init, 0x3000
@@ -9,46 +9,49 @@
 .entry
     ; Initialize
     ecalli Z, Z, stdio.init
-    li A, 'N'
-    li B, 'Y'
     ; 1
-    addi X, Z, 0
+    li X, 0
     sltiu X, X, 1
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 1
-    addi X, Z, 0
-    sltiu X, X, 0xffffffff
+    li X, 0
+    sltiu X, X, 0xffff
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 1
-    addi X, Z, 1234
+    li X, 1234
     sltiu X, X, 5678
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 0
-    addi X, Z, 1
+    li X, 1
     sltiu X, X, 0
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 0
-    addi X, Z, 0xffffffff
+    li X, 0xffffffff
     sltiu X, X, 0
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 0
-    addi X, Z, 6000
+    li X, 6000
     sltiu X, X, 1200
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 0
-    addi X, Z, 512
+    li X, 512
     sltiu X, X, 512
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; 0
-    addi X, Z, 0x80000000
-    sltiu X, X, 0x80000000
+    li X, 0x4000
+    sltiu X, X, 0x4000
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    ; 1
+    li X, 0x8000
+    sltiu X, X, 0x8000
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     ; All done

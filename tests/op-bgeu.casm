@@ -12,57 +12,57 @@
     li A, 'N'
     li B, 'Y'
     ; N
-    addi X, Z, 0
-    addi Y, Z, 1
+    li X, 0
+    li Y, 1
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
 0:
     ; N
-    addi X, Z, 0
-    addi Y, Z, 0xffffffff
+    li X, 0
+    li Y, 0xffffffff
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
 0:
     ; N
-    addi X, Z, 1234
-    addi Y, Z, 5678
+    li X, 1234
+    li Y, 5678
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
 0:
     ; Y
-    addi X, Z, 1
-    addi Y, Z, 0
+    li X, 1
+    li Y, 0
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
 0:
     ; Y
-    addi X, Z, 0xffffffff
-    addi Y, Z, 0
+    li X, 0xffffffff
+    li Y, 0
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
 0:
     ; Y
-    addi X, Z, 6000
-    addi Y, Z, 1200
+    li X, 6000
+    li Y, 1200
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
 0:
     ; Y
-    addi X, Z, 512
-    addi Y, Z, 512
+    li X, 512
+    li Y, 512
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
 0:
     ; Y
-    addi X, Z, 0x80000000
-    addi Y, Z, 0x80000000
+    li X, 0x80000000
+    li Y, 0x80000000
     bgeu X, Y, 1f
     ecalli Z, A, stdio.put_byte j 0f
 1:  ecalli Z, B, stdio.put_byte
