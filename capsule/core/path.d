@@ -110,6 +110,15 @@ struct Path {
         );
     }
     
+    typeof(this) relativeTo(T)(in T path) const {
+        if(this.isAbsolute) {
+            return this;
+        }
+        else {
+            return Path.join(cast(string) path, this).normalize();
+        }
+    }
+    
     string[] split() const {
         if(!this.path.length) {
             return null;
@@ -156,6 +165,10 @@ struct Path {
     }
     
     string toString() @nogc const {
+        return this.path;
+    }
+    
+    string opCast(T: string)() @nogc const {
         return this.path;
     }
     

@@ -430,6 +430,14 @@ struct CapsuleAsmParser {
         else if(type is DirectiveType.HalfWord) {
             return this.parseByteDataDirective(location, type, ReferenceType.AbsoluteHalfWord);
         }
+        // .incbin [path]
+        else if(type is DirectiveType.IncludeBinary) {
+            return this.parseTextDataDirective(location, type);
+        }
+        // .include [path]
+        else if(type is DirectiveType.IncludeSource) {
+            return this.parseTextDataDirective(location, type);
+        }
         // .padb [length], [fill]
         else if(type is DirectiveType.PadBytes) {
             return this.parsePaddingDirective(location, type);

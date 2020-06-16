@@ -9,6 +9,7 @@ import capsule.core.indexof : lastIndexOf;
 import capsule.core.obj : CapsuleObject;
 import capsule.core.objencode : CapsuleObjectEncoder;
 import capsule.core.objstring : capsuleObjectToString;
+import capsule.core.path : Path;
 import capsule.core.stdio : stdio;
 
 import capsule.casm.compile : CapsuleAsmCompiler;
@@ -61,6 +62,19 @@ struct CapsuleAssemblerConfig {
         ])
     )
     string outputPath;
+    
+    @(CapsuleConfigAttribute!(string[])("include-dirs", "I")
+        .setOptional(null)
+        .setHelpText([
+            "Accepts one or more directory file path strings.",
+            "When an .incbin or .include directive is encountered",
+            "using a relative file path, first the assembler will",
+            "look for the file relative to the including file, then",
+            "it will look relative to each of these directory paths",
+            "from first to last to try to resolve the relative path."
+        ])
+    )
+    string[] includePaths;
     
     @(CapsuleConfigAttribute!bool("debug", "db")
         .setOptional(false)
@@ -221,6 +235,7 @@ CapsuleApplicationStatus compile(string[] args) {
     auto compiler = CapsuleAsmCompiler(&log, sources);
     compiler.doWriteDebugInfo = config.writeDebugInfo;
     compiler.objectSourceEncoding = config.objectSourceEncoding;
+    compiler.includePaths = config.includePaths;
     compiler.compile();
     if(!compiler.ok) {
         writeln("Compilation error.");

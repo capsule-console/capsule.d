@@ -40,6 +40,8 @@ contexts:
       push: data_directive_arguments
     - match: (\.)(endproc|procedure)\b
       scope: support.type.directive.type.casm
+    - match: (\.)(incbin|include)\b
+      scope: support.type.directive.include.casm
     - match: (\.)(align|comment|const|data|entry|export|extern|pad[bhw]|priority|res[bhw]|stringz?)\b
       scope: support.type.directive.casm
 

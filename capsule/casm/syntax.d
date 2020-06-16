@@ -130,6 +130,8 @@ enum CapsuleAsmDirectiveType: uint {
     @("export") Export,
     @("extern") Extern,
     @("half") HalfWord,
+    @("incbin") IncludeBinary,
+    @("include") IncludeSource,
     @("padb") PadBytes,
     @("padh") PadHalfWords,
     @("padw") PadWords,
@@ -359,6 +361,7 @@ struct CapsuleAsmNode {
     FileLocation location;
     Type type = Type.None;
     uint subtype = 0;
+    uint includeDepth = 0;
     
     union {
         // Data for labels
@@ -369,7 +372,7 @@ struct CapsuleAsmNode {
         CapsuleAsmPadDirectiveNode padDirective;
         // Data for .byte, .half, .word
         CapsuleAsmByteDataDirectiveNode byteDataDirective;
-        // Data for .comment, .string, .stringz
+        // Data for .comment, .string, .stringz, .incbin, .include
         CapsuleAsmTextDataDirectiveNode textDirective;
         // Data for .const
         CapsuleAsmConstantDirectiveNode constDirective;
@@ -447,6 +450,8 @@ struct CapsuleAsmNode {
     static bool isTextDirectiveType(in DirectiveType type) {
         return (
             type is DirectiveType.Comment ||
+            type is DirectiveType.IncludeSource ||
+            type is DirectiveType.IncludeBinary ||
             type is DirectiveType.String ||
             type is DirectiveType.StringZ
         );

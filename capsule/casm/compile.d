@@ -9,6 +9,7 @@ import capsule.core.file : File, FileLocation;
 import capsule.core.lz77 : lz77Deflate;
 import capsule.core.math : lcm, isPow2;
 import capsule.core.obj : CapsuleObject;
+import capsule.core.path : Path;
 import capsule.core.programsource : CapsuleProgramSource;
 import capsule.core.time : getUnixSeconds;
 import capsule.core.types : CapsuleOpcode, CapsuleInstruction;
@@ -25,6 +26,7 @@ public:
 
 /// TODO: Load from a config file or something instead of hardcoding
 static const uint MaxAcceptableAlignment = 256;
+static const uint MaxAcceptableIncludeDepth = 256;
 
 /// Representation of a Capsule object section generated internally
 /// by the compiler and used later to assemble a CapsuleObject instance
@@ -36,7 +38,6 @@ struct CapsuleCompilerObjectSection {
     alias Source = CapsuleProgramSource;
     alias Symbol = CapsuleCompilerObjectSymbol;
     alias Type = CapsuleObject.Section.Type;
-    
     
     /// Where in the source code the section is declared
     FileLocation location;
@@ -394,6 +395,10 @@ struct CapsuleAsmCompiler {
     /// future if the linker is able to "relax" jumps & etc.
     bool doResolveLocalReferences = true;
     
+    /// Try these directory paths in order when resolving a relative path
+    /// for an .incbin or .include directive.
+    string[] includePaths = null;
+    
     /// Flag determines whether source file content is included in the
     /// outputted object data.
     bool doWriteDebugInfo = false;
@@ -549,7 +554,6 @@ struct CapsuleAsmCompiler {
     }
     
     Node[] parseSources() {
-        // TODO: Resolve .include and .incbin
         assert(this.log);
         this.addStatus(FileLocation.init, Status.CompileParseSources);
         Node[] nodes;
@@ -568,28 +572,42 @@ struct CapsuleAsmCompiler {
     Source[] getObjectSources() const {
         Source[] objectSources = [];
         foreach(sourceFile; this.sourceFiles) {
-            const useLz77 = (
-                this.objectSourceEncoding is Source.Encoding.CapsuleLZ77
-            );
-            const encoding = (useLz77 ?
-                Source.Encoding.CapsuleLZ77 : Source.Encoding.None
-            );
-            const content = (useLz77 ?
-                cast(string) lz77Deflate(sourceFile.content) :
-                sourceFile.content
-            );
-            const checksum = Source.getChecksum(
-                sourceFile.path, sourceFile.content
-            );
-            const Source objectSource = {
-                encoding: encoding,
-                checksum: checksum,
-                name: sourceFile.path,
-                content: content,
-            };
-            objectSources ~= objectSource;
+            const source = this.getObjectSource(sourceFile);
+            if(!this.hasObjectSource(source)) {
+                objectSources ~= source;
+            }
         }
         return objectSources;
+    }
+    
+    Source getObjectSource(in File file) const {
+        const fileName = Path(file.path).normalize().toString();
+        const useLz77 = (
+            this.objectSourceEncoding is Source.Encoding.CapsuleLZ77
+        );
+        const encoding = (useLz77 ?
+            Source.Encoding.CapsuleLZ77 : Source.Encoding.None
+        );
+        const content = (useLz77 ?
+            cast(string) lz77Deflate(file.content) : file.content
+        );
+        const checksum = Source.getChecksum(fileName, file.content);
+        const Source objectSource = {
+            encoding: encoding,
+            checksum: checksum,
+            name: fileName,
+            content: content,
+        };
+        return objectSource;
+    }
+    
+    bool hasObjectSource(in Source source) const {
+        foreach(objectSource; this.objectSources) {
+            if(source == objectSource) {
+                return true;
+            }
+        }
+        return false;
     }
     
     void addExport(in Export exported) {
@@ -1022,7 +1040,8 @@ struct CapsuleAsmCompiler {
                     dirType is Node.DirectiveType.Constant ||
                     dirType is Node.DirectiveType.Comment ||
                     dirType is Node.DirectiveType.Export ||
-                    dirType is Node.DirectiveType.Extern
+                    dirType is Node.DirectiveType.Extern ||
+                    dirType is Node.DirectiveType.IncludeSource
                 );
             }
             return false;
@@ -1712,6 +1731,14 @@ struct CapsuleAsmCompiler {
         else if(type is DirectiveType.HalfWord) {
             this.compileByteDataDirective!ushort(node);
         }
+        // .incbin
+        else if(type is DirectiveType.IncludeBinary) {
+            this.compileIncludeDirective(node);
+        }
+        // .include
+        else if(type is DirectiveType.IncludeSource) {
+            this.compileIncludeDirective(node);
+        }
         // .padb
         else if(type is DirectiveType.PadBytes) {
             auto section = this.requireInitializedSection(node.location);
@@ -1977,4 +2004,90 @@ struct CapsuleAsmCompiler {
         };
         section.symbols ~= symbol;
     }
+    
+    /// Helper function to resolve a path and load a file given by an
+    /// .incbin or .include directive.
+    File getIncludedFile(in string path, in string relativeToFile = null) {
+        if(Path(path).isAbsolute) {
+            return File.read(path);
+        }
+        else if(relativeToFile.length) {
+            const sourceDirPath = Path(relativeToFile).dirName();
+            const relHere = Path(path).relativeTo(sourceDirPath);
+            const file = File.read(relHere.toString());
+            if(file.ok) {
+                return file;
+            }
+        }
+        foreach(includePath; this.includePaths) {
+            const relInclude = Path(path).relativeTo(includePath);
+            const file = File.read(relInclude.toString());
+            if(file.ok) {
+                return file;
+            }
+        }
+        return File.init;
+    }
+    
+    /// Process a node representing an .incbin or .include directive.
+    void compileIncludeDirective(in Node node) {
+        assert(
+            node.directiveType is DirectiveType.IncludeBinary ||
+            node.directiveType is DirectiveType.IncludeSource
+        );
+        const includePath = node.textDirective.text;
+        auto file = this.getIncludedFile(includePath, node.location.file.path);
+        if(file.status is File.Status.ReadError) {
+            this.addStatus(node.location, Status.FilePathReadError, file.path);
+            return;
+        }
+        else if(!file.ok) {
+            this.addStatus(node.location, Status.FilePathResolutionError, includePath);
+            return;
+        }
+        if(node.directiveType is DirectiveType.IncludeBinary) {
+            this.compileIncludeBinaryDirective(node, file);
+        }
+        else {
+            this.compileIncludeSourceDirective(node, file);
+        }
+    }
+    
+    /// Process a node representing an .incbin directive.
+    void compileIncludeBinaryDirective(in Node node, ref File file) {
+        assert(node.directiveType is DirectiveType.IncludeBinary);
+        this.addStatus(node.location, Status.CompileIncludeBinary, file.path);
+        auto section = this.requireInitializedSection(node.location);
+        if(!section) return;
+        this.setLabelVariableLength(cast(uint) file.content.length);
+        section.addBytes(node.location, file.content);
+    }
+
+    /// Process a node representing an .include directive.
+    void compileIncludeSourceDirective(in Node node, ref File file) {
+        assert(node.directiveType is DirectiveType.IncludeSource);
+        assert(this.nodeIndex < this.nodes.length);
+        assert(this.log);
+        this.addStatus(node.location, Status.CompileIncludeSource, file.path);
+        this.addStatus(FileLocation(file), Status.CompileParseSourceFile);
+        if(node.includeDepth >= MaxAcceptableIncludeDepth) {
+            this.addStatus(node.location, Status.IncludeLevelTooDeep, file.path);
+            return;
+        }
+        const source = this.getObjectSource(file);
+        if(!this.hasObjectSource(source)) {
+            this.objectSources ~= source;
+        }
+        auto parser = Parser(this.log, file);
+        parser.parse();
+        foreach(ref parserNode; parser.nodes) {
+            parserNode.includeDepth = node.includeDepth + 1;
+        }
+        if(parser.ok) this.nodes = (
+            this.nodes[0 .. 1 + this.nodeIndex] ~
+            parser.nodes ~
+            this.nodes[1 + this.nodeIndex .. $]
+        );
+    }
 }
+import capsule.core.stdio;

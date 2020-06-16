@@ -3,14 +3,11 @@
 ; https://en.wikipedia.org/wiki/Collatz_conjecture
 ; https://esolangs.org/wiki/Collatz_sequence
 
+.include "lib/constants.casm"
+
 .extern read_int
 .extern write_int
 .extern write_stringz
-
-.const meta.exit_ok, 0x0001
-.const meta.exit_error, 0x0002
-.const stdio.init, 0x3000
-.const stdio.put_byte, 0x3002
 
 .rodata
     collatz.err: .stringz "Error: Invalid input."

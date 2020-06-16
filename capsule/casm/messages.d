@@ -68,6 +68,10 @@ enum CapsuleAsmMessageStatus: uint {
     CompileExportDirective,
     @('D', "Compiler found an .extern symbol declaration directive.")
     CompileExternDirective,
+    @('D', "Compiler is including a binary file via .incbin.")
+    CompileIncludeBinary,
+    @('D', "Compiler is including a source file via .include.")
+    CompileIncludeSource,
     @('D', "Compiler is attempting to resolve a reference.")
     CompileTryResolveReference,
     @('D', "Compiler was able to resolve a reference.")
@@ -281,6 +285,12 @@ enum CapsuleAsmMessageStatus: uint {
     DuplicateExportedSymbolName,
     @('E', "Global symbol name appears multiple times in the same object.")
     DuplicateGlobalSymbolName,
+    @('E', "Failed to resolve file path.")
+    FilePathResolutionError,
+    @('E', "Failed to read from file path.")
+    FilePathReadError,
+    @('E', "Source file include tree goes too deep.")
+    IncludeLevelTooDeep,
 }
 
 /// Parses a status severity override settings string, for example:
