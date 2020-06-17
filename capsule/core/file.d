@@ -257,7 +257,11 @@ struct FileWriter {
     }
     
     bool ok() const {
-        return this.status is Status.Ok;
+        return this.status is Status.Ok && this.file !is null;
+    }
+    
+    bool isOpen() const {
+        return this.file !is null;
     }
     
     void close() @trusted {
