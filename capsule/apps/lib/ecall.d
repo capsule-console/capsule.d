@@ -46,10 +46,10 @@ ExtFunction getExtFunction(in uint id) {
     uint high = cast(uint) ecallExtList.length;
     while(true) {
         const uint mid = low + ((high - low) / 2);
-        if(ecallExtList[mid].id == id) {
+        if(mid < ecallExtList.length && ecallExtList[mid].id == id) {
             return ecallExtList[mid].func;
         }
-        else if(low == mid) {
+        else if(low >= mid) {
             return null;
         }
         else if(ecallExtList[mid].id > id) {
