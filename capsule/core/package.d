@@ -4,6 +4,7 @@ public:
 
 import capsule.core.adler32;
 import capsule.core.ascii;
+import capsule.core.bitflags;
 import capsule.core.concat;
 import capsule.core.config;
 import capsule.core.encoding;
