@@ -19,6 +19,11 @@ import capsule.apps.lib.runprogram : runProgram, debugProgram;
 import capsule.apps.lib.status : CapsuleApplicationStatus;
 import capsule.apps.lib.stdio : CapsuleStandardIO;
 
+static if(true) { // TODO
+    import capsule.apps.lib.sdl : CapsuleSDL;
+    import capsule.apps.lib.pxgfx : CapsuleSDLPixelGraphics;
+}
+
 public:
 
 enum string CapsuleEngineVersionName = "20200514";
@@ -78,6 +83,14 @@ CapsuleApplicationStatus execute(string[] args) {
     alias Config = CapsuleEngineConfig;
     alias Status = CapsuleApplicationStatus;
     enum string VersionName = CapsuleEngineVersionName;
+    // Initialize extension error message handlers
+    void onExtensionErrorMessage(in string text) {
+        stdio.writeln("Extension error: ", text);
+    }
+    CapsuleStandardIO.global.onErrorMessage = &onExtensionErrorMessage;
+    static if(true) { // TODO
+        CapsuleSDLPixelGraphics.global.onErrorMessage = &onExtensionErrorMessage;
+    }
     // Initialize ecall function pointers
     for(size_t i = 0; i < ecallExtList.length; i++) {
         if(ecallExtList[i].id == CapsuleExtension.stdio_init) {
@@ -88,6 +101,14 @@ CapsuleApplicationStatus execute(string[] args) {
         }
         else if(ecallExtList[i].id == CapsuleExtension.stdio_get_byte) {
             ecallExtList[i].func = &CapsuleStandardIO.ecall_stdio_get_byte;
+        }
+        static if(true) { // TODO
+            if(ecallExtList[i].id == CapsuleExtension.pxgfx_init) {
+                ecallExtList[i].func = &CapsuleSDLPixelGraphics.ecall_pxgfx_init;
+            }
+            else if(ecallExtList[i].id == CapsuleExtension.pxgfx_flip) {
+                ecallExtList[i].func = &CapsuleSDLPixelGraphics.ecall_pxgfx_flip;
+            }
         }
     }
     // Handle --help or --version
@@ -175,6 +196,10 @@ CapsuleApplicationStatus execute(string[] args) {
         );
     }
     engine.mem.free();
+    CapsuleStandardIO.global.conclude();
+    static if(true) { // TODO
+        CapsuleSDLPixelGraphics.global.conclude();
+    }
     switch(engine.status) {
         case CapsuleEngine.Status.None:
             return Status.ExecutionError;

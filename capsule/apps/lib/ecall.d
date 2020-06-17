@@ -39,6 +39,8 @@ Ext[] ecallExtList = [
     Ext(Extension.stdio_get_byte, &ecall_stdio_get_byte),
     Ext(Extension.stdio_flush, &ecall_stdio_flush),
     Ext(Extension.stdio_eof, &ecall_stdio_eof),
+    Ext(Extension.pxgfx_init, null),
+    Ext(Extension.pxgfx_flip, null),
 ];
 
 ExtFunction getExtFunction(in uint id) {

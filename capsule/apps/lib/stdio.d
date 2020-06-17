@@ -37,6 +37,12 @@ struct CapsuleStandardIO {
     void setOutputPath(in string path) {
         this.stdoutPath = path;
     }
+    
+    void conclude() {
+        if(this.stdoutWriter.isOpen) {
+            this.stdoutWriter.close();
+        }
+    }
 }
 
 CapsuleExtensionCallResult ecall_stdio_init(

@@ -32,4 +32,10 @@ enum CapsuleExtension: uint {
     stdio_get_byte = 0x0103,
     stdio_flush = 0x0104,
     stdio_eof = 0x0105,
+    // 2D Pixel Graphics Module (30 00 00 xx)
+    pxgfx_init = 0x30000000,
+    pxgfx_quit = 0x30000001,
+    pxgfx_check_mode = 0x30000002,
+    pxgfx_list_res = 0x30000003,
+    pxgfx_flip = 0x30000004,
 }

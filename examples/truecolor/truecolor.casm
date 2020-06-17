@@ -1,0 +1,64 @@
+.const meta.exit_ok, 0x0001
+.const pxgfx.init, 0x30000000
+.const pxgfx.flip, 0x30000004
+
+.const resx, 128
+.const resy, 128
+.const resxy, 0x4000
+
+.rodata
+    .align 32, 0
+    pxgfx_settings:
+    .word resx, resy
+    .word resx
+    .word 0x80
+    .word 0
+    .word pixels[pcrel_word]
+    .half 60
+    .half 0, 0, 0
+    
+.bss
+    pixels: .resb 0x4000
+
+.bss
+    ticks: .resw 1
+
+.text .entry
+    ; Initialize
+    la A, pxgfx_settings
+    ecalli X, A, pxgfx.init ; TODO: Fix this
+loop:
+    ; Do a loop
+    la C, pixels
+    lwa S, ticks
+0:  add X, C, S
+    andi X, X, 0x7f
+    srli Y, C, 7
+    sub Y, Y, S
+    andi Y, Y, 0x7f
+    ; Red: Brightest in bottom-right (1, 1)
+    add A, X, Y
+    neg A, A
+    addi A, A, 0xff
+    max A, A, Z
+    sb A, C, 0
+    ; Green: Brightest in top-left (1, 0)
+    neg A, Y
+    add A, A, X, 0x7f
+    max A, A, Z
+    sb A, C, 1
+    ; Blue: Brightest in bottom-left (0, 1)
+    neg A, X
+    add A, A, Y, 0x7f
+    max A, A, Z
+    sb A, C, 2
+    ; Next pixel
+    la A, pixels[end_pcrel_word]
+    addi C, C, 4
+    bge C, A, 1f
+    j 0b
+    ; Update graphics
+1:  ecalli A, Z, pxgfx.flip
+    addi S, S, 1
+    swa A, S, ticks
+    j loop
