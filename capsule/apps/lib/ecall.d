@@ -1,4 +1,4 @@
-module capsule.apps.ecall;
+module capsule.apps.lib.ecall;
 
 import capsule.core.extension : CapsuleExtension;
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;

@@ -15,7 +15,7 @@ import capsule.core.stdio : stdio;
 import capsule.casm.compile : CapsuleAsmCompiler;
 import capsule.casm.syntaxstring : capsuleAsmNodeToString;
 
-import capsule.apps.status : CapsuleApplicationStatus;
+import capsule.apps.lib.status : CapsuleApplicationStatus;
 
 public:
 

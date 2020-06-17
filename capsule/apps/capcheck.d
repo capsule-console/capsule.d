@@ -16,7 +16,7 @@ import capsule.core.strings : padLeft;
 import capsule.core.timer : Timer;
 import capsule.core.writeint : writeInt;
 
-import capsule.apps.status : CapsuleApplicationStatus;
+import capsule.apps.lib.status : CapsuleApplicationStatus;
 
 public:
 

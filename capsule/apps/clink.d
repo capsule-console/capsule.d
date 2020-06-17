@@ -14,7 +14,7 @@ import capsule.core.stdio : stdio;
 
 import capsule.casm.link : CapsuleLinker;
 
-import capsule.apps.status : CapsuleApplicationStatus;
+import capsule.apps.lib.status : CapsuleApplicationStatus;
 
 public:
 

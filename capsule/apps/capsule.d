@@ -14,9 +14,9 @@ import capsule.core.programstring : capsuleProgramToString;
 import capsule.core.stdio : stdio;
 import capsule.core.typestrings : getCapsuleExceptionDescription;
 
-import capsule.apps.ecall : ecall, ecallExtList;
-import capsule.apps.runprogram : runProgram, debugProgram;
-import capsule.apps.status : CapsuleApplicationStatus;
+import capsule.apps.lib.ecall : ecall, ecallExtList;
+import capsule.apps.lib.runprogram : runProgram, debugProgram;
+import capsule.apps.lib.status : CapsuleApplicationStatus;
 import capsule.apps.lib.stdio : CapsuleStandardIO;
 
 public:

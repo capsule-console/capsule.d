@@ -1,4 +1,4 @@
-module capsule.apps.runprogram;
+module capsule.apps.lib.runprogram;
 
 import capsule.core.ascii : isDigit, toLower;
 import capsule.core.crc : CRC32;

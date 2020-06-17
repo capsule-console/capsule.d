@@ -1,4 +1,4 @@
-module capsule.apps.status;
+module capsule.apps.lib.status;
 
 public nothrow @safe @nogc:
 
