@@ -3,11 +3,11 @@ module capsule.apps.capsule;
 import capsule.core.config : CapsuleConfigAttribute, CapsuleConfigStatus;
 import capsule.core.config : loadCapsuleConfig, capsuleConfigStatusToString;
 import capsule.core.config : getCapsuleConfigUsageString;
-import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
+import capsule.core.engine : CapsuleEngine;
 import capsule.core.engineinit : initializeCapsuleEngine;
 import capsule.core.enums : getEnumMemberName;
 import capsule.core.extension : CapsuleExtension;
-import capsule.core.file : File, FileWriter;
+import capsule.core.file : File;
 import capsule.core.program : CapsuleProgram;
 import capsule.core.programencode : CapsuleProgramDecoder;
 import capsule.core.programstring : capsuleProgramToString;
@@ -17,6 +17,7 @@ import capsule.core.typestrings : getCapsuleExceptionDescription;
 import capsule.apps.ecall : ecall, ecallExtList;
 import capsule.apps.runprogram : runProgram, debugProgram;
 import capsule.apps.status : CapsuleApplicationStatus;
+import capsule.apps.lib.stdio : CapsuleStandardIO;
 
 public:
 
@@ -73,68 +74,6 @@ struct CapsuleEngineConfig {
     bool verbose;
 }
 
-bool stdinHasContent = false;
-string stdinPath = null;
-string stdoutPath = null;
-string stdinContent = null;
-size_t stdinIndex = 0;
-FileWriter stdoutWriter = FileWriter(null);
-
-CapsuleExtensionCallResult ecall_stdio_init(
-    CapsuleEngine* engine, in uint arg
-) {
-    bool anyFailure = false;
-    if(stdoutWriter) {
-        anyFailure = true;
-    }
-    else if(stdoutPath.length) {
-        stdoutWriter = FileWriter.open(stdoutPath);
-        anyFailure = anyFailure || !stdoutWriter.ok;
-    }
-    if(stdinPath.length) {
-        auto stdinFile = File.read(stdinPath);
-        stdinHasContent = true;
-        stdinContent = stdinFile.content;
-        stdinIndex = 0;
-        anyFailure = anyFailure || !stdinFile.ok;
-    }
-    if(anyFailure) {
-        return CapsuleExtensionCallResult.ExtError;
-    }
-    else {
-        return CapsuleExtensionCallResult.Ok(0);
-    }
-}
-
-CapsuleExtensionCallResult ecall_stdio_put_byte(
-    CapsuleEngine* engine, in uint arg
-) {
-    if(stdoutWriter) {
-        stdoutWriter.put(cast(char) arg);
-    }
-    else {
-        stdio.write(cast(char) arg);
-    }
-    return CapsuleExtensionCallResult.Ok(0);
-}
-
-CapsuleExtensionCallResult ecall_stdio_get_byte(
-    CapsuleEngine* engine, in uint arg
-) {
-    if(!stdinHasContent) {
-        const ch = stdio.readChar();
-        return CapsuleExtensionCallResult.Ok(cast(uint) ch);
-    }
-    else if(stdinIndex < stdinContent.length) {
-        const ch = stdinContent[stdinIndex++];
-        return CapsuleExtensionCallResult.Ok(cast(uint) ch);
-    }
-    else {
-        const ch = int(-1);
-        return CapsuleExtensionCallResult.Ok(cast(uint) ch);
-    }
-}
-
 CapsuleApplicationStatus execute(string[] args) {
     alias Config = CapsuleEngineConfig;
     alias Status = CapsuleApplicationStatus;
@@ -142,13 +81,13 @@ CapsuleApplicationStatus execute(string[] args) {
     // Initialize ecall function pointers
     for(size_t i = 0; i < ecallExtList.length; i++) {
         if(ecallExtList[i].id == CapsuleExtension.stdio_init) {
-            ecallExtList[i].func = &ecall_stdio_init;
+            ecallExtList[i].func = &CapsuleStandardIO.ecall_stdio_init;
         }
         else if(ecallExtList[i].id == CapsuleExtension.stdio_put_byte) {
-            ecallExtList[i].func = &ecall_stdio_put_byte;
+            ecallExtList[i].func = &CapsuleStandardIO.ecall_stdio_put_byte;
         }
         else if(ecallExtList[i].id == CapsuleExtension.stdio_get_byte) {
-            ecallExtList[i].func = &ecall_stdio_get_byte;
+            ecallExtList[i].func = &CapsuleStandardIO.ecall_stdio_get_byte;
         }
     }
     // Handle --help or --version
@@ -164,13 +103,12 @@ CapsuleApplicationStatus execute(string[] args) {
     auto configResult = loadCapsuleConfig!Config(args[2 .. $]);
     auto config = configResult.config;
     const verbose = configResult.config.verbose;
-    stdoutPath = config.stdoutPath;
+    CapsuleStandardIO.global.setOutputPath(config.stdoutPath);
     if(config.stdin) {
-        stdinHasContent = true;
-        stdinContent = config.stdin;
+        CapsuleStandardIO.global.setInputContent(config.stdin);
     }
     else {
-        stdinPath = config.stdinPath;
+        CapsuleStandardIO.global.setInputPath(config.stdinPath);
     }
     if(!configResult.ok) {
         stdio.writeln(configResult.toString());

@@ -33,11 +33,6 @@ Ext[] ecallExtList = [
     Ext(Extension.meta_list_exts, &ecall_meta_list_exts),
     Ext(Extension.meta_host_uuid, &ecall_meta_host_uuid),
     Ext(Extension.meta_host_name, &ecall_meta_host_name),
-    Ext(Extension.exc_init, &ecall_exc_init),
-    Ext(Extension.exc_get_code, &ecall_exc_get_code),
-    Ext(Extension.exc_set_edt, &ecall_exc_set_edt),
-    Ext(Extension.exc_set_edp, &ecall_exc_set_edp),
-    Ext(Extension.conf_init, &ecall_conf_init),
     Ext(Extension.stdio_init, &ecall_stdio_init),
     Ext(Extension.stdio_quit, &ecall_stdio_quit),
     Ext(Extension.stdio_put_byte, &ecall_stdio_put_byte),
@@ -105,26 +100,6 @@ Result ecall_meta_host_uuid(Engine* engine, in uint arg) {
 }
 
 Result ecall_meta_host_name(Engine* engine, in uint arg) {
-    return Result.Ok(0); // TODO
-}
-
-Result ecall_exc_init(Engine* engine, in uint arg) {
-    return Result.Ok(0); // TODO
-}
-
-Result ecall_exc_get_code(Engine* engine, in uint arg) {
-    return Result.Ok(0); // TODO
-}
-
-Result ecall_exc_set_edt(Engine* engine, in uint arg) {
-    return Result.Ok(0); // TODO
-}
-
-Result ecall_exc_set_edp(Engine* engine, in uint arg) {
-    return Result.Ok(0); // TODO
-}
-
-Result ecall_conf_init(Engine* engine, in uint arg) {
     return Result.Ok(0); // TODO
 }
 
