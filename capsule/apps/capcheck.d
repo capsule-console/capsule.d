@@ -361,6 +361,7 @@ CapsuleApplicationStatus check(string[] args) {
         CapsuleCheckTestBuilder builder = {
             test: test,
             config: config,
+            iniDir: iniDir,
             outDir: outDir,
         };
         builder.build();
@@ -432,6 +433,7 @@ struct CapsuleCheckTestBuilder {
     
     Test test;
     Config config;
+    string iniDir;
     string outDir;
     
     Status compileStatus = Status.Ok;
@@ -450,6 +452,7 @@ struct CapsuleCheckTestBuilder {
             test: this.test,
             testCase: testCase,
             config: this.config,
+            iniDir: this.iniDir,
             outDir: this.outDir,
             programPath: this.programPath,
         };
@@ -465,11 +468,12 @@ struct CapsuleCheckTestBuilder {
         );
         // Compile each source file
         foreach(source; this.test.sources) {
+            const srcPath = Path.join(this.iniDir, source).toString();
             const objPath = Path.join(this.outDir, source).toString() ~ ".cob";
             if(objPaths.length) objPaths ~= " ";
             objPaths ~= escapeArg(objPath);
             string compileCmd = (
-                this.config.casmCommand ~ " " ~ source ~
+                this.config.casmCommand ~ " " ~ srcPath ~
                 " -o " ~ escapeArg(objPath) ~
                 (this.config.writeDebugInfo ? " -db" : "") ~
                 cmdLogFlag ~ " " ~ this.test.casmArgs ~ "\0"
@@ -515,6 +519,7 @@ struct CapsuleCheckTestRunner {
     Test test;
     TestCase testCase;
     Config config;
+    string iniDir;
     string outDir;
     
     Status runStatus = Status.Ok;
