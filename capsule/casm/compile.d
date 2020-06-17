@@ -1744,6 +1744,9 @@ struct CapsuleAsmCompiler {
             auto section = this.requireInitializedSection(node.location);
             if(!section) return;
             const fill = cast(ubyte) node.padDirective.fill;
+            if(!node.padDirective.size) this.addStatus(
+                node.location, Status.DirectivePadZeroUnits, node.getName()
+            );
             this.setLabelVariableLength(node.padDirective.size);
             section.reserveBytes(node.location, node.padDirective.size, fill);
         }
@@ -1755,6 +1758,9 @@ struct CapsuleAsmCompiler {
             if(section.length % 2 != 0) this.addStatus(
                 node.location, Status.MisalignedHalfWord, node.getName()
             );
+            if(!node.padDirective.size) this.addStatus(
+                node.location, Status.DirectivePadZeroUnits, node.getName()
+            );
             this.setLabelVariableLength(2 * node.padDirective.size);
             section.reserveHalfWords(node.location, node.padDirective.size, fill);
         }
@@ -1765,6 +1771,9 @@ struct CapsuleAsmCompiler {
             const fill = cast(uint) node.padDirective.fill;
             if(section.length % 4 != 0) this.addStatus(
                 node.location, Status.MisalignedWord, node.getName()
+            );
+            if(!node.padDirective.size) this.addStatus(
+                node.location, Status.DirectivePadZeroUnits, node.getName()
             );
             this.setLabelVariableLength(4 * node.padDirective.size);
             section.reserveWords(node.location, node.padDirective.size, fill);
@@ -1794,6 +1803,9 @@ struct CapsuleAsmCompiler {
         else if(type is DirectiveType.ReserveBytes) {
             auto section = this.requireDeclaredSection(node.location);
             if(!section) return;
+            if(!node.padDirective.size) this.addStatus(
+                node.location, Status.DirectiveReserveZeroUnits, node.getName()
+            );
             this.setLabelVariableLength(node.padDirective.size);
             section.reserveBytes(node.location, node.padDirective.size);
         }
@@ -1804,6 +1816,9 @@ struct CapsuleAsmCompiler {
             if(section.length % 2 != 0) this.addStatus(
                 node.location, Status.MisalignedHalfWord, node.getName()
             );
+            if(!node.padDirective.size) this.addStatus(
+                node.location, Status.DirectiveReserveZeroUnits, node.getName()
+            );
             this.setLabelVariableLength(2 * node.padDirective.size);
             section.reserveHalfWords(node.location, node.padDirective.size);
         }
@@ -1813,6 +1828,9 @@ struct CapsuleAsmCompiler {
             if(!section) return;
             if(section.length % 4 != 0) this.addStatus(
                 node.location, Status.MisalignedWord, node.getName()
+            );
+            if(!node.padDirective.size) this.addStatus(
+                node.location, Status.DirectiveReserveZeroUnits, node.getName()
             );
             this.setLabelVariableLength(4 * node.padDirective.size);
             section.reserveWords(node.location, node.padDirective.size);

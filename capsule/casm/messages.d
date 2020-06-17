@@ -205,6 +205,10 @@ enum CapsuleAsmMessageStatus: uint {
     InvalidProgramSegmentType,
     @('E', "Wrong arguments for directive.")
     DirectiveWrongArgs,
+    @('W', "Pad directive is padding with zero units.")
+    DirectivePadZeroUnits,
+    @('W', "Reserve directive is reserving zero units.")
+    DirectiveReserveZeroUnits,
     @('E', "Wrong arguments for instruction.")
     InstructionWrongArgs,
     @('E', "Instruction argument list contains more registers than expected.")
