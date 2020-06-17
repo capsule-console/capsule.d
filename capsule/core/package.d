@@ -34,6 +34,7 @@ import capsule.core.range;
 import capsule.core.sort;
 import capsule.core.stdio;
 import capsule.core.strings;
+import capsule.core.stringz;
 import capsule.core.templates;
 import capsule.core.typestrings;
 import capsule.core.time;
