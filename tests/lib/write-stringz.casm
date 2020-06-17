@@ -1,6 +1,6 @@
 .export write_stringz
 
-.const stdio.put_byte, 0x3002
+.const stdio.put_byte, 0x0102
 
 ; Beginning at the address indicated by register A,
 ; print characters until a zero (null char) is encountered.

@@ -2,8 +2,8 @@
 ; Inserts the contents of a file at the current location in memory.
 
 .const meta.exit_ok, 0x0001
-.const stdio.init, 0x3000
-.const stdio.put_byte, 0x3002
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
 
 .rodata
 hello:
@@ -16,11 +16,11 @@ hello:
     la A, hello
     li B, hello[length_word]
     add B, A, B
-0:  ; Loop until the end
-    bge A, B, 1f
+    ; Loop until the end
+0:  bge A, B, 1f
     lbu X, A, 0
     ecalli Z, X, stdio.put_byte
     addi A, A, 1
     j 0b
-1:  ; All done
-    ecalli Z, Z, meta.exit_ok
+    ; All done
+1:  ecalli Z, Z, meta.exit_ok

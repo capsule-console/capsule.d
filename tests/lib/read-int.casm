@@ -1,6 +1,6 @@
 .export read_int
 
-.const stdio.get_byte, 0x3003
+.const stdio.get_byte, 0x0103
 
 ; Read a signed decimal integer input from stdin and store the
 ; parsed value in register A.

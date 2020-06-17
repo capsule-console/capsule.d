@@ -4,8 +4,8 @@
 .extern write_hex
 
 .const meta.exit_ok, 0x0001
-.const stdio.init, 0x3000
-.const stdio.put_half, 0x3002
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
 
 .rodata
 test_data:
@@ -20,25 +20,25 @@ test_data:
     la C, test_data
     ; 12345678
     lw A, C, 0
-    call R, write_hex ecalli Z, B, stdio.put_half
+    call R, write_hex ecalli Z, B, stdio.put_byte
     ; 9abcdef0
     lw A, C, 4
-    call R, write_hex ecalli Z, B, stdio.put_half
+    call R, write_hex ecalli Z, B, stdio.put_byte
     ; fedcba98
     lw A, C, 8
-    call R, write_hex ecalli Z, B, stdio.put_half
+    call R, write_hex ecalli Z, B, stdio.put_byte
     ; 76543210
     lw A, C, 12
-    call R, write_hex ecalli Z, B, stdio.put_half
+    call R, write_hex ecalli Z, B, stdio.put_byte
     ; 5678
     lhu A, C, 0
-    call R, write_hex ecalli Z, B, stdio.put_half
+    call R, write_hex ecalli Z, B, stdio.put_byte
     ; ba98
     lhu A, C, 8
-    call R, write_hex ecalli Z, B, stdio.put_half
+    call R, write_hex ecalli Z, B, stdio.put_byte
     ; 78
     lbu A, C, 0
-    call R, write_hex ecalli Z, B, stdio.put_half
+    call R, write_hex ecalli Z, B, stdio.put_byte
     ; 56
     lbu A, C, 1
     call R, write_hex

@@ -2,8 +2,22 @@ module capsule.core.extension;
 
 public nothrow @safe @nogc:
 
+/* Tentatively planned extensions
+
+Exception Handling Module 00 00 .. .. (exc_init, exc_quit, exc_get_code)
+
+Memory management module (00 00 .. ..) (mem_brk)
+
+Configuration Preferences Module
+
+Saved Data Module
+
+External Assets Module
+
+*/
+
 enum CapsuleExtension: uint {
-    /// Meta module 0x0000 0x0000
+    // Meta Module (00 00 00 xx)
     meta_noop = 0x0000,
     meta_exit_ok = 0x0001,
     meta_exit_error = 0x0002,
@@ -11,18 +25,11 @@ enum CapsuleExtension: uint {
     meta_list_exts = 0x0004,
     meta_host_uuid = 0x0005,
     meta_host_name = 0x0006,
-    // Exceptions module 0x0000 0x1000
-    exc_init = 0x1000,
-    exc_get_code = 0x1001,
-    exc_set_edt = 0x1002,
-    exc_set_edp = 0x1003,
-    // System settings module 0x0000 0x2000
-    conf_init = 0x2000,
-    // Standard I/O module 0x0000 0x3000
-    stdio_init = 0x3000,
-    stdio_quit = 0x3001,
-    stdio_put_byte = 0x3002,
-    stdio_get_byte = 0x3003,
-    stdio_flush = 0x3004,
-    stdio_eof = 0x3005,
+    // Standard Input and Output Module (00 00 01 xx)
+    stdio_init = 0x0100,
+    stdio_quit = 0x0101,
+    stdio_put_byte = 0x0102,
+    stdio_get_byte = 0x0103,
+    stdio_flush = 0x0104,
+    stdio_eof = 0x0105,
 }

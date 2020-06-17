@@ -2,8 +2,8 @@
 ; Store 1 to rd if rs1 > 0, otherwise store 0 to rd
 
 .const meta.exit_ok, 0x0001
-.const stdio.init, 0x3000
-.const stdio.put_byte, 0x3002
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
 
 .text
 .entry
