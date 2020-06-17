@@ -498,17 +498,13 @@ struct CapsuleAsmCompiler {
     
     void addReference(
         Section* section, in FileLocation location, in Node.Number number,
-        in uint offset, in uint targetLength, in uint maxRefLength,
-        in bool allowPcRelative
+        in uint offset, in uint targetLength, in uint maxRefLength
     ) {
         // Make sure this isn't an absolute word (32 bit) reference
         // trying to get crammed into a 16 bit immediate or something
         const refLength = Object.Reference.typeLength(number.referenceType);
         const refOffset = Object.Reference.typeOffset(number.referenceType);
-        const pcRel = Object.Reference.isPcRelativeType(number.referenceType);
-        if(refLength > maxRefLength || refLength + refOffset > targetLength ||
-            (pcRel && !allowPcRelative)
-        ) {
+        if(refLength > maxRefLength || refLength + refOffset > targetLength) {
             this.addStatus(
                 location, Status.InvalidObjectReference, number.name
             );
@@ -1172,7 +1168,7 @@ struct CapsuleAsmCompiler {
         else {
             this.addReference(
                 section, node.location, node.instruction.immediate,
-                section.length, 4, 2, true
+                section.length, 4, 2
             );
         }
         // Encode the instruction
@@ -1505,7 +1501,7 @@ struct CapsuleAsmCompiler {
         else if(pseudoType is PseudoType.ExtensionCallImmediate) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
-            if(values.high) this.addStatus(
+            if(values.high && rd == rs1) this.addStatus(
                 node.location,
                 Status.PseudoInstructionBadDstRegisterArgs,
                 node.getName()
@@ -1531,15 +1527,15 @@ struct CapsuleAsmCompiler {
         }
         // Helper function to get the two halves of a constant value
         Result getConstantHalves(in typeof(number.value) value) {
-            if(number.value == cast(short) number.value) {
-                return Result(number);
+            if(value == cast(short) value) {
+                return Result(Number(value));
             }
             else {
-                const short low = cast(short) number.value;
+                const short low = cast(short) value;
                 const short high = cast(short) (
-                    (cast(short) (number.value >> 16)) + ((low >> 15) & 1)
+                    (cast(short) (value >> 16)) + ((low >> 15) & 1)
                 );
-                assert((cast(int) high << 16) + low == cast(int) number.value);
+                assert((cast(int) high << 16) + low == cast(int) value);
                 return Result(Number(low), Number(high));
             }
         }
@@ -1982,7 +1978,7 @@ struct CapsuleAsmCompiler {
             );
             if(!resolveValue.canWrite) this.addReference(
                 section, node.location, number, section.length,
-                T.sizeof, T.sizeof, false
+                T.sizeof, T.sizeof
             );
             // Write the number's value to the section
             //const uint offset = section.length;
