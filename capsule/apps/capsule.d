@@ -77,6 +77,31 @@ struct CapsuleEngineConfig {
         ])
     )
     bool verbose;
+    
+    @(CapsuleConfigAttribute!bool("show-exit-status", "exs")
+        .setOptional(false)
+        .setHelpText([
+            "When set, information about the final exit status of",
+            "the program will be written to stdout after completion."
+        ])
+    )
+    bool showExitStatus;
+}
+
+CapsuleApplicationStatus getExitStatus(in CapsuleEngine.Status status) {
+    alias Status = CapsuleApplicationStatus;
+    switch(status) {
+        case CapsuleEngine.Status.None:
+            return Status.ExecutionError;
+        case CapsuleEngine.Status.ExitError:
+            return Status.ExecutionExitError;
+        case CapsuleEngine.Status.Aborted:
+            return Status.ExecutionAborted;
+        case CapsuleEngine.Status.Terminated:
+            return Status.ExecutionTerminated;
+        default:
+            return Status.Ok;
+    }
 }
 
 CapsuleApplicationStatus execute(string[] args) {
@@ -200,18 +225,11 @@ CapsuleApplicationStatus execute(string[] args) {
     static if(true) { // TODO
         CapsuleSDLPixelGraphics.global.conclude();
     }
-    switch(engine.status) {
-        case CapsuleEngine.Status.None:
-            return Status.ExecutionError;
-        case CapsuleEngine.Status.ExitError:
-            return Status.ExecutionExitError;
-        case CapsuleEngine.Status.Aborted:
-            return Status.ExecutionAborted;
-        case CapsuleEngine.Status.Terminated:
-            return Status.ExecutionTerminated;
-        default:
-            return Status.Ok;
+    const exitStatus = getExitStatus(engine.status);
+    if(config.showExitStatus) {
+        stdio.writeln("Exiting with status code ", writeInt(exitStatus));
     }
+    return exitStatus;
 }
 
 version(CapsuleExcludeExecutionMain) {}

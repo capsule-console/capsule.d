@@ -393,9 +393,20 @@ CapsuleApplicationStatus check(string[] args) {
                 write("TEST PASS: ", testCase.name, " (");
                 testsPassed++;
             }
-            else {
+            else if(testCase.status is Status.Ok) {
                 const statusName = getEnumMemberName(runner.status);
-                write("TEST FAIL: ", testCase.name ~ " (" ~ statusName ~ ") (");
+                write("TEST FAIL: ", testCase.name, " (Error status: ",
+                    getByteHexString(cast(ushort) runner.status), ", ",
+                    statusName,
+                ") (");
+                testsFailed++;
+            }
+            else {
+                const statusName = getEnumMemberName(runner.runStatus);
+                write("TEST FAIL: ", testCase.name, " (Wrong status: ",
+                    getByteHexString(cast(ushort) runner.runStatus), ", ",
+                    statusName,
+                ") (");
                 testsFailed++;
             }
             writems(buildms + runner.runTime.milliseconds);
@@ -571,7 +582,15 @@ struct CapsuleCheckTestRunner {
         assert(this.runCmd.length && this.runCmd[$ - 1] == '\0');
         verboseln(this.runCmd[0 .. $ - 1]);
         this.runTime.start();
-        this.runStatus = cast(Status) system(this.runCmd.ptr);
+        const systemStatus = system(this.runCmd.ptr);
+        version(Windows) {
+            // Windows is nice and easy
+            this.runStatus = cast(Status) systemStatus;
+        }
+        else {
+            // Posix systems are slightly a pain
+            this.runStatus = cast(Status) (systemStatus >> 8);
+        }
         this.runTime.end();
         // Record the output
         const stdoutFile = File.read(stdoutPath);
