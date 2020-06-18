@@ -110,7 +110,7 @@ CapsuleApplicationStatus execute(string[] args) {
     alias Status = CapsuleApplicationStatus;
     enum string VersionName = CapsuleEngineVersionName;
     // Initialize extension error message handlers
-    void onExtensionErrorMessage(in string text) {
+    void onExtensionErrorMessage(in char[] text) {
         stdio.writeln("Extension error: ", text);
     }
     CapsuleStandardIO.global.onErrorMessage = &onExtensionErrorMessage;
