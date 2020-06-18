@@ -1322,12 +1322,13 @@ struct CapsuleAsmCompiler {
         else if(pseudoType is PseudoType.SetLessThanWordImmediateUnsigned) {
             if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
-            const rdz = values.high ? rd : 0;
+            const addrdz = values.high ? rd : 0;
+            const endrdz = (values.low || values.high) ? rd : 0;
             emitHighHalf(values.high);
             if(values.low) {
-                emit(Node(loc, Opcode.Add, rd, rdz, 0, values.low));
+                emit(Node(loc, Opcode.Add, rd, addrdz, 0, values.low));
             }
-            emit(Node(loc, Opcode.SetLessThanUnsigned, rd, rs1, rd));
+            emit(Node(loc, Opcode.SetLessThanUnsigned, rd, rs1, endrdz));
         }
         else if(pseudoType is PseudoType.CountLeadingOnes) {
             emit(Node(loc, Opcode.XorImmediate, rd, rs1, 0, Number(-1)));
