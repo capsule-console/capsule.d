@@ -13,13 +13,14 @@ import capsule.core.programencode : CapsuleProgramDecoder;
 import capsule.core.programstring : capsuleProgramToString;
 import capsule.core.stdio : stdio;
 import capsule.core.typestrings : getCapsuleExceptionDescription;
+import capsule.core.writeint : writeInt;
 
 import capsule.apps.lib.ecall : ecall, ecallExtList;
 import capsule.apps.lib.runprogram : runProgram, debugProgram;
 import capsule.apps.lib.status : CapsuleApplicationStatus;
 import capsule.apps.lib.stdio : CapsuleStandardIO;
 
-static if(true) { // TODO
+version(CapsuleSDL2Graphics) {
     import capsule.apps.lib.sdl : CapsuleSDL;
     import capsule.apps.lib.pxgfx : CapsuleSDLPixelGraphics;
 }
@@ -113,7 +114,7 @@ CapsuleApplicationStatus execute(string[] args) {
         stdio.writeln("Extension error: ", text);
     }
     CapsuleStandardIO.global.onErrorMessage = &onExtensionErrorMessage;
-    static if(true) { // TODO
+    version(CapsuleSDL2Graphics) {
         CapsuleSDLPixelGraphics.global.onErrorMessage = &onExtensionErrorMessage;
     }
     // Initialize ecall function pointers
@@ -127,7 +128,7 @@ CapsuleApplicationStatus execute(string[] args) {
         else if(ecallExtList[i].id == CapsuleExtension.stdio_get_byte) {
             ecallExtList[i].func = &CapsuleStandardIO.ecall_stdio_get_byte;
         }
-        static if(true) { // TODO
+        version(CapsuleSDL2Graphics) {
             if(ecallExtList[i].id == CapsuleExtension.pxgfx_init) {
                 ecallExtList[i].func = &CapsuleSDLPixelGraphics.ecall_pxgfx_init;
             }
@@ -222,7 +223,7 @@ CapsuleApplicationStatus execute(string[] args) {
     }
     engine.mem.free();
     CapsuleStandardIO.global.conclude();
-    static if(true) { // TODO
+    version(CapsuleSDL2Graphics) {
         CapsuleSDLPixelGraphics.global.conclude();
     }
     const exitStatus = getExitStatus(engine.status);

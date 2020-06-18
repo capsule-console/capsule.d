@@ -1,5 +1,7 @@
 module capsule.apps.lib.sdl;
 
+version(CapsuleSDL2Graphics):
+
 import derelict.sdl2.sdl;
 import derelict.util.loader : SharedLibVersion;
 

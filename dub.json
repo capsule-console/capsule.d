@@ -30,7 +30,7 @@
             ],
         },
         {
-            "name": "capsule",
+            "name": "capsule-cli",
             "targetType": "executable",
             "targetPath": "bin",
             "targetName": "capsule",
@@ -39,6 +39,21 @@
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeLinkerMain"
             ],
+        },
+        {
+            "name": "capsule",
+            "targetType": "executable",
+            "targetPath": "bin",
+            "targetName": "capsule",
+            "versions": [
+                "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeCheckerMain",
+                "CapsuleExcludeLinkerMain",
+                "CapsuleSDL2Graphics"
+            ],
+            "dependencies": {
+                "derelict-sdl2": "3.0.0-beta.8"
+            },
         },
         {
             "name": "casm",

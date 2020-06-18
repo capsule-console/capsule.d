@@ -1,5 +1,7 @@
 module capsule.apps.lib.pxgfx;
 
+version(CapsuleSDL2Graphics):
+
 import core.stdc.string : memcpy;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
