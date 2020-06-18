@@ -70,7 +70,7 @@ end:
 This repository is configured to be built with [**dub**](https://dub.pm/index.html).
 With dub installed, run one of the following commands in a CLI with the repository root as your working directory to build a particular binary:
 
-- Capsule virtual machine **capsule**: `dub --config=capsule --build=release`
+- Capsule virtual machine **capsule**: `dub --config=capsule-sdl --build=release`
 - Capsule virtual machine **capsule** (CLI only): `dub --config=capsule-cli --build=release`
 - Capsule assembler **casm**: `dub --config=casm --build=release`
 - Capsule linker **clink**: `dub --config=clink --build=release`

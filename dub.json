@@ -41,7 +41,7 @@
             ],
         },
         {
-            "name": "capsule",
+            "name": "capsule-sdl",
             "targetType": "executable",
             "targetPath": "bin",
             "targetName": "capsule",
