@@ -54,7 +54,7 @@ struct CapsuleCheckConfig {
     )
     bool writeDebugInfo;
     
-    @(CapsuleConfigAttribute!string("asm")
+    @(CapsuleConfigAttribute!string("asm-command")
         .setOptional("casm")
         .setHelpText([
             "Command or path to binary to use when compiling Capsule",
@@ -63,7 +63,7 @@ struct CapsuleCheckConfig {
     )
     string asmCommand;
     
-    @(CapsuleConfigAttribute!string("link")
+    @(CapsuleConfigAttribute!string("link-command")
         .setOptional("clink")
         .setHelpText([
             "Command or path to binary to use when linking compiled",
@@ -72,7 +72,7 @@ struct CapsuleCheckConfig {
     )
     string linkCommand;
     
-    @(CapsuleConfigAttribute!string("capsule")
+    @(CapsuleConfigAttribute!string("run-command")
         .setOptional("capsule")
         .setHelpText([
             "Command or path to binary to use for executing compiled",
@@ -240,7 +240,7 @@ CapsuleApplicationStatus check(string[] args) {
     auto iniParser = Ini.Parser(iniFile);
     iniParser.parse();
     if(!iniFile.ok) {
-        writeln("Error parsing configuration INI file.");
+        writeln("Error parsing test configuration INI file.");
         writeln(iniParser.log.toString());
         return Status.ConfigFileParseError;
     }
@@ -466,7 +466,7 @@ struct CapsuleCheckTestBuilder {
                 srcPath,
                 "-o", objPath,
                 cmdLogFlag,
-                (this.config.writeDebugInfo ? " -db" : null),
+                (this.config.writeDebugInfo ? "-db" : null),
             ] ~ this.test.asmArgs;
             verboseln(getRunProcessString(
                 this.config.asmCommand, compileArgs
