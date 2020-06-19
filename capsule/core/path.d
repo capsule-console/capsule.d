@@ -77,10 +77,16 @@ struct Path {
         return this.path[0 .. i];
     }
     
-    string fileExt() @nogc const {
+    string extName() @nogc const {
         size_t i = this.path.length;
         while(i > 0 && this.path[i - 1] != '.') i--;
         return this.path[i .. $];
+    }
+    
+    typeof(this) stripExt() @nogc const {
+        size_t i = this.path.length;
+        while(i > 0 && this.path[i - 1] != '.') i--;
+        return typeof(this)(i > 0 ? this.path[0 .. i - 1] : null);
     }
     
     /// Determine whether a file path is absolute on the current platform.
@@ -218,13 +224,15 @@ unittest {
 unittest {
     assert(Path(``).fileName == ``);
     assert(Path(``).dirName == ``);
-    assert(Path(``).fileExt == ``);
+    assert(Path(``).extName == ``);
+    assert(Path(``).stripExt == ``);
 }
 
 unittest {
     assert(Path(`stuff.dat`).fileName == `stuff.dat`);
     assert(Path(`stuff.dat`).dirName == ``);
-    assert(Path(`stuff.dat`).fileExt == `dat`);
+    assert(Path(`stuff.dat`).extName == `dat`);
+    assert(Path(`stuff.dat`).stripExt == `stuff`);
 }
 
 unittest {
@@ -232,6 +240,8 @@ unittest {
     assert(Path(`hello\world\stuff.dat`).fileName == `stuff.dat`);
     assert(Path(`hello/world/stuff.dat`).dirName == `hello/world/`);
     assert(Path(`hello\world\stuff.dat`).dirName == `hello\world\`);
-    assert(Path(`hello/world/stuff.dat`).fileExt == `dat`);
-    assert(Path(`hello\world\stuff.dat`).fileExt == `dat`);
+    assert(Path(`hello/world/stuff.dat`).extName == `dat`);
+    assert(Path(`hello\world\stuff.dat`).extName == `dat`);
+    assert(Path(`hello/world/stuff.dat`).stripExt == `hello/world/stuff`);
+    assert(Path(`hello\world\stuff.dat`).stripExt == `hello\world\stuff`);
 }
