@@ -3,6 +3,7 @@ module capsule.core.file;
 import core.stdc.stdio : FILE;
 import core.stdc.stdio : fopen, fclose, fread, feof, fwrite, fputc, fflush;
 
+import capsule.core.filesystem : openFile;
 import capsule.core.stringz : StringZ;
 
 nothrow @safe public:
@@ -38,9 +39,7 @@ ReadFileResult readFileContent(in string path) @trusted {
         return Result.FilePathError;
     }
     // Open the file
-    const string mode = "rb";
-    const pathz = StringZ!char(path);
-    FILE* file = fopen(pathz.ptr, mode.ptr);
+    FILE* file = openFile(path, "rb");
     if(file is null) {
         return Result.FilePathError;
     }
@@ -74,9 +73,7 @@ FileStatus writeFileContent(T)(
         return Status.FilePathError;
     }
     // Open the file
-    const string mode = "wb";
-    const pathz = StringZ!char(path);
-    FILE* file = fopen(pathz.ptr, mode.ptr);
+    FILE* file = openFile(path, "wb");
     if(file is null) {
         return Status.FilePathError;
     }

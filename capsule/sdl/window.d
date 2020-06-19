@@ -6,7 +6,7 @@ import capsule.sdl.displaymode : CapsuleSDLDisplayMode;
 import capsule.sdl.types : CapsuleSDLPixelFormat;
 
 import capsule.core.bitflags : BitFlags;
-import capsule.core.stringz : StringZ;
+import capsule.core.stringz : stringz;
 
 public:
 
@@ -76,7 +76,7 @@ struct CapsuleSDLWindow {
         in string title, in int width, in int height, in FlagsType flags
     ) {
         this.handle = SDL_CreateWindow(
-            StringZ!char(title).ptr,
+            stringz(title).ptr,
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
             width, height, flags
         );

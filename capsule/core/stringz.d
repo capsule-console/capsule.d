@@ -2,6 +2,10 @@ module capsule.core.stringz;
 
 public:
 
+auto stringz(T)(in T[] text) {
+    return StringZ!T(text);
+}
+
 struct StringZ(T) {
     nothrow @safe:
     
@@ -50,4 +54,12 @@ unittest {
     assert(str[0] == 'h');
     assert(str.ptr[0] == 'h');
     assert(str.ptr[5] == '\0');
+}
+
+unittest {
+    auto str = stringz("hi");
+    assert(str.length == 2);
+    assert(str[0] == 'h');
+    assert(str.ptr[0] == 'h');
+    assert(str.ptr[2] == '\0');
 }
