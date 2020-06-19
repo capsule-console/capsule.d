@@ -51,7 +51,18 @@ auto toArray(T)(auto ref T range) if(isRange!T) {
         array.reserve(range.length);
     }
     foreach(item; range) {
-        array ~= cast(char) item;
+        array ~= item;
+    }
+    return array;
+}
+
+auto toArrayOf(E, T)(auto ref T range) if(isRange!T) {
+    E[] array;
+    static if(is(typeof(range.length))) {
+        array.reserve(range.length);
+    }
+    foreach(item; range) {
+        array ~= cast(E) item;
     }
     return array;
 }
@@ -141,4 +152,11 @@ unittest {
     assert(!rangesEqual(asRange(a), asRange(d)));
     assert(!rangesEqual(asRange(b), asRange(e)));
     assert(rangesEqual(asRange(hello), asRange(hello)));
+}
+
+/// Test coverage for toArrayOf
+unittest {
+    uint[] a = [0x01, 0x7f, 0xfff, 0xff80];
+    ubyte[] b = [0x01, 0x7f, 0xff, 0x80];
+    assert(toArrayOf!ubyte(asRange(a)) == b);
 }
