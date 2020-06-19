@@ -16,6 +16,7 @@ import capsule.core.strings : padLeft;
 import capsule.core.timer : Timer;
 import capsule.core.writeint : writeInt;
 
+import capsule.apps.lib.cli : escapeCliArg, getSystemExitStatusCode;
 import capsule.apps.lib.status : CapsuleApplicationStatus;
 
 public:
@@ -202,24 +203,6 @@ struct CapsuleCheckTestCase {
     string stdin = null;
     string stdout = null;
     string capsuleArgs = null;
-}
-
-/// Helper to escape a string to be used as a command line argument
-string escapeArg(in string arg) {
-    string escaped = `"`;
-    foreach(ch; arg) {
-        if(ch == '\"') {
-            escaped ~= `\"`;
-        }
-        else if(ch == '\\') {
-            escaped ~= `\\`;
-        }
-        else {
-            escaped ~= ch;
-        }
-    }
-    escaped ~= `"`;
-    return escaped;
 }
 
 CapsuleApplicationStatus check(string[] args) {
@@ -482,18 +465,19 @@ struct CapsuleCheckTestBuilder {
             const srcPath = Path.join(this.iniDir, source).toString();
             const objPath = Path.join(this.outDir, source).toString() ~ ".cob";
             if(objPaths.length) objPaths ~= " ";
-            objPaths ~= escapeArg(objPath);
+            objPaths ~= escapeCliArg(objPath);
             string compileCmd = (
                 this.config.casmCommand ~ " " ~ srcPath ~
-                " -o " ~ escapeArg(objPath) ~
+                " -o " ~ escapeCliArg(objPath) ~
                 (this.config.writeDebugInfo ? " -db" : "") ~
                 cmdLogFlag ~ " " ~ this.test.casmArgs ~ "\0"
             );
             assert(compileCmd.length && compileCmd[$ - 1] == '\0');
             verboseln(compileCmd[0 .. $ - 1]);
             this.compileTime.start();
-            this.compileStatus = cast(Status) system(compileCmd.ptr);
+            const systemStatus = system(compileCmd.ptr);
             this.compileTime.suspend();
+            this.compileStatus = cast(Status) getSystemExitStatusCode(systemStatus);
             if(compileStatus !is Status.Ok) {
                 return;
             }
@@ -504,18 +488,19 @@ struct CapsuleCheckTestBuilder {
         );
         this.linkCmd = (
             this.config.clinkCommand ~ " " ~ objPaths ~
-            " -o " ~ escapeArg(this.programPath) ~
+            " -o " ~ escapeCliArg(this.programPath) ~
             (this.config.writeDebugInfo ? " -db" : "") ~
             cmdLogFlag ~ " " ~ this.test.clinkArgs
         );
         if(this.test.comment.length) {
-            this.linkCmd ~= " --program-comment " ~ escapeArg(this.test.comment);
+            this.linkCmd ~= " --program-comment " ~ escapeCliArg(this.test.comment);
         }
         this.linkCmd ~= "\0";
         assert(this.linkCmd.length && this.linkCmd[$ - 1] == '\0');
         verboseln(this.linkCmd[0 .. $ - 1]);
         this.linkTime.start();
-        this.linkStatus = cast(Status) system(this.linkCmd.ptr);
+        const systemStatus = system(this.linkCmd.ptr);
+        this.linkStatus = cast(Status) getSystemExitStatusCode(systemStatus);
         this.linkTime.end();
     }
 }
@@ -570,27 +555,20 @@ struct CapsuleCheckTestRunner {
             Path.join(this.outDir, this.testCase.name).toString() ~ ".stdout.txt"
         );
         this.runCmd = (
-            this.config.capsuleCommand ~ " " ~ escapeArg(programPath) ~
-            " --stdout-path " ~ escapeArg(stdoutPath) ~
+            this.config.capsuleCommand ~ " " ~ escapeCliArg(programPath) ~
+            " --stdout-path " ~ escapeCliArg(stdoutPath) ~
             (this.config.veryVerbose && !silent ? " -v" : "") ~
             " " ~ this.testCase.capsuleArgs
         );
         if(this.testCase.stdin.length) {
-            this.runCmd ~= " -in " ~ escapeArg(this.testCase.stdin);
+            this.runCmd ~= " -in " ~ escapeCliArg(this.testCase.stdin);
         }
         this.runCmd ~= "\0";
         assert(this.runCmd.length && this.runCmd[$ - 1] == '\0');
         verboseln(this.runCmd[0 .. $ - 1]);
         this.runTime.start();
         const systemStatus = system(this.runCmd.ptr);
-        version(Windows) {
-            // Windows is nice and easy
-            this.runStatus = cast(Status) systemStatus;
-        }
-        else {
-            // Posix systems are slightly a pain
-            this.runStatus = cast(Status) (systemStatus >> 8);
-        }
+        this.runStatus = cast(Status) getSystemExitStatusCode(systemStatus);
         this.runTime.end();
         // Record the output
         const stdoutFile = File.read(stdoutPath);
