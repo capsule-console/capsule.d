@@ -27,7 +27,7 @@
     ; Handle overflowed inputs
     bnez Y, 0.err.f
     ; Handle inputs less than 1
-    beqz A, 0.err.f
+    blez A, 0.err.f
 0.loop:
     ; Begin main Collatz loop
     mv A, C
