@@ -39,7 +39,7 @@ ReadFileResult readFileContent(in string path) @trusted {
     }
     // Open the file
     const string mode = "rb";
-    const pathz = StringZ(path);
+    const pathz = StringZ!char(path);
     FILE* file = fopen(pathz.ptr, mode.ptr);
     if(file is null) {
         return Result.FilePathError;
@@ -75,7 +75,7 @@ FileStatus writeFileContent(T)(
     }
     // Open the file
     const string mode = "wb";
-    const pathz = StringZ(path);
+    const pathz = StringZ!char(path);
     FILE* file = fopen(pathz.ptr, mode.ptr);
     if(file is null) {
         return Status.FilePathError;

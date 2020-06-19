@@ -2,13 +2,17 @@ module capsule.core.stringz;
 
 nothrow @safe public:
 
-struct StringZ {
+struct StringZ(T) {
     nothrow @safe:
     
-    string text = "\0";
+    const(T)[] text = null;
     
-    this(in string text) {
-        this.text = text ~ "\0";
+    this(in const(T)[] text) {
+        this.text = text ~ T(0);
+    }
+    
+    bool ok() const @nogc {
+        return this.text.length && this.text[$ - 1] == 0;
     }
     
     bool empty() const @nogc {
@@ -20,7 +24,7 @@ struct StringZ {
         return this.text.length - 1;
     }
     
-    const(char)* ptr() const @system {
+    const(T)* ptr() const @system {
         return this.text.ptr;
     }
     
@@ -28,20 +32,20 @@ struct StringZ {
         return this.text;
     }
     
-    char opIndex(in size_t index) const @nogc {
+    T opIndex(in size_t index) const @nogc {
         assert(index < this.length);
         return this.text[index];
     }
 }
 
 unittest {
-    StringZ str = StringZ("");
+    StringZ str = StringZ!char("");
     assert(str.length == 0);
     assert(str.ptr[0] == '\0');
 }
 
 unittest {
-    StringZ str = StringZ("hello");
+    StringZ str = StringZ!char("hello");
     assert(str.length == 5);
     assert(str[0] == 'h');
     assert(str.ptr[0] == 'h');

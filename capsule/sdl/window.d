@@ -76,7 +76,7 @@ struct CapsuleSDLWindow {
         in string title, in int width, in int height, in FlagsType flags
     ) {
         this.handle = SDL_CreateWindow(
-            StringZ(title).ptr,
+            StringZ!char(title).ptr,
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
             width, height, flags
         );
