@@ -12,7 +12,7 @@ import capsule.core.math : isPow2;
 import capsule.core.range : toArray;
 
 import capsule.apps.lib.extcommon : CapsuleExtensionMixin;
-import capsule.apps.lib.sdl : CapsuleSDL;
+import capsule.sdl : CapsuleSDL, CapsuleSDLWindow;
 
 public:
 
@@ -23,10 +23,10 @@ struct CapsuleSDLPixelGraphics {
     alias ecall_pxgfx_flip = .ecall_pxgfx_flip;
     
     alias Mode = CapsuleSDLPixelGraphicsMode;
-    alias PixelFormat = CapsuleSDL.PixelFormat;
+    alias PixelFormat = CapsuleSDLWindow.PixelFormat;
     alias Resolution = CapsuleSDLPixelGraphicsResolution;
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
-    alias Window = CapsuleSDL.Window;
+    alias Window = CapsuleSDLWindow;
     
     /// Global instance shared by ecalls
     static typeof(this) global;
@@ -55,9 +55,9 @@ struct CapsuleSDLPixelGraphics {
     
     static bool isSupportedWindowPixelFormat(in PixelFormat format) {
         switch(format) {
-            case PixelFormat.RGB24: return true;
-            case PixelFormat.RGB888: return true;
-            case PixelFormat.RGBA8888: return true;
+            case PixelFormat.RGB24: goto case;
+            case PixelFormat.RGB888: goto case;
+            case PixelFormat.RGBA8888: goto case;
             case PixelFormat.ARGB8888: return true;
             default: return false;
         }
@@ -100,9 +100,11 @@ struct CapsuleSDLPixelGraphicsInitSettings {
 CapsuleExtensionCallResult ecall_pxgfx_init(
     CapsuleEngine* engine, in uint arg
 ) {
-    // TODO: Return status flag instead of producing an exception
+    // TODO: Return status flag instead of always producing an exception
+    // TODO: Should pixel and palette ptrs be absolute? (I think no..?)
+    // TODO: Should ptrs be relative to the beginning of the struct?
     alias Mode = CapsuleSDLPixelGraphicsMode;
-    alias PixelFormat = CapsuleSDL.PixelFormat;
+    alias PixelFormat = CapsuleSDLWindow.PixelFormat;
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
     alias pxgfx = CapsuleSDLPixelGraphics.global;
     if(pxgfx.window.ok) {
@@ -146,11 +148,11 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         pxgfx.addErrorMessage("pxgfx.init: Invalid settings data.");
         return CapsuleExtensionCallResult.ExtError;
     }
-    pxgfx.window = CapsuleSDL.Window(
+    pxgfx.window = CapsuleSDLWindow(
         pxgfx.windowTitle,
         pxgfx.scale * settings.resolutionX,
         pxgfx.scale * settings.resolutionY,
-        CapsuleSDL.Window.Flag.Shown
+        CapsuleSDLWindow.Flag.Shown
     );
     if(!pxgfx.window.ok) {
         pxgfx.addErrorMessage("pxgfx.init: Failed to create window.");
@@ -194,7 +196,7 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
     CapsuleEngine* engine, in uint arg
 ) {
     alias Mode = CapsuleSDLPixelGraphicsMode;
-    alias PixelFormat = CapsuleSDL.PixelFormat;
+    alias PixelFormat = CapsuleSDLWindow.PixelFormat;
     alias pxgfx = CapsuleSDLPixelGraphics.global;
     bool checkProgramMemory(in int address, in int length) {
         return (

@@ -7,14 +7,18 @@
     "copyright": "Copyright © 2020, Sophie Kirschner",
     "license": "GNU AGPLv3",
     "buildRequirements": ["silenceWarnings"],
-    "sourcePaths": ["capsule"],
+    "sourcePaths": [
+        "capsule/apps",
+        "capsule/casm",
+        "capsule/core"
+    ],
     "importPaths": ["."],
     "excludedSourceFiles": [
         "**/test.d",
         "**/temp.d",
         "**/wip_*.d",
         "**/old_*.d",
-        "**/reject_*.d",
+        "**/reject_*.d"
     ],
     "configurations": [
         {
@@ -45,6 +49,9 @@
             "targetType": "executable",
             "targetPath": "bin",
             "targetName": "capsule",
+            "sourcePaths": [
+                "capsule/sdl/"
+            ],
             "versions": [
                 "CapsuleExcludeAssemblerMain",
                 "CapsuleExcludeCheckerMain",
@@ -53,7 +60,7 @@
             ],
             "dependencies": {
                 "derelict-sdl2": "3.0.0-beta.8"
-            },
+            }
         },
         {
             "name": "casm",

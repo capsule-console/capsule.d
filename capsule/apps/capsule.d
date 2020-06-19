@@ -21,7 +21,7 @@ import capsule.apps.lib.status : CapsuleApplicationStatus;
 import capsule.apps.lib.stdio : CapsuleStandardIO;
 
 version(CapsuleSDL2Graphics) {
-    import capsule.apps.lib.sdl : CapsuleSDL;
+    import capsule.sdl.sdl : CapsuleSDL;
     import capsule.apps.lib.pxgfx : CapsuleSDLPixelGraphics;
 }
 
