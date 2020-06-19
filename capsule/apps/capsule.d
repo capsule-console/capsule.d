@@ -34,7 +34,7 @@ struct CapsuleEngineConfig {
         "Capsule engine version " ~ CapsuleEngineVersionName,
         "Load and execute Capsule program files.",
         "Usage:",
-        "  casm <file> [<option>...]",
+        "  capsule <file> [<option>...]",
     ];
     
     @(CapsuleConfigAttribute!string("stdout-path")
