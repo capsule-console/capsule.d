@@ -1,6 +1,6 @@
 module capsule.core.stringz;
 
-nothrow @safe public:
+public:
 
 struct StringZ(T) {
     nothrow @safe:
@@ -28,8 +28,8 @@ struct StringZ(T) {
         return this.text.ptr;
     }
     
-    string toString() const @nogc {
-        return this.text;
+    string toString() const @nogc @system {
+        return cast(string) this.text;
     }
     
     T opIndex(in size_t index) const @nogc {
@@ -39,13 +39,13 @@ struct StringZ(T) {
 }
 
 unittest {
-    StringZ str = StringZ!char("");
+    auto str = StringZ!char("");
     assert(str.length == 0);
     assert(str.ptr[0] == '\0');
 }
 
 unittest {
-    StringZ str = StringZ!char("hello");
+    auto str = StringZ!char("hello");
     assert(str.length == 5);
     assert(str[0] == 'h');
     assert(str.ptr[0] == 'h');
