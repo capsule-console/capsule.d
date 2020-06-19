@@ -28,6 +28,7 @@ import capsule.core.objencode;
 import capsule.core.objstring;
 import capsule.core.parseint;
 import capsule.core.path;
+import capsule.core.process;
 import capsule.core.program;
 import capsule.core.programsource;
 import capsule.core.range;

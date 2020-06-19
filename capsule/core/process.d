@@ -4,9 +4,22 @@ import core.stdc.stdlib : system;
 
 nothrow @safe public:
 
+bool shouldEscapeProcessArg(in const(char)[] arg) {
+    foreach(ch; arg) {
+        if(ch != '-' && ch != '_' &&
+            !(ch >= '0' && ch <= '9') &&
+            !(ch >= 'a' && ch <= 'z') &&
+            !(ch >= 'A' && ch <= 'Z')
+        ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /// Helper to escape a string to be used as a command line argument.
 /// e.g. `hello "world"` -> `"hello \"world\""`
-string escapeProcessArg(in string arg) {
+string escapeProcessArg(in const(char)[] arg) {
     string escaped = `"`;
     foreach(ch; arg) {
         if(ch == '\"') {
@@ -32,19 +45,24 @@ int getSystemExitStatusCode(in int code) pure @nogc {
     }
 }
 
-string getRunProcessString(in string name, in string[] args) {
-    string command = name;
+const(char)[] getRunProcessString(in const(char)[] name, in const(char)[][] args) {
+    const(char)[] command = name;
     foreach(arg; args) {
         if(arg !is null) {
-            command ~= " " ~ escapeProcessArg(arg);
+            if(shouldEscapeProcessArg(arg)) {
+                command ~= " " ~ escapeProcessArg(arg);
+            }
+            else {
+                command ~= " " ~ arg;
+            }
         }
     }
     return command;
 }
 
 /// TODO: Use an API with less negative security implications than system
-int runProcess(in string name, in string[] args) @trusted {
-    const string command = getRunProcessString(name, args) ~ '\0';
+int runProcess(in const(char)[] name, in const(char)[][] args) @trusted {
+    const command = getRunProcessString(name, args) ~ '\0';
     const status = system(command.ptr);
     return getSystemExitStatusCode(status);
 }
