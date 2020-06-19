@@ -4,6 +4,7 @@ import capsule.core.config : CapsuleConfigAttribute, CapsuleConfigStatus;
 import capsule.core.config : loadCapsuleConfig, capsuleConfigStatusToString;
 import capsule.core.config : getCapsuleConfigUsageString;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
+import capsule.core.enums : getEnumMemberAttribute;
 import capsule.core.file : File;
 import capsule.core.indexof : lastIndexOf;
 import capsule.core.obj : CapsuleObject;
@@ -89,14 +90,23 @@ struct CapsuleAssemblerConfig {
     @(CapsuleConfigAttribute!TextEncoding("text-encoding")
         .setOptional(TextEncoding.UTF8)
         .setHelpText([
-            "Assembly source will be handled using this text encoding",
-            "and the outputted object file will indicate that the",
-            "text in it uses this text encoding."
+            "Source files will be handled using this text encoding",
+            "and the outputted object and program files will indicate",
+            "that the text in it uses this text encoding."
         ])
         .setEnumNames([
-            TextEncodingName(TextEncoding.None, "none"),
-            TextEncodingName(TextEncoding.Ascii, "ascii"),
-            TextEncodingName(TextEncoding.UTF8, "utf-8"),
+            TextEncodingName(
+                TextEncoding.None,
+                getEnumMemberAttribute!string(TextEncoding.None)
+            ),
+            TextEncodingName(
+                TextEncoding.Ascii,
+                getEnumMemberAttribute!string(TextEncoding.Ascii)
+            ),
+            TextEncodingName(
+                TextEncoding.UTF8,
+                getEnumMemberAttribute!string(TextEncoding.UTF8)
+            ),
         ])
     )
     TextEncoding textEncoding = TextEncoding.None;
@@ -104,11 +114,18 @@ struct CapsuleAssemblerConfig {
     @(CapsuleConfigAttribute!TimeEncoding("time-encoding")
         .setOptional(TimeEncoding.UnixEpochSeconds)
         .setHelpText([
-            "Output object file will use this timestamp encoding."
+            "Output object and program files will use this timestamp",
+            "encoding."
         ])
         .setEnumNames([
-            TimeEncodingName(TimeEncoding.None, "none"),
-            TimeEncodingName(TimeEncoding.UnixEpochSeconds, "unix-seconds"),
+            TimeEncodingName(
+                TimeEncoding.None,
+                getEnumMemberAttribute!string(TimeEncoding.None)
+            ),
+            TimeEncodingName(
+                TimeEncoding.UnixEpochSeconds,
+                getEnumMemberAttribute!string(TimeEncoding.UnixEpochSeconds)
+            ),
         ])
     )
     TimeEncoding timeEncoding = TimeEncoding.None;
@@ -121,8 +138,14 @@ struct CapsuleAssemblerConfig {
             "source code.",
         ])
         .setEnumNames([
-            SourceEncodingName(SourceEncoding.None, "none"),
-            SourceEncodingName(SourceEncoding.CapsuleLZ77, "clz77"),
+            SourceEncodingName(
+                SourceEncoding.None,
+                getEnumMemberAttribute!string(SourceEncoding.None)
+            ),
+            SourceEncodingName(
+                SourceEncoding.CapsuleLZ77,
+                getEnumMemberAttribute!string(SourceEncoding.CapsuleLZ77)
+            ),
         ])
     )
     SourceEncoding objectSourceEncoding = SourceEncoding.CapsuleLZ77;

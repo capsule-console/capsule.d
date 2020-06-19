@@ -213,7 +213,7 @@ auto parseCapsuleConfigAttribute(T, Config)(
     }
     foreach(enumName; attribute.enumNames) {
         if(enumName.name == args[argIndex]) {
-            return Result(true, enumName.value);
+            return Result(true, enumName.value, 1);
         }
     }
     return Result(false);

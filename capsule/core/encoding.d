@@ -37,20 +37,20 @@ enum CapsuleHashType: uint {
 /// Enumeration of recognized text encodings
 enum CapsuleTextEncoding: ushort {
     /// No text encoding or unknown encoding
-    None = 0x0000,
+    @("none") None = 0x0000,
     /// Text is ASCII-encoded
-    Ascii = 0x0001,
+    @("ascii") Ascii = 0x0001,
     /// Text is UTF-8 encoded
-    UTF8 = 0x0002,
+    @("utf-8") UTF8 = 0x0002,
 }
 
 /// Enumeration of recognized timestamp representations
 enum CapsuleTimeEncoding: ushort {
     /// No date/time encoding or unknown encoding
-    None = 0x0000,
+    @("none") None = 0x0000,
     /// Timestamps are a 64-bit signed number of seconds since
     /// Unix epoch (ISO 8601: 1970-01-01T00:00:00Z) on Earth
-    UnixEpochSeconds = 0x0001,
+    @("unix-seconds") UnixEpochSeconds = 0x0001,
 }
 
 /// Enumeration of possible status codes for file encoders and decoders
