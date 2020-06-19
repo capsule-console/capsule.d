@@ -1,7 +1,5 @@
 module capsule.apps.capcheck;
 
-import core.stdc.stdlib : system;
-
 import capsule.core.config : CapsuleConfigAttribute, CapsuleConfigStatus;
 import capsule.core.config : loadCapsuleConfig, capsuleConfigStatusToString;
 import capsule.core.config : getCapsuleConfigUsageString;
@@ -11,12 +9,12 @@ import capsule.core.hex : getByteHexString;
 import capsule.core.indexof : lastIndexOf;
 import capsule.core.ini : Ini;
 import capsule.core.path : Path;
+import capsule.core.process : runProcess, getRunProcessString;
 import capsule.core.stdio : stdio;
 import capsule.core.strings : padLeft;
 import capsule.core.timer : Timer;
 import capsule.core.writeint : writeInt;
 
-import capsule.apps.lib.cli : escapeCliArg, getSystemExitStatusCode;
 import capsule.apps.lib.status : CapsuleApplicationStatus;
 
 public:
@@ -56,23 +54,23 @@ struct CapsuleCheckConfig {
     )
     bool writeDebugInfo;
     
-    @(CapsuleConfigAttribute!string("casm")
+    @(CapsuleConfigAttribute!string("asm")
         .setOptional("casm")
         .setHelpText([
             "Command or path to binary to use when compiling Capsule",
             "assembly source code files."
         ])
     )
-    string casmCommand;
+    string asmCommand;
     
-    @(CapsuleConfigAttribute!string("clink")
+    @(CapsuleConfigAttribute!string("link")
         .setOptional("clink")
         .setHelpText([
             "Command or path to binary to use when linking compiled",
             "Capsule object files."
         ])
     )
-    string clinkCommand;
+    string linkCommand;
     
     @(CapsuleConfigAttribute!string("capsule")
         .setOptional("capsule")
@@ -81,7 +79,7 @@ struct CapsuleCheckConfig {
             "Capsule program files."
         ])
     )
-    string capsuleCommand;
+    string runCommand;
     
     @(CapsuleConfigAttribute!(string[])("only")
         .setOptional(null)
@@ -178,8 +176,8 @@ struct CapsuleCheckTest {
     string name = null;
     string comment = null;
     string[] sources = null;
-    string casmArgs = null;
-    string clinkArgs = null;
+    string[] asmArgs = null;
+    string[] linkArgs = null;
     Case[] cases = null;
     
     bool hasNameMatch(in string name) const {
@@ -307,8 +305,8 @@ CapsuleApplicationStatus check(string[] args) {
             name: section.name,
             comment: section.get("comment"),
             sources: section.all("source"),
-            casmArgs: section.get("casm-args"),
-            clinkArgs: section.get("clink-args"),
+            asmArgs: section.all("casm-args"),
+            linkArgs: section.all("clink-args"),
         };
         if(section.get("stdin") || section.get("stdout") || section.get("status")) {
             const expectStatus = (
@@ -435,7 +433,6 @@ struct CapsuleCheckTestBuilder {
     string programPath = null;
     Timer compileTime;
     Timer linkTime;
-    string linkCmd;
     
     bool ok() const {
         return this.compileStatus is Status.Ok && this.linkStatus is Status.Ok;
@@ -454,30 +451,31 @@ struct CapsuleCheckTestBuilder {
     }
     
     void build() {
-        string objPaths = "";
+        string[] objPaths;
         const cmdLogFlag = (
-            silent ? " --silent" :
-            this.config.veryVerbose ? " -v" :
-            verbose ? "" : " --silent"
+            silent ? "--silent" :
+            this.config.veryVerbose ? "-v" :
+            verbose ? null : "--silent"
         );
         // Compile each source file
         foreach(source; this.test.sources) {
             const srcPath = Path.join(this.iniDir, source).toString();
             const objPath = Path.join(this.outDir, source).toString() ~ ".cob";
-            if(objPaths.length) objPaths ~= " ";
-            objPaths ~= escapeCliArg(objPath);
-            string compileCmd = (
-                this.config.casmCommand ~ " " ~ srcPath ~
-                " -o " ~ escapeCliArg(objPath) ~
-                (this.config.writeDebugInfo ? " -db" : "") ~
-                cmdLogFlag ~ " " ~ this.test.casmArgs ~ "\0"
-            );
-            assert(compileCmd.length && compileCmd[$ - 1] == '\0');
-            verboseln(compileCmd[0 .. $ - 1]);
+            objPaths ~= objPath;
+            string[] compileArgs = [
+                srcPath,
+                "-o", objPath,
+                cmdLogFlag,
+                (this.config.writeDebugInfo ? " -db" : null),
+            ] ~ this.test.asmArgs;
+            verboseln(getRunProcessString(
+                this.config.asmCommand, compileArgs
+            ));
             this.compileTime.start();
-            const systemStatus = system(compileCmd.ptr);
+            this.compileStatus = cast(Status) runProcess(
+                this.config.asmCommand, compileArgs
+            );
             this.compileTime.suspend();
-            this.compileStatus = cast(Status) getSystemExitStatusCode(systemStatus);
             if(compileStatus !is Status.Ok) {
                 return;
             }
@@ -486,21 +484,22 @@ struct CapsuleCheckTestBuilder {
         this.programPath = (
             Path.join(this.outDir, this.test.name).toString() ~ ".capsule"
         );
-        this.linkCmd = (
-            this.config.clinkCommand ~ " " ~ objPaths ~
-            " -o " ~ escapeCliArg(this.programPath) ~
-            (this.config.writeDebugInfo ? " -db" : "") ~
-            cmdLogFlag ~ " " ~ this.test.clinkArgs
-        );
+        string[] linkArgs = objPaths ~ [
+            "-o", this.programPath,
+            (this.config.writeDebugInfo ? "-db" : null),
+            cmdLogFlag,
+        ];
         if(this.test.comment.length) {
-            this.linkCmd ~= " --program-comment " ~ escapeCliArg(this.test.comment);
+            linkArgs ~= ["--program-comment", this.test.comment];
         }
-        this.linkCmd ~= "\0";
-        assert(this.linkCmd.length && this.linkCmd[$ - 1] == '\0');
-        verboseln(this.linkCmd[0 .. $ - 1]);
+        linkArgs ~= this.test.linkArgs;
+        verboseln(getRunProcessString(
+            this.config.linkCommand, linkArgs
+        ));
         this.linkTime.start();
-        const systemStatus = system(this.linkCmd.ptr);
-        this.linkStatus = cast(Status) getSystemExitStatusCode(systemStatus);
+        this.linkStatus = cast(Status) runProcess(
+            this.config.linkCommand, linkArgs
+        );
         this.linkTime.end();
     }
 }
@@ -554,21 +553,23 @@ struct CapsuleCheckTestRunner {
         const stdoutPath = (
             Path.join(this.outDir, this.testCase.name).toString() ~ ".stdout.txt"
         );
-        this.runCmd = (
-            this.config.capsuleCommand ~ " " ~ escapeCliArg(programPath) ~
-            " --stdout-path " ~ escapeCliArg(stdoutPath) ~
-            (this.config.veryVerbose && !silent ? " -v" : "") ~
-            " " ~ this.testCase.capsuleArgs
-        );
+        // this.config.capsuleCommand
+        string[] runArgs = [
+            programPath,
+            "--stdout-path", stdoutPath,
+            (this.config.veryVerbose && !silent ? "-v" : null),
+        ];
         if(this.testCase.stdin.length) {
-            this.runCmd ~= " -in " ~ escapeCliArg(this.testCase.stdin);
+            runArgs ~= ["-in", this.testCase.stdin];
         }
-        this.runCmd ~= "\0";
-        assert(this.runCmd.length && this.runCmd[$ - 1] == '\0');
-        verboseln(this.runCmd[0 .. $ - 1]);
+        runArgs ~= this.testCase.capsuleArgs;
+        verboseln(getRunProcessString(
+            this.config.runCommand, runArgs
+        ));
         this.runTime.start();
-        const systemStatus = system(this.runCmd.ptr);
-        this.runStatus = cast(Status) getSystemExitStatusCode(systemStatus);
+        this.runStatus = cast(Status) runProcess(
+            this.config.runCommand, runArgs
+        );
         this.runTime.end();
         // Record the output
         const stdoutFile = File.read(stdoutPath);

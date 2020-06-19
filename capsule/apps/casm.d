@@ -10,6 +10,7 @@ import capsule.core.obj : CapsuleObject;
 import capsule.core.objencode : CapsuleObjectEncoder;
 import capsule.core.objstring : capsuleObjectToString;
 import capsule.core.path : Path;
+import capsule.core.process : runProcess, getRunProcessString;
 import capsule.core.stdio : stdio;
 
 import capsule.casm.compile : CapsuleAsmCompiler;
