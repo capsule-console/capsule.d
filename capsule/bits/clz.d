@@ -1,3 +1,11 @@
+/**
+
+This module implements a count leading zeroes function (clz).
+
+https://en.wikipedia.org/wiki/Find_first_set
+
+*/
+
 module capsule.bits.clz;
 
 public:

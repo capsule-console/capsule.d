@@ -1,3 +1,11 @@
+/**
+
+This module implements a count trailing zeroes function (ctz).
+
+https://en.wikipedia.org/wiki/Find_first_set
+
+*/
+
 module capsule.bits.ctz;
 
 public:

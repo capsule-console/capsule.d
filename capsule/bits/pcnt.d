@@ -1,3 +1,15 @@
+/**
+
+This module implements a population count function (pcnt), also called
+a "count set bits" function. This is also equivalent to calculating the
+Hamming weight of a binary number.
+
+https://en.wikichip.org/wiki/population_count
+
+https://en.wikipedia.org/wiki/Hamming_weight
+
+*/
+
 module capsule.bits.pcnt;
 
 public:
