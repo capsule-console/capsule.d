@@ -1,4 +1,14 @@
-module capsule.core.utf.utf16decode;
+/**
+
+This module implements a range that can be used to lazily decode a
+UTF-16 encoded string, producing a list of code points represented
+as dchars.
+
+*/
+
+module capsule.utf.utf16decode;
+
+private:
 
 import capsule.range.range : asRange;
 

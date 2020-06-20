@@ -1,7 +1,17 @@
-module capsule.core.utf.utf8encode;
+/**
 
-import capsule.core.utf.encode : UTFEncodeRange;
+This module implements a range that can be used to lazily encode a
+sequence of Unicode code points as a UTF-8 string.
+
+*/
+
+module capsule.utf.utf8encode;
+
+private:
+
 import capsule.range.range : asRange;
+
+import capsule.utf.encode : UTFEncodeRange;
 
 public:
 

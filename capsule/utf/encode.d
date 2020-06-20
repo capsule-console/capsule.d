@@ -1,4 +1,12 @@
-module capsule.core.utf.encode;
+/**
+
+This module implements a type commonly used by the utf8encode
+and utf16encode modules to provide a range interface for enumerating
+UTF-8 or UTF-16 code units encoding a given UTF-32 encoded string.
+
+*/
+
+module capsule.utf.encode;
 
 public:
 
