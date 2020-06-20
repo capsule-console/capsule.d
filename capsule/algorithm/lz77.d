@@ -1,6 +1,19 @@
+/**
+
+This module provides utilities for compressing and decompressing data
+using an LZ77-derived algorithm. It provides the best compression ratio
+for text or text-like data.
+
+The encoding used for this compressed data is a standard created
+specifically for Capsule files and applications, designed to be
+minimally complicated and as easy as possible to support while still
+providing an acceptable level of compression.
+
+*/
+
 module capsule.algorithm.lz77;
 
-public nothrow @safe:
+public:
 
 /// Enumeration of possible status values for the LZ77Inflate type.
 enum LZ77InflateStatus: uint {
@@ -185,14 +198,14 @@ struct LZ77Inflate {
 }
 
 /// Convenience function to LZ77-compress data.
-auto lz77Deflate(T)(in T[] content) @trusted {
+auto lz77Deflate(T)(in T[] content) nothrow @trusted {
     auto deflate = LZ77Deflate(cast(typeof(LZ77Deflate.content)) content);
     deflate.deflate();
     return deflate.buffer;
 }
 
 /// Convenience function to LZ77-decompress data.
-auto lz77Inflate(T)(in T[] buffer) @trusted {
+auto lz77Inflate(T)(in T[] buffer) nothrow @trusted {
     auto inflate = LZ77Inflate(cast(typeof(LZ77Inflate.buffer)) buffer);
     inflate.inflate();
     return inflate;

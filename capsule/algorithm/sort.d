@@ -1,7 +1,15 @@
+/**
+
+This module implements a sorting function for sorting the contents
+of an array.
+
+*/
+
 module capsule.algorithm.sort;
 
 public:
 
+/// Sort comparison function used when no other is explicitly provided.
 alias DefaultSortCompare = (a, b) => (a < b);
 
 /// Sorts an array using a binary insertion sort.
