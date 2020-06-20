@@ -15,6 +15,7 @@ import capsule.string.hex : CapsuleByteHexStrings, getByteHexString, getHexStrin
 import capsule.string.writeint : writeInt;
 
 import capsule.core.types : CapsuleInstruction, CapsuleOpcode;
+import capsule.core.types : CapsuleExceptionCode;
 
 public:
 
@@ -49,7 +50,9 @@ const string[16] CapsuleExceptionDescriptions = [
 /// Opcodes without names are represented like `0x00`,
 /// where the hexadecimal number is the opcode value.
 string getCapsuleOpcodeName(in ubyte opcode) pure nothrow @safe @nogc {
-    const name = getEnumMemberAttribute!string(cast(CapsuleOpcode) opcode);
+    const name = getEnumMemberAttribute!string(
+        cast(CapsuleOpcode) opcode
+    );
     if(opcode > 0 && name.length > 0) {
         return name;
     }
@@ -62,7 +65,9 @@ string getCapsuleOpcodeName(in ubyte opcode) pure nothrow @safe @nogc {
 /// Exception codes without names are represented like `0x00`,
 /// where the hexadecimal number is the opcode value.
 string getCapsuleExceptionName(in ubyte exception) pure nothrow @safe @nogc {
-    const name = getEnumMemberAttribute!string(cast(CapsuleException) exception);
+    const name = getEnumMemberAttribute!string(
+        cast(CapsuleExceptionCode) exception
+    );
     if(exception > 0 && name.length > 0) {
         return name;
     }
