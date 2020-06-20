@@ -1,3 +1,10 @@
+/**
+
+This module provides an enumeration of exit status codes used by
+Capsule applications.
+
+*/
+
 module capsule.apps.lib.status;
 
 public nothrow @safe @nogc:
