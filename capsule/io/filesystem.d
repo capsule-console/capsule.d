@@ -1,4 +1,13 @@
+/**
+
+This module provides essentially platform-agnostic functions for
+dealing with the file system.
+
+*/
+
 module capsule.io.filesystem;
+
+private:
 
 import core.stdc.stdio : FILE;
 import core.stdc.stdio : SEEK_CUR, SEEK_END, SEEK_SET;
@@ -27,10 +36,11 @@ version(CRuntime_Microsoft){
     extern(C) @nogc nothrow int _fseeki64(FileHandle, long, int);
 }
 
-import capsule.string.stringz : stringz;
+import capsule.string.stringz : stringz, StringZ;
 
 public nothrow:
 
+/// Define seek file offset type for this platform.
 version(CRuntime_Microsoft) {
     alias off_t = long;
 }
@@ -44,6 +54,7 @@ else {
     static assert(false, "Unsupported platform.");
 }
 
+/// Enumeration of valid places to seek relative to.
 enum FileSeek: int {
     /// Relative to the current position in the file
     Cur = SEEK_CUR,
@@ -53,20 +64,57 @@ enum FileSeek: int {
     End = SEEK_END,
 }
 
-version(Windows) auto getFileAttributes(in const(char)[] path) {
-    import core.sys.windows.winbase : GetFileAttributesW;
-    const pathwz = stringz(utf16Encode(utf8Decode(path)).toArray());
-    return GetFileAttributesW(pathwz.ptr);
+/// Type returned by the getWStringZ function.
+version(Windows) struct WStringZResult {
+    bool invalid;
+    bool wobbly;
+    StringZ!wchar stringz;
+    
+    bool ok() const {
+        return !this.invalid && !this.wobbly;
+    }
+    
+    auto ptr() const {
+        return this.stringz.ptr;
+    }
 }
 
+/// Helper for getting a null-terminated UTF-16 string given
+/// a UTF-8 encoded input string. This is used a lot when interfacing
+/// with the Windows file system API.
+version(Windows) auto getWStringZ(in const(char)[] text) {
+    alias Result = WStringZResult;
+    auto encode = utf16Encode(utf8Decode(path));
+    const wtext = encode.toArray();
+    const Result result = {
+        invalid: encode.invalid || encode.source.invalid,
+        wobbly: encode.wobbly || encode.source.wobbly,
+        stringz: StringZ!wchar(wtext),
+    };
+    return result;
+}
+
+/// On a Windows platform, get a file's attributes.
+/// Attributes indicate things like whether a file is a regular file
+/// or a directory or if it exists at all.
+version(Windows) auto getFileAttributes(in const(char)[] path) {
+    import core.sys.windows.winbase : GetFileAttributesW;
+    enum Invalid = INVALID_FILE_ATTRIBUTES;
+    const pathwz = getWStringZ(path);
+    return pathwz.invalid ? Invalid : GetFileAttributesW(pathwz.ptr);
+}
+
+/// Open a file, given a UTF-8 encoded file path.
+/// The path is re-encoded as UTF-16 in order to support unicode
+/// file paths on Windows platforms.
 FILE* openFile(in const(char)[] path, in const(char)[] mode) {
     version(Windows) {
         immutable(wchar)[] modewz;
         modewz.reserve(mode.length + 1);
         foreach(const ch; mode) modewz ~= ch;
         modewz ~= wchar(0);
-        const pathwz = stringz(utf16Encode(utf8Decode(path)).toArray());
-        return _wfopen(pathwz.ptr, modewz.ptr);
+        const pathwz = getWStringZ(path);
+        return pathwz.invalid ? null : _wfopen(pathwz.ptr, modewz.ptr);
     }
     else version(Posix) {
         import core.stdc.stdio : fopen;
@@ -102,8 +150,8 @@ bool makeDirectory(in const(char)[] path) {
     version(Windows) {
         // https://msdn.microsoft.com/en-us/library/windows/desktop/aa363855(v=vs.85).aspx
         import core.sys.windows.winbase : CreateDirectoryW;
-        const pathwz = stringz(utf16Encode(utf8Decode(path)).toArray());
-        return CreateDirectoryW(pathwz.ptr, null);
+        const pathwz = getWStringZ(path);
+        return pathwz.invalid ? false : CreateDirectoryW(pathwz.ptr, null);
     }
     else version(Posix) {
         import core.sys.posix.sys.stat : mkdir;
@@ -164,7 +212,7 @@ private version(unittest) {
     import capsule.io.path : Path;
     import core.stdc.stdio : fclose, fread;
     /// The very first line of this file
-    enum FileStart = "module capsule.io.filesystem;";
+    enum FileStart = "/**";
     /// Path to this file
     enum FilePath = __FILE_FULL_PATH__;
     /// Path to the directory containing this file

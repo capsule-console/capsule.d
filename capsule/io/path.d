@@ -1,3 +1,10 @@
+/**
+
+This module provides string manipulation functions specifically for
+manipulating or inspecting file paths.
+
+*/
+
 module capsule.io.path;
 
 public:
@@ -193,6 +200,7 @@ struct Path {
     }
 }
 
+/// Test coverage for Path.join
 unittest {
     assert(Path.join() == "");
     assert(Path.join("ok") == "ok");
@@ -205,6 +213,7 @@ unittest {
     assert(Path.join("/a/", "/b/", "/c/") == "/a/b/c/");
 }
 
+/// Test coverage for Path.split
 unittest {
     assert(Path("").split() == new string[0]);
     assert(Path("hello").split() == ["hello"]);
@@ -213,6 +222,7 @@ unittest {
     assert(Path("/abc/xyz/123/").split() == ["/abc", "xyz", "123"]);
 }
 
+/// Test coverage for Path.normalize
 unittest {
     assert(Path("").normalize() == "");
     assert(Path("./").normalize() == "");
@@ -221,6 +231,8 @@ unittest {
     assert(Path("../abc/xyz/../123").normalize() == "../abc/123");
 }
 
+/// Test Path fileName, dirName, extName, and stripExt methods
+/// with an empty string
 unittest {
     assert(Path(``).fileName == ``);
     assert(Path(``).dirName == ``);
@@ -228,6 +240,8 @@ unittest {
     assert(Path(``).stripExt == ``);
 }
 
+/// Test Path fileName, dirName, extName, and stripExt methods
+/// with a Unix root path
 unittest {
     assert(Path(`/test`).fileName == `test`);
     assert(Path(`/test`).dirName == `/`);
@@ -235,6 +249,8 @@ unittest {
     assert(Path(`/test`).stripExt == `/test`);
 }
 
+/// Test Path fileName, dirName, extName, and stripExt methods
+/// with a file name, directory path omitted
 unittest {
     assert(Path(`stuff.dat`).fileName == `stuff.dat`);
     assert(Path(`stuff.dat`).dirName == ``);
@@ -242,6 +258,8 @@ unittest {
     assert(Path(`stuff.dat`).stripExt == `stuff`);
 }
 
+/// Test Path fileName, dirName, extName, and stripExt methods
+/// with a relative file path
 unittest {
     assert(Path(`hello/world/stuff.dat`).fileName == `stuff.dat`);
     assert(Path(`hello\world\stuff.dat`).fileName == `stuff.dat`);

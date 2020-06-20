@@ -1,4 +1,15 @@
+/**
+
+This module provides functions for writing to stdout and stderr and
+for reading from stdin, the standard input and output streams.
+
+https://en.wikipedia.org/wiki/Standard_streams
+
+*/
+
 module capsule.io.stdio;
+
+private:
 
 import core.stdc.stdio : stdin, stdout, stderr;
 import core.stdc.stdio : fwrite, fflush, putchar, getchar;

@@ -1,15 +1,24 @@
+/**
+
+This module implements a message logging interface that can be used
+to log and display messages emitted by some application.
+
+*/
+
 module capsule.io.messages;
 
-import capsule.range.concat : concat;
-import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+private:
+
+import capsule.algorithm.sort : sort;
 import capsule.io.file : FileLocation;
+import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+import capsule.range.concat : concat;
 import capsule.range.join : join;
 import capsule.range.map : map;
 import capsule.range.range : toArray;
-import capsule.algorithm.sort : sort;
 import capsule.string.writeint : writeInt;
 
-public nothrow @safe:
+public:
 
 enum CapsuleMessageSeverity: uint {
     None = 0,
@@ -35,7 +44,9 @@ static const CapsuleMessageSeverityNames = [
     "Error",
 ];
 
-CapsuleMessageSeverity getCapsuleMessageSeverityByChar(in char ch) @nogc {
+CapsuleMessageSeverity getCapsuleMessageSeverityByChar(
+    in char ch
+) nothrow @safe @nogc {
     foreach(i, severityChar; CapsuleMessageSeverityChars) {
         if(ch == severityChar) {
             return cast(CapsuleMessageSeverity) i;
@@ -144,7 +155,7 @@ struct CapsuleMessageLog(T) {
     alias AddMessageCallback = void delegate(in Message message);
     
     AddMessageCallback onAddMessage = null;
-    Message[] messages;
+    Message[] messages; // TODO: Don't keep a list, make it @nogc
     size_t nextMessageId = 0;
     Severity maxSeverity = Severity.None;
     
@@ -222,19 +233,6 @@ struct CapsuleMessageLog(T) {
     
     Message addError(in FileLocation location, in Status status, in string context = null) {
         return this.add(location, Severity.Error, status, context);
-    }
-    
-    void addFromLog(in typeof(this) log) {
-        foreach(message; log.messages) {
-            this.add(
-                message.location, message.severity,
-                message.status, message.context
-            );
-        }
-    }
-    
-    void sortMessages() @nogc {
-        sort(this.messages);
     }
     
     auto toStringRange() const {

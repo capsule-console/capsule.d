@@ -1,4 +1,12 @@
+/**
+
+This module provides interfaces for reading from and writing to files.
+
+*/
+
 module capsule.io.file;
+
+private:
 
 import core.stdc.stdio : FILE;
 import core.stdc.stdio : fopen, fclose, fread, feof, fwrite, fputc, fflush;
@@ -8,6 +16,7 @@ import capsule.string.stringz : StringZ;
 
 nothrow @safe public:
 
+/// Enumeration of possible file read or write status codes.
 enum FileStatus: uint {
     Ok = 0,
     UnspecifiedError,
@@ -16,6 +25,8 @@ enum FileStatus: uint {
     WriteError,
 }
 
+/// Return type of the readFileContent function.
+/// Pairs a content string with a file operation status code.
 struct ReadFileResult {
     nothrow @safe @nogc:
     
@@ -32,6 +43,7 @@ struct ReadFileResult {
     }
 }
 
+/// Get the entire content of a file as a single string.
 ReadFileResult readFileContent(in string path) @trusted {
     alias Result = ReadFileResult;
     // Check the file path
@@ -64,6 +76,7 @@ ReadFileResult readFileContent(in string path) @trusted {
     return Result.Ok(content);
 }
 
+/// Write a content string to a path as a complete file.
 FileStatus writeFileContent(T)(
     in string path, in T[] content
 ) @trusted {
@@ -87,6 +100,8 @@ FileStatus writeFileContent(T)(
     return Status.Ok;
 }
 
+/// Type for representing a file, with a path string, a content string,
+/// and a status indicator.
 struct File {
     nothrow @safe:
     
@@ -96,11 +111,14 @@ struct File {
     string content;
     Status status = Status.Ok;
     
+    /// Read a file and its content completely and get a File
+    /// instance representing that file.
     static typeof(this) read(in string path) {
         const read = readFileContent(path);
         return File(path, read.content, read.status);
     }
     
+    /// Write the content associated with this file to a file path.
     auto write(in string toPath = "") const {
         return writeFileContent(toPath.length ? toPath : this.path, this.content);
     }
@@ -134,6 +152,7 @@ struct File {
     }
 }
 
+/// Data type for representing a location in a file.
 struct FileLocation {
     nothrow @safe @nogc:
     
@@ -231,6 +250,7 @@ struct FileReader {
     }
 }
 
+/// Utility for writing data to a file stream.
 struct FileWriter {
     alias Status = FileStatus;
     
