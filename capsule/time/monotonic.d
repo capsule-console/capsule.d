@@ -1,3 +1,11 @@
+/**
+
+This module implements functions that deal with monotonic time.
+
+https://www.sourcetoad.com/app-development/use-monotonic-time/
+
+*/
+
 module capsule.time.monotonic;
 
 private:

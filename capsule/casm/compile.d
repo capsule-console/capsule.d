@@ -17,7 +17,7 @@ import capsule.math.gcd : lcm;
 import capsule.math.ispow2 : isPow2;
 import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
 import capsule.string.ascii : isDigit;
-import capsule.time.time : getUnixSeconds;
+import capsule.time.unix : getUnixSeconds;
 
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;

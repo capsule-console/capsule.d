@@ -1,9 +1,19 @@
+/**
+
+This module implements a timer that can be used to measure the time
+elapsed from one point in program execution to another point.
+
+*/
+
 module capsule.time.timer;
+
+private:
 
 import capsule.time.monotonic : monotonicns;
 
-public nothrow @safe @nogc:
+public:
 
+/// Enumeration of possible states that a Timer can be in.
 enum TimerState: uint {
     None = 0,
     Active,
@@ -11,6 +21,7 @@ enum TimerState: uint {
     Suspended,
 }
 
+/// Type used to implement a monotonic timer.
 struct Timer {
     nothrow @safe @nogc:
     

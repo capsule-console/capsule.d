@@ -16,7 +16,7 @@ import capsule.digest.crc : CRC32;
 import capsule.io.file : File, FileLocation;
 import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
 import capsule.string.ascii : isDigit;
-import capsule.time.time : getUnixSeconds;
+import capsule.time.unix : getUnixSeconds;
 
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
