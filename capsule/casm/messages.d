@@ -1,10 +1,19 @@
+/**
+
+This module defines types used to provide a message log for the Capsule
+assembler and linker processes.
+
+*/
+
 module capsule.casm.messages;
 
-import capsule.string.ascii : isWhitespace;
-import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+private:
+
 import capsule.io.messages : CapsuleMessageLog, CapsuleMessageSeverity;
 import capsule.io.messages : CapsuleMessageSeverityChars;
 import capsule.io.messages : getCapsuleMessageSeverityByChar;
+import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+import capsule.string.ascii : isWhitespace;
 
 private alias Status = CapsuleAsmMessageStatus;
 private alias Severity = CapsuleMessageSeverity;
@@ -21,6 +30,8 @@ struct CapsuleAsmMessageStatusSeverity {
     Severity severity;
 }
 
+/// Enumeration of possible message types.
+/// The UDAs define a default severity level and a message string.
 enum CapsuleAsmMessageStatus: uint {
     // Misc
     @('N', "")

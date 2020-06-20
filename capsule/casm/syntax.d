@@ -1,16 +1,28 @@
+/**
+
+This module implements a Capsule assembly syntax node type.
+A syntax node represents some unit of syntax, such as a label,
+a directive, or an instruction.
+
+*/
+
 module capsule.casm.syntax;
 
-import capsule.string.ascii : isDigit, eitherCaseStringEquals;
-import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+private:
+
 import capsule.io.file : FileLocation;
-import capsule.casm.instructionargs : CapsuleInstructionArgs;
+import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+import capsule.string.ascii : isDigit, eitherCaseStringEquals;
+
 import capsule.core.obj : CapsuleObjectReference, CapsuleObjectSymbol;
 import capsule.core.typestrings : getCapsuleOpcodeName;
 import capsule.core.types : CapsuleInstruction, CapsuleOpcode;
 
-public nothrow @safe @nogc:
+import capsule.casm.instructionargs : CapsuleInstructionArgs;
 
-Type getCapsuleAsmNodeTypeWithName(Type)(in string name) {
+public:
+
+Type getCapsuleAsmNodeTypeWithName(Type)(in string name) pure nothrow @safe @nogc {
     foreach(member; __traits(allMembers, Type)) {
         static assert(member.length);
         enum type = __traits(getMember, Type, member);
@@ -147,7 +159,12 @@ enum CapsuleAsmDirectiveType: uint {
     @("word") Word,
 }
 
-auto getCapsuleInstructionArgs(in CapsuleOpcode opcode) {
+/// Given a Capsule instruction opcode, get a data structure
+/// representing the expected register and/or immediate arguments
+/// for that instruction.
+auto getCapsuleInstructionArgs(
+    in CapsuleOpcode opcode
+) pure nothrow @safe @nogc {
     alias Args = CapsuleInstructionArgs;
     alias Opcode = CapsuleOpcode;
     switch(opcode) {
@@ -208,7 +225,12 @@ auto getCapsuleInstructionArgs(in CapsuleOpcode opcode) {
     }
 }
 
-auto getCapsulePseudoInstructionArgs(in CapsuleAsmPseudoInstructionType type) {
+/// Given a Capsule pseudo-instruction type, get a data structure
+/// representing the expected register and/or immediate arguments
+/// for that pseudo-instruction.
+auto getCapsulePseudoInstructionArgs(
+    in CapsuleAsmPseudoInstructionType type
+) pure nothrow @safe @nogc {
     alias Args = CapsuleInstructionArgs;
     alias Type = CapsuleAsmPseudoInstructionType;
     switch(type) {
@@ -280,6 +302,9 @@ auto getCapsulePseudoInstructionArgs(in CapsuleAsmPseudoInstructionType type) {
     }
 }
 
+/// Represents a number value referenced by a Capsule assembly syntax node.
+/// A number value can be a literal or it can be a reference to the value
+/// defined via some symbol identifier.
 struct CapsuleAsmNumber {
     nothrow @safe @nogc:
     
@@ -289,7 +314,6 @@ struct CapsuleAsmNumber {
     
     /// The literal value represented by this number, if any.
     long value = 0;
-    
     /// Identifies the type of reference, if this number represents
     /// a reference to a symbol as opposed to a literal value.
     ReferenceType referenceType = ReferenceType.None;
@@ -335,6 +359,8 @@ struct CapsuleAsmNumber {
         return CapsuleObjectReference.isPcRelativeLowHalfType(this.referenceType);
     }
     
+    /// Returns true if the number value is a reference or if it's a
+    /// literal with a nonzero value.
     bool opCast(T: bool)() const {
         return this.referenceType || this.value != 0;
     }
@@ -373,7 +399,7 @@ struct CapsuleAsmNode {
         // Data for .byte, .half, .word
         CapsuleAsmByteDataDirectiveNode byteDataDirective;
         // Data for .comment, .string, .stringz, .incbin, .include
-        CapsuleAsmTextDataDirectiveNode textDirective;
+        CapsuleAsmValueDirectiveNode!string textDirective;
         // Data for .const
         CapsuleAsmConstantDirectiveNode constDirective;
         // Data for .export, .extern
@@ -580,6 +606,7 @@ struct CapsuleAsmNode {
     }
 }
 
+/// Used to represent information about a label syntax node.
 struct CapsuleAsmLabelNode {
     nothrow @safe @nogc:
     
@@ -590,6 +617,8 @@ struct CapsuleAsmLabelNode {
     }
 }
 
+/// Used to represent information about an instruction or
+/// pseudo-instruction syntax node.
 struct CapsuleAsmInstructionNode {
     nothrow @safe @nogc:
     
@@ -627,6 +656,8 @@ struct CapsuleAsmInstructionNode {
     }
 }
 
+/// Used to represent information about a syntax node which
+/// corresponds to an alignment, padding, or reserve directive.
 struct CapsuleAsmPadDirectiveNode {
     /// Meaning of the size field varies slightly from one
     /// directive to the next.
@@ -639,25 +670,31 @@ struct CapsuleAsmPadDirectiveNode {
     uint fill;
 }
 
-struct CapsuleAsmTextDataDirectiveNode {
-    string text;
-}
-
+/// Used to represent information about a directive syntax node that
+/// requires a single symbol identifier argument, such as .export
+/// or .extern.
 struct CapsuleAsmSymbolDirectiveNode {
     string name;
 }
 
+/// Used to represent information about a directive syntax node that
+/// requires a list of number arguments, such as .byte or .word.
 struct CapsuleAsmByteDataDirectiveNode {
     alias Number = CapsuleAsmNumber;
     
     Number[] values;
 }
 
+/// Used to represent information about a .const directive syntax node.
 struct CapsuleAsmConstantDirectiveNode {
     string name;
     uint value;
 }
 
+/// Used to represent information about a directive syntax node with
+/// a single value as its argument, such as a .priority directive.
+/// Used also to represent information about a directive syntax node that
+/// requires a single string argument, such as .string or .stringz.
 struct CapsuleAsmValueDirectiveNode(T) {
     T value;
 }

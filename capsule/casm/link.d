@@ -1,25 +1,33 @@
+/**
+
+This module provides functionality for linking compiled Capsule objects
+to produce an executable Capsule program.
+
+https://en.wikipedia.org/wiki/Linker_(computing)
+
+*/
+
 module capsule.casm.link;
 
-import capsule.string.ascii : isDigit;
+private:
+
+import capsule.algorithm.sort : sort;
 import capsule.digest.crc : CRC32;
+import capsule.io.file : File, FileLocation;
+import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
+import capsule.string.ascii : isDigit;
+import capsule.time.time : getUnixSeconds;
+
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
-import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
-import capsule.io.file : File, FileLocation;
 import capsule.core.obj : CapsuleObject;
 import capsule.core.program : CapsuleProgram;
-import capsule.algorithm.sort : sort;
-import capsule.time.time : getUnixSeconds;
 
 import capsule.casm.messages : CapsuleAsmMessageStatus, CapsuleAsmMessageMixin;
 import capsule.casm.messages : CapsuleAsmMessageStatusSeverity;
 import capsule.casm.reference : findCapsuleObjectPcRelHighReference;
 import capsule.casm.reference : resolveCapsuleObjectReference;
 import capsule.casm.syntax : CapsuleAsmNumberLinkDirectiveType;
-
-private uint getWordAlignedOffset(in uint offset) {
-    return offset + ((4 - (offset & 0x3)) & 0x3);
-}
 
 public:
 

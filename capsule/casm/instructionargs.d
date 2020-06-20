@@ -1,4 +1,14 @@
+/**
+
+This module defines types used by the Capsule assembly parser to determine
+what register and/or immediate arguments to expect for a given instruction
+or pseudo-instruction.
+
+*/
+
 module capsule.casm.instructionargs;
+
+private:
 
 import capsule.core.obj : CapsuleObjectReferenceType;
 import capsule.core.types : CapsuleOpcode, CapsuleRegisterParameter;

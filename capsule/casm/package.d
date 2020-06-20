@@ -1,3 +1,10 @@
+/**
+
+Modules in this package are used to implement the Capsule assembler (casm)
+and Capsule linker (clink) applications.
+
+*/
+
 module capsule.casm;
 
 public:

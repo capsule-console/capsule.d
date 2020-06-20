@@ -1,10 +1,19 @@
+/**
+
+This module implements utility functions that are commonly used by the
+assembler and linker to resolve references to symbols.
+
+*/
+
 module capsule.casm.reference;
+
+private:
 
 import capsule.core.obj : CapsuleObjectReference, CapsuleObjectReferenceType;
 
 import capsule.casm.messages : CapsuleAsmMessageStatus;
 
-public nothrow @safe @nogc:
+public:
 
 /// Used as a default template parameter value for the
 /// findCapsuleObjectPcRelHighReference helper function
@@ -33,7 +42,7 @@ struct ResolveCapsuleObjectReferenceResult {
 /// Helper for resolveCapsuleObjectReference to handle PC-relative references
 auto resolveReferencePcRel(
     in uint pcOffset, in int addend, in int value, in uint length = 0
-) {
+) nothrow @safe @nogc {
     alias Status = CapsuleAsmMessageStatus;
     struct Result {
         Status status = Status.Ok;
@@ -51,7 +60,7 @@ auto resolveReferencePcRel(
 auto resolveCapsuleObjectReferenceValue(
     in CapsuleObjectReferenceType type,
     in uint pcOffset, in int addend, in uint value, in uint length
-) @trusted {
+) nothrow @safe @nogc {
     // Handy aliases
     alias Reference = CapsuleObjectReference;
     alias Result = ResolveCapsuleObjectReferenceResult;
@@ -240,7 +249,7 @@ auto resolveCapsuleObjectReference(
     ref ubyte[] bytes, in CapsuleObjectReferenceType type,
     in uint offset, in uint pcOffset,
     in int addend, in uint value, in uint length
-) @trusted {
+) nothrow @trusted @nogc {
     // Handy aliases
     alias Reference = CapsuleObjectReference;
     alias Result = ResolveCapsuleObjectReferenceResult;
@@ -290,7 +299,7 @@ auto findCapsuleObjectPcRelHighReference(
 )(
     ref Reference[] references, in CapsuleObjectReferenceType lowRefType,
     in Name lowRefName, in uint hiRefOffset
-) {
+) nothrow @safe @nogc {
     alias Type = CapsuleObjectReferenceType;
     struct Result {
         bool ok = false;

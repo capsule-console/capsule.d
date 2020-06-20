@@ -1,18 +1,28 @@
+/**
+
+This module provides functionality for producing a Capsule object
+from one or more Capsule assembly sources.
+
+https://en.wikipedia.org/wiki/Assembly_language
+
+*/
+
 module capsule.casm.compile;
 
-import capsule.string.ascii : isDigit;
-import capsule.digest.crc : CRC32, CRC64ISO;
-import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
-import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
-import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
-import capsule.io.file : File, FileLocation;
 import capsule.algorithm.lz77 : lz77Deflate;
+import capsule.digest.crc : CRC32, CRC64ISO;
+import capsule.io.file : File, FileLocation;
+import capsule.io.path : Path;
 import capsule.math.gcd : lcm;
 import capsule.math.ispow2 : isPow2;
-import capsule.core.obj : CapsuleObject;
-import capsule.io.path : Path;
-import capsule.core.programsource : CapsuleProgramSource;
+import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
+import capsule.string.ascii : isDigit;
 import capsule.time.time : getUnixSeconds;
+
+import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
+import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
+import capsule.core.obj : CapsuleObject;
+import capsule.core.programsource : CapsuleProgramSource;
 import capsule.core.types : CapsuleOpcode, CapsuleInstruction;
 
 import capsule.casm.messages : CapsuleAsmMessageStatus, CapsuleAsmMessageMixin;
@@ -1667,7 +1677,7 @@ struct CapsuleAsmCompiler {
         }
         // .comment
         else if(type is DirectiveType.Comment) {
-            this.comment ~= node.textDirective.text;
+            this.comment ~= node.textDirective.value;
         }
         // .const
         else if(type is DirectiveType.Constant) {
@@ -1847,9 +1857,9 @@ struct CapsuleAsmCompiler {
                 getEnumMemberAttribute!string(section.type)
             );
             this.setLabelVariableLength(
-                cast(uint) node.textDirective.text.length
+                cast(uint) node.textDirective.value.length
             );
-            section.addBytes(node.location, node.textDirective.text);
+            section.addBytes(node.location, node.textDirective.value);
         }
         // .stringz
         else if(type is DirectiveType.StringZ) {
@@ -1861,9 +1871,9 @@ struct CapsuleAsmCompiler {
                 getEnumMemberAttribute!string(section.type)
             );
             this.setLabelVariableLength(
-                cast(uint) (1 + node.textDirective.text.length)
+                cast(uint) (1 + node.textDirective.value.length)
             );
-            section.addBytes(node.location, node.textDirective.text ~ "\0");
+            section.addBytes(node.location, node.textDirective.value ~ "\0");
         }
         // .text
         else if(type is DirectiveType.Text) {
@@ -2051,7 +2061,7 @@ struct CapsuleAsmCompiler {
             node.directiveType is DirectiveType.IncludeBinary ||
             node.directiveType is DirectiveType.IncludeSource
         );
-        const includePath = node.textDirective.text;
+        const includePath = node.textDirective.value;
         auto file = this.getIncludedFile(includePath, node.location.file.path);
         if(file.status is File.Status.ReadError) {
             this.addStatus(node.location, Status.FilePathReadError, file.path);

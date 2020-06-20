@@ -1,13 +1,23 @@
+/**
+
+This module provides functionality for parsing Capsule assembly
+source code and producing a list of syntax nodes.
+
+*/
+
 module capsule.casm.parse;
 
+private:
+
+import capsule.io.file : File, FileLocation, FileReader;
+import capsule.meta.enums : isNamedEnumMember, getEnumMemberWithAttribute;
+import capsule.range.range : toArray;
 import capsule.string.ascii : isDigit, eitherCaseStringEquals;
 import capsule.string.ascii : isWhitespace, isInlineWhitespace;
-import capsule.meta.enums : isNamedEnumMember, getEnumMemberWithAttribute;
 import capsule.string.escape : unescapeCapsuleText;
-import capsule.io.file : File, FileLocation, FileReader;
 import capsule.string.hex : isHexDigit, getHexDigitValue, parseHexString;
+
 import capsule.core.obj : CapsuleObject;
-import capsule.range.range : toArray;
 import capsule.core.typestrings : CapsuleRegisterNames;
 import capsule.core.typestrings : getCapsuleRegisterIndex;
 import capsule.core.types : CapsuleOpcode;
@@ -582,7 +592,7 @@ struct CapsuleAsmParser {
             return node;
         }
         const text = this.parseStringLiteral();
-        node.textDirective.text = text.value;
+        node.textDirective.value = text.value;
         if(!text.ok) {
             this.addStatusSkipLine(this.endLocation(location), text.status);
         }

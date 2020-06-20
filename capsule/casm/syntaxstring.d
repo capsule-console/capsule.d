@@ -1,13 +1,23 @@
+/**
+
+This module provides functionality that can be used to produce a string
+representation of a parsed Capsule assembly syntax node.
+
+*/
+
 module capsule.casm.syntaxstring;
 
+private:
+
 import capsule.meta.enums : getEnumMemberAttribute;
+import capsule.range.range : toArray;
 import capsule.string.escape : escapeCapsuleText;
 import capsule.string.hex : getByteHexString, getHexString;
-import capsule.core.objstring : getCapsuleObjectReferenceTypeName;
-import capsule.range.range : toArray;
-import capsule.core.typestrings : getCapsuleOpcodeName, getCapsuleRegisterName;
-import capsule.core.types : CapsuleOpcode, CapsuleRegisterParameter;
 import capsule.string.writeint : writeInt;
+
+import capsule.core.objstring : getCapsuleObjectReferenceTypeName;
+import capsule.core.types : CapsuleOpcode, CapsuleRegisterParameter;
+import capsule.core.typestrings : getCapsuleOpcodeName, getCapsuleRegisterName;
 
 import capsule.casm.syntax : CapsuleAsmNode;
 
@@ -149,7 +159,7 @@ string capsuleAsmByteDataDirectiveNodeToString(in Node node) {
 string capsuleAsmTextDirectiveNodeToString(in Node node) {
     assert(node.isTextDirective);
     const text = cast(string) (
-        escapeCapsuleText(node.textDirective.text).toArray()
+        escapeCapsuleText(node.textDirective.value).toArray()
     );
     return "." ~ node.getName() ~ " \"" ~ text ~ "\"";
 }
