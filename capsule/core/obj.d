@@ -1,3 +1,15 @@
+/**
+
+This module declares types and helper functions that are used
+to represent and manipulate a Capsule object.
+
+An object is an intermediate step that is produced by a compiler
+and consumed by a linker in order to produce a Capsule program.
+
+https://en.wikipedia.org/wiki/Object_file
+
+*/
+
 module capsule.core.obj;
 
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;

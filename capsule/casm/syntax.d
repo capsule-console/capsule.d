@@ -1,8 +1,8 @@
 module capsule.casm.syntax;
 
-import capsule.core.ascii : isDigit, eitherCaseStringEquals;
-import capsule.core.enums : getEnumMemberName, getEnumMemberAttribute;
-import capsule.core.file : FileLocation;
+import capsule.string.ascii : isDigit, eitherCaseStringEquals;
+import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+import capsule.io.file : FileLocation;
 import capsule.casm.instructionargs : CapsuleInstructionArgs;
 import capsule.core.obj : CapsuleObjectReference, CapsuleObjectSymbol;
 import capsule.core.typestrings : getCapsuleOpcodeName;

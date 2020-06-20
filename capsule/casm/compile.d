@@ -1,17 +1,18 @@
 module capsule.casm.compile;
 
-import capsule.core.ascii : isDigit;
-import capsule.core.crc : CRC32, CRC64ISO;
+import capsule.string.ascii : isDigit;
+import capsule.digest.crc : CRC32, CRC64ISO;
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
-import capsule.core.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
-import capsule.core.file : File, FileLocation;
-import capsule.core.lz77 : lz77Deflate;
-import capsule.core.math : lcm, isPow2;
+import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
+import capsule.io.file : File, FileLocation;
+import capsule.algorithm.lz77 : lz77Deflate;
+import capsule.math.gcd : lcm;
+import capsule.math.ispow2 : isPow2;
 import capsule.core.obj : CapsuleObject;
-import capsule.core.path : Path;
+import capsule.io.path : Path;
 import capsule.core.programsource : CapsuleProgramSource;
-import capsule.core.time : getUnixSeconds;
+import capsule.time.time : getUnixSeconds;
 import capsule.core.types : CapsuleOpcode, CapsuleInstruction;
 
 import capsule.casm.messages : CapsuleAsmMessageStatus, CapsuleAsmMessageMixin;

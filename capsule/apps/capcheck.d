@@ -1,19 +1,34 @@
+/**
+
+Main file for the Capsule implementation check utility (capcheck).
+
+The check utility can be used to verify the integrity of a Capsule
+toolchain and virtual machine by compiling and linking a number of
+test programs from their sources, running them in a Capsule virtual
+machine, and then verifying that the program's behavior and output
+matched what was expected for that program.
+
+*/
+
 module capsule.apps.capcheck;
 
-import capsule.core.config : CapsuleConfigAttribute, CapsuleConfigStatus;
-import capsule.core.config : loadCapsuleConfig, capsuleConfigStatusToString;
-import capsule.core.config : getCapsuleConfigUsageString;
-import capsule.core.enums : getEnumMemberName, getEnumMemberByName;
-import capsule.core.file : File;
-import capsule.core.hex : getByteHexString;
-import capsule.core.indexof : lastIndexOf;
-import capsule.core.ini : Ini;
-import capsule.core.path : Path;
-import capsule.core.process : runProcess, getRunProcessString;
-import capsule.core.stdio : stdio;
-import capsule.core.strings : padLeft;
-import capsule.core.timer : Timer;
-import capsule.core.writeint : writeInt;
+private:
+
+import capsule.parse.config : CapsuleConfigAttribute, CapsuleConfigStatus;
+import capsule.parse.config : loadCapsuleConfig, capsuleConfigStatusToString;
+import capsule.parse.config : getCapsuleConfigUsageString;
+
+import capsule.algorithm.indexof : lastIndexOf;
+import capsule.io.file : File;
+import capsule.io.path : Path;
+import capsule.io.stdio : stdio;
+import capsule.meta.enums : getEnumMemberName, getEnumMemberByName;
+import capsule.parse.ini : Ini;
+import capsule.string.hex : getByteHexString;
+import capsule.string.strings : padLeft;
+import capsule.string.writeint : writeInt;
+import capsule.system.process : runProcess, getRunProcessString;
+import capsule.time.timer : Timer;
 
 import capsule.apps.lib.status : CapsuleApplicationStatus;
 

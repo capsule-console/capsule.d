@@ -1,7 +1,7 @@
 module capsule.core.programsource;
 
-import capsule.core.crc : CRC32;
-import capsule.core.file : FileLocation;
+import capsule.digest.crc : CRC32;
+import capsule.io.file : FileLocation;
 
 public:
 

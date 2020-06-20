@@ -1,14 +1,22 @@
+/**
+
+This module provides functionality for getting a string
+representation of Capsule program data. This is intended
+primarily for debugging purposes.
+
+*/
+
 module capsule.core.programstring;
 
-import capsule.core.concat : concat;
-import capsule.core.enums : getEnumMemberName;
-import capsule.core.hex : getHexString, getByteHexString;
-import capsule.core.join : join;
-import capsule.core.map : map;
+import capsule.range.concat : concat;
+import capsule.meta.enums : getEnumMemberName;
+import capsule.string.hex : getHexString, getByteHexString;
+import capsule.range.join : join;
+import capsule.range.map : map;
 import capsule.core.objstring : getCapsuleObjectSymbolTypeName;
 import capsule.core.program : CapsuleProgram;
-import capsule.core.range : toArray;
-import capsule.core.writeint : writeInt;
+import capsule.range.range : toArray;
+import capsule.string.writeint : writeInt;
 
 public:
 

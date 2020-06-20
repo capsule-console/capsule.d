@@ -1,10 +1,10 @@
 module capsule.casm.messages;
 
-import capsule.core.ascii : isWhitespace;
-import capsule.core.enums : getEnumMemberName, getEnumMemberAttribute;
-import capsule.core.messages : CapsuleMessageLog, CapsuleMessageSeverity;
-import capsule.core.messages : CapsuleMessageSeverityChars;
-import capsule.core.messages : getCapsuleMessageSeverityByChar;
+import capsule.string.ascii : isWhitespace;
+import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+import capsule.io.messages : CapsuleMessageLog, CapsuleMessageSeverity;
+import capsule.io.messages : CapsuleMessageSeverityChars;
+import capsule.io.messages : getCapsuleMessageSeverityByChar;
 
 private alias Status = CapsuleAsmMessageStatus;
 private alias Severity = CapsuleMessageSeverity;
@@ -341,9 +341,9 @@ auto parseCapsuleStatusSeverityOverrides(Status)(in string text) {
 }
 
 template CapsuleAsmMessageMixin() {
-    import capsule.core.enums : getEnumMemberAttribute;
-    import capsule.core.messages : CapsuleMessageLog;
-    import capsule.core.messages : getCapsuleMessageSeverityByChar;
+    import capsule.meta.enums : getEnumMemberAttribute;
+    import capsule.io.messages : CapsuleMessageLog;
+    import capsule.io.messages : getCapsuleMessageSeverityByChar;
     
     alias Log = CapsuleMessageLog!CapsuleAsmMessageStatus;
     alias Status = CapsuleAsmMessageStatus;

@@ -1,10 +1,10 @@
 module capsule.core.typestrings;
 
-import capsule.core.ascii : eitherCaseStringEquals;
-import capsule.core.enums : getEnumMemberAttribute;
-import capsule.core.hex : CapsuleByteHexStrings, getByteHexString, getHexString;
+import capsule.string.ascii : eitherCaseStringEquals;
+import capsule.meta.enums : getEnumMemberAttribute;
+import capsule.string.hex : CapsuleByteHexStrings, getByteHexString, getHexString;
 import capsule.core.types : CapsuleInstruction, CapsuleOpcode;
-import capsule.core.writeint : writeInt;
+import capsule.string.writeint : writeInt;
 
 public pure nothrow @safe:
 

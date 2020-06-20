@@ -1,8 +1,8 @@
 module capsule.apps.lib.stdio;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
-import capsule.core.file : File, FileWriter;
-import capsule.core.stdio : stdio;
+import capsule.io.file : File, FileWriter;
+import capsule.io.stdio : stdio;
 
 import capsule.apps.lib.extcommon : CapsuleExtensionMixin;
 

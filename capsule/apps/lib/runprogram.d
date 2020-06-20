@@ -1,22 +1,22 @@
 module capsule.apps.lib.runprogram;
 
-import capsule.core.ascii : isDigit, toLower;
-import capsule.core.crc : CRC32;
+import capsule.string.ascii : isDigit, toLower;
+import capsule.digest.crc : CRC32;
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
-import capsule.core.enums : getEnumMemberAttribute, getEnumMemberName;
-import capsule.core.hex : parseHexString, getHexString, getByteHexString;
-import capsule.core.lz77 : lz77Inflate;
+import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberName;
+import capsule.string.hex : parseHexString, getHexString, getByteHexString;
+import capsule.algorithm.lz77 : lz77Inflate;
 import capsule.core.memory : CapsuleMemoryStatus;
 import capsule.core.obj : CapsuleObjectReferenceLocalType;
-import capsule.core.parseint : parseInt, parseUnsignedInt;
+import capsule.string.parseint : parseInt, parseUnsignedInt;
 import capsule.core.program : CapsuleProgram;
-import capsule.core.stdio : stdio;
-import capsule.core.strings : startsWith;
+import capsule.io.stdio : stdio;
+import capsule.string.strings : startsWith;
 import capsule.core.types : CapsuleOpcode, CapsuleExceptionCode;
 import capsule.core.types : CapsuleInstruction;
 import capsule.core.typestrings : getCapsuleOpcodeWithName;
 import capsule.core.typestrings : CapsuleRegisterNames;
-import capsule.core.writeint : writeInt;
+import capsule.string.writeint : writeInt;
 
 public:
 

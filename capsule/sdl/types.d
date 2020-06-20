@@ -2,7 +2,7 @@ module capsule.sdl.types;
 
 import derelict.sdl2.sdl;
 
-import capsule.core.bitflags : BitFlags;
+import capsule.bits.bitflags : BitFlags;
 
 public:
 

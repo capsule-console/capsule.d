@@ -1,3 +1,16 @@
+/**
+
+The declarations in this module are used commonly by other
+modules that read or write data using a standard Capsule
+file format.
+
+A standard Capsule file begins with a 64-byte file header,
+which is followed by any number of 32-bit section headers.
+The section headers may indicate an offset to related binary
+data which, if so indicated, will follow after all headers.
+
+*/
+
 module capsule.core.encoding;
 
 public nothrow @safe @nogc:
@@ -204,7 +217,7 @@ mixin template CapsuleCoderMixin() {
 }
 
 mixin template CapsuleEncoderMixin() {
-    import capsule.core.templates : Unconst;
+    import capsule.meta.templates : Unconst;
     
     mixin CapsuleCoderMixin;
     
@@ -388,7 +401,7 @@ mixin template CapsuleEncoderMixin() {
 }
 
 mixin template CapsuleDecoderMixin() {
-    import capsule.core.sort : sort;
+    import capsule.algorithm.sort : sort;
     
     mixin CapsuleCoderMixin;
     

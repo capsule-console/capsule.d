@@ -1,18 +1,36 @@
+/**
+
+Main file for the Capsule assembler (casm).
+
+This program is used to compile Capsule assembly source code, producing
+a Capsule object file.
+
+Object files produced by the Capsule assembler or some other utility can
+be linked togther to produce a Capsule program file using the Capsule
+linker (clink).
+
+https://en.wikipedia.org/wiki/Assembly_language
+
+*/
+
 module capsule.apps.casm;
 
-import capsule.core.config : CapsuleConfigAttribute, CapsuleConfigStatus;
-import capsule.core.config : loadCapsuleConfig, capsuleConfigStatusToString;
-import capsule.core.config : getCapsuleConfigUsageString;
+private:
+
+import capsule.parse.config : CapsuleConfigAttribute, CapsuleConfigStatus;
+import capsule.parse.config : loadCapsuleConfig, capsuleConfigStatusToString;
+import capsule.parse.config : getCapsuleConfigUsageString;
+
+import capsule.algorithm.indexof : lastIndexOf;
+import capsule.io.file : File;
+import capsule.io.path : Path;
+import capsule.io.stdio : stdio;
+import capsule.meta.enums : getEnumMemberAttribute;
+
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
-import capsule.core.enums : getEnumMemberAttribute;
-import capsule.core.file : File;
-import capsule.core.indexof : lastIndexOf;
 import capsule.core.obj : CapsuleObject;
 import capsule.core.objencode : CapsuleObjectEncoder;
 import capsule.core.objstring : capsuleObjectToString;
-import capsule.core.path : Path;
-import capsule.core.process : runProcess, getRunProcessString;
-import capsule.core.stdio : stdio;
 
 import capsule.casm.compile : CapsuleAsmCompiler;
 import capsule.casm.syntaxstring : capsuleAsmNodeToString;

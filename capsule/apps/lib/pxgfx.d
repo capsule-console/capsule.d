@@ -5,11 +5,11 @@ version(CapsuleSDL2Graphics):
 import core.stdc.string : memcpy;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
-import capsule.core.enums : getEnumMemberName;
-import capsule.core.file : File, FileWriter;
-import capsule.core.hex : getHexString;
-import capsule.core.math : isPow2;
-import capsule.core.range : toArray;
+import capsule.meta.enums : getEnumMemberName;
+import capsule.io.file : File, FileWriter;
+import capsule.string.hex : getHexString;
+import capsule.math.ispow2 : isPow2;
+import capsule.range.range : toArray;
 
 import capsule.apps.lib.extcommon : CapsuleExtensionMixin;
 import capsule.sdl : CapsuleSDL, CapsuleSDLWindow;

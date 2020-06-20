@@ -1,15 +1,15 @@
 module capsule.casm.link;
 
-import capsule.core.ascii : isDigit;
-import capsule.core.crc : CRC32;
+import capsule.string.ascii : isDigit;
+import capsule.digest.crc : CRC32;
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
-import capsule.core.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
-import capsule.core.file : File, FileLocation;
+import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberWithAttribute;
+import capsule.io.file : File, FileLocation;
 import capsule.core.obj : CapsuleObject;
 import capsule.core.program : CapsuleProgram;
-import capsule.core.sort : sort;
-import capsule.core.time : getUnixSeconds;
+import capsule.algorithm.sort : sort;
+import capsule.time.time : getUnixSeconds;
 
 import capsule.casm.messages : CapsuleAsmMessageStatus, CapsuleAsmMessageMixin;
 import capsule.casm.messages : CapsuleAsmMessageStatusSeverity;

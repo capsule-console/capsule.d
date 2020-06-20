@@ -1,6 +1,9 @@
 module capsule.core.engine;
 
-import capsule.core.math : clz, ctz, pcnt, min, max;
+import capsule.bits.clz : clz;
+import capsule.bits.ctz : ctz;
+import capsule.bits.pcnt : pcnt;
+import capsule.math.minmax : min, max;
 import capsule.core.memory : CapsuleMemory;
 import capsule.core.typestrings : getCapsuleExceptionDescription;
 import capsule.core.types : CapsuleOpcode, CapsuleExceptionCode;
@@ -11,8 +14,6 @@ public:
 alias CapsuleExtensionCallHandler = CapsuleExtensionCallResult function(
     CapsuleEngine* engine, in uint id, in uint arg
 );
-
-public pure nothrow @safe:
 
 enum CapsuleEngineStatus: uint {
     /// Program is invalid or awaiting initialization
@@ -34,6 +35,8 @@ enum CapsuleEngineStatus: uint {
 }
 
 struct CapsuleExtensionCallResult {
+    nothrow @safe @nogc:
+    
     alias ExceptionCode = CapsuleExceptionCode;
     
     static enum ExtError = typeof(this).Exception(ExceptionCode.ExtensionError);

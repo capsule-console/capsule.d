@@ -2,7 +2,7 @@ module capsule.apps.lib.ecall;
 
 import capsule.core.extension : CapsuleExtension;
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
-import capsule.core.stdio : stdio;
+import capsule.io.stdio : stdio;
 import capsule.core.types : CapsuleExceptionCode;
 
 private alias Engine = CapsuleEngine;

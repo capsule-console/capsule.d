@@ -1,13 +1,13 @@
 module capsule.casm.parse;
 
-import capsule.core.ascii : isDigit, eitherCaseStringEquals;
-import capsule.core.ascii : isWhitespace, isInlineWhitespace;
-import capsule.core.enums : isNamedEnumMember, getEnumMemberWithAttribute;
-import capsule.core.escape : unescapeCapsuleText;
-import capsule.core.file : File, FileLocation, FileReader;
-import capsule.core.hex : isHexDigit, getHexDigitValue, parseHexString;
+import capsule.string.ascii : isDigit, eitherCaseStringEquals;
+import capsule.string.ascii : isWhitespace, isInlineWhitespace;
+import capsule.meta.enums : isNamedEnumMember, getEnumMemberWithAttribute;
+import capsule.string.escape : unescapeCapsuleText;
+import capsule.io.file : File, FileLocation, FileReader;
+import capsule.string.hex : isHexDigit, getHexDigitValue, parseHexString;
 import capsule.core.obj : CapsuleObject;
-import capsule.core.range : toArray;
+import capsule.range.range : toArray;
 import capsule.core.typestrings : CapsuleRegisterNames;
 import capsule.core.typestrings : getCapsuleRegisterIndex;
 import capsule.core.types : CapsuleOpcode;

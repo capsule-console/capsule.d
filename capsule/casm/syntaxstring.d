@@ -1,13 +1,13 @@
 module capsule.casm.syntaxstring;
 
-import capsule.core.enums : getEnumMemberAttribute;
-import capsule.core.escape : escapeCapsuleText;
-import capsule.core.hex : getByteHexString, getHexString;
+import capsule.meta.enums : getEnumMemberAttribute;
+import capsule.string.escape : escapeCapsuleText;
+import capsule.string.hex : getByteHexString, getHexString;
 import capsule.core.objstring : getCapsuleObjectReferenceTypeName;
-import capsule.core.range : toArray;
+import capsule.range.range : toArray;
 import capsule.core.typestrings : getCapsuleOpcodeName, getCapsuleRegisterName;
 import capsule.core.types : CapsuleOpcode, CapsuleRegisterParameter;
-import capsule.core.writeint : writeInt;
+import capsule.string.writeint : writeInt;
 
 import capsule.casm.syntax : CapsuleAsmNode;
 

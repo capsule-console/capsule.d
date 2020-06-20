@@ -1,6 +1,6 @@
 module capsule.core.program;
 
-import capsule.core.crc : CRC32;
+import capsule.digest.crc : CRC32;
 import capsule.core.encoding : CapsuleArchitecture;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
 import capsule.core.obj : CapsuleObject;

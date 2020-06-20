@@ -5,8 +5,8 @@ import derelict.sdl2.sdl;
 import capsule.sdl.displaymode : CapsuleSDLDisplayMode;
 import capsule.sdl.types : CapsuleSDLPixelFormat;
 
-import capsule.core.bitflags : BitFlags;
-import capsule.core.stringz : stringz;
+import capsule.bits.bitflags : BitFlags;
+import capsule.string.stringz : stringz;
 
 public:
 

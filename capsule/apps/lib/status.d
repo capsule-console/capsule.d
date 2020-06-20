@@ -2,6 +2,9 @@ module capsule.apps.lib.status;
 
 public nothrow @safe @nogc:
 
+/// Enumeration of exit status codes used by Capsule applications,
+/// including the Capsule assembler (casm), linker (clink), and
+/// virtual machine (capsule).
 enum CapsuleApplicationStatus: int {
     Ok = 0x00,
     ExecutionExitError = 0x01,
@@ -45,4 +48,6 @@ enum CapsuleApplicationStatus: int {
     CheckTestFailure = 0x81,
     CheckTestFailureWrongStatus = 0x82,
     CheckTestFailureWrongOutput = 0x83,
+    // Errors related to an automated build process
+    BuildError = 0x90,
 }

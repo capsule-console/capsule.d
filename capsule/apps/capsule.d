@@ -1,19 +1,31 @@
+/**
+
+Main file for the Capsule virtual machine (capsule).
+
+This application can be used to load and run a Capsule program file.
+
+*/
+
 module capsule.apps.capsule;
 
-import capsule.core.config : CapsuleConfigAttribute, CapsuleConfigStatus;
-import capsule.core.config : loadCapsuleConfig, capsuleConfigStatusToString;
-import capsule.core.config : getCapsuleConfigUsageString;
+private:
+
+import capsule.parse.config : CapsuleConfigAttribute, CapsuleConfigStatus;
+import capsule.parse.config : loadCapsuleConfig, capsuleConfigStatusToString;
+import capsule.parse.config : getCapsuleConfigUsageString;
+
+import capsule.io.file : File;
+import capsule.io.stdio : stdio;
+import capsule.meta.enums : getEnumMemberName;
+import capsule.string.writeint : writeInt;
+
 import capsule.core.engine : CapsuleEngine;
 import capsule.core.engineinit : initializeCapsuleEngine;
-import capsule.core.enums : getEnumMemberName;
 import capsule.core.extension : CapsuleExtension;
-import capsule.core.file : File;
 import capsule.core.program : CapsuleProgram;
 import capsule.core.programencode : CapsuleProgramDecoder;
 import capsule.core.programstring : capsuleProgramToString;
-import capsule.core.stdio : stdio;
 import capsule.core.typestrings : getCapsuleExceptionDescription;
-import capsule.core.writeint : writeInt;
 
 import capsule.apps.lib.ecall : ecall, ecallExtList;
 import capsule.apps.lib.runprogram : runProgram, debugProgram;

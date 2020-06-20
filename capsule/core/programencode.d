@@ -1,6 +1,13 @@
+/**
+
+The functions in this module can be used to encode or decode
+a Capsule program file using a condensed binary format.
+
+*/
+
 module capsule.core.programencode;
 
-import capsule.core.crc : CRC64ISO;
+import capsule.digest.crc : CRC64ISO;
 import capsule.core.program : CapsuleProgram;
 
 import capsule.core.encoding;
@@ -473,9 +480,9 @@ struct CapsuleProgramDecoder {
 }
 
 private version(unittest) {
-    import capsule.core.enums : getEnumMemberName;
+    import capsule.meta.enums : getEnumMemberName;
     import capsule.core.programstring : capsuleProgramToString;
-    import capsule.core.stdio;
+    import capsule.io.stdio;
 }
 
 /// Test that encoding and then decoding
