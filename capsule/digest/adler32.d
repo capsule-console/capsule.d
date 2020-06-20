@@ -14,7 +14,7 @@ https://en.wikipedia.org/wiki/Zlib
 
 module capsule.digest.adler32;
 
-public nothrow @safe @nogc:
+public:
 
 /// Implementation for getting an Adler-32 checksum of some data.
 struct Adler32 {
@@ -66,11 +66,11 @@ struct Adler32 {
     }
 }
 
-uint adler32(T)(in T[] buffer) {
+uint adler32(T)(in T[] buffer) nothrow @safe @nogc {
     return Adler32.get(buffer);
 }
 
-uint adler32(T)(in uint start, in T[] buffer) {
+uint adler32(T)(in uint start, in T[] buffer) nothrow @safe @nogc {
     Adler32 adler = Adler32(start);
     adler.put(buffer);
     return adler.result;
