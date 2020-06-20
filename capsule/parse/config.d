@@ -1,10 +1,20 @@
+/**
+
+This module provides functions that can be used to parse configuration
+options given to an application via the command line and/or an INI
+configuration file.
+
+*/
+
 module capsule.parse.config;
 
+private:
+
 import capsule.meta.enums : isEnumType;
-import capsule.parse.ini : Ini;
-import capsule.string.parseint : parseSignedInt, parseUnsignedInt;
-import capsule.range.range : isArray;
 import capsule.meta.templates : isTemplateOf;
+import capsule.parse.ini : Ini;
+import capsule.range.range : isArray;
+import capsule.string.parseint : parseSignedInt, parseUnsignedInt;
 
 public:
 

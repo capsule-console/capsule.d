@@ -1,11 +1,19 @@
+/**
+
+This module provides functions for parsing and handling INI files.
+
+*/
+
 module capsule.parse.ini;
 
-import capsule.meta.enums : getEnumMemberAttribute;
-import capsule.string.escape : unescapeCapsuleText;
+private:
+
 import capsule.io.file : File, FileLocation, FileReader;
 import capsule.io.messages : CapsuleMessageLog, CapsuleMessageSeverity;
 import capsule.io.messages : getCapsuleMessageSeverityByChar;
+import capsule.meta.enums : getEnumMemberAttribute;
 import capsule.range.range : toArray;
+import capsule.string.escape : unescapeCapsuleText;
 
 private alias Status = IniMessageStatus;
 
