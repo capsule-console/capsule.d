@@ -80,13 +80,13 @@ struct Path {
     string extName() @nogc const {
         size_t i = this.path.length;
         while(i > 0 && this.path[i - 1] != '.') i--;
-        return this.path[i .. $];
+        return i == 0 ? null : this.path[i .. $];
     }
     
     typeof(this) stripExt() @nogc const {
         size_t i = this.path.length;
         while(i > 0 && this.path[i - 1] != '.') i--;
-        return typeof(this)(i > 0 ? this.path[0 .. i - 1] : null);
+        return i > 0 ? typeof(this)(this.path[0 .. i - 1]) : this;
     }
     
     /// Determine whether a file path is absolute on the current platform.
@@ -226,6 +226,13 @@ unittest {
     assert(Path(``).dirName == ``);
     assert(Path(``).extName == ``);
     assert(Path(``).stripExt == ``);
+}
+
+unittest {
+    assert(Path(`/test`).fileName == `test`);
+    assert(Path(`/test`).dirName == `/`);
+    assert(Path(`/test`).extName == ``);
+    assert(Path(`/test`).stripExt == `/test`);
 }
 
 unittest {
