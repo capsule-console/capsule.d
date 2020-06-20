@@ -20,8 +20,8 @@ version(Posix) {
 version(Windows) {
     import core.sys.windows.winnt : INVALID_FILE_ATTRIBUTES;
     import core.sys.windows.winnt : FILE_ATTRIBUTE_DIRECTORY;
-    import capsule.core.utf.utf16decode : utf16Encode;
-    import capsule.core.utf.utf8decode : utf8Decode;
+    import capsule.utf.utf16decode : utf16Encode;
+    import capsule.utf.utf8decode : utf8Decode;
 }
 
 version(CRuntime_Microsoft) {
