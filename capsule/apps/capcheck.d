@@ -25,7 +25,6 @@ import capsule.io.stdio : stdio;
 import capsule.meta.enums : getEnumMemberName, getEnumMemberByName;
 import capsule.parse.ini : Ini;
 import capsule.string.hex : getByteHexString;
-import capsule.string.strings : padLeft;
 import capsule.string.writeint : writeInt;
 import capsule.system.process : runProcess, getRunProcessString;
 import capsule.time.timer : Timer;

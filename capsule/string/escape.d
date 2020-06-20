@@ -1,10 +1,21 @@
+/**
+
+This module implements functionality useful for escaping or unescaping
+special characters in strings.
+
+https://en.wikipedia.org/wiki/Escape_sequence
+
+*/
+
 module capsule.string.escape;
+
+private:
 
 import capsule.string.hex : getHexDigitValue, LowerHexDigits;
 
-nothrow @safe public:
+public:
 
-char getCapsuleEscapeChar(in char ch) pure @nogc {
+char getCapsuleEscapeChar(in char ch) pure nothrow @safe @nogc {
     switch(ch) {
         case '\\': return '\\';
         case '\"': return '"';
@@ -24,7 +35,7 @@ char getCapsuleEscapeChar(in char ch) pure @nogc {
     }
 }
 
-char getCapsuleUnescapeChar(in char ch) pure @nogc {
+char getCapsuleUnescapeChar(in char ch) pure nothrow @safe @nogc {
     switch(ch) {
         case '\\': return '\\';
         case '"': return '\"';
@@ -38,11 +49,11 @@ char getCapsuleUnescapeChar(in char ch) pure @nogc {
     }
 }
 
-auto escapeCapsuleText(in string text) pure @nogc {
+auto escapeCapsuleText(in string text) pure nothrow @safe @nogc {
     return CapsuleEscapeTextRange(text);
 }
 
-auto unescapeCapsuleText(in string text) pure @nogc {
+auto unescapeCapsuleText(in string text) pure nothrow @safe @nogc {
     return CapsuleUnescapeTextRange(text);
 }
 

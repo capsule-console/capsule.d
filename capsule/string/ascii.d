@@ -1,3 +1,10 @@
+/**
+
+This module contains functions for dealing with ASCII-encoded
+characters or strings.
+
+*/
+
 module capsule.string.ascii;
 
 public pure nothrow @safe @nogc:

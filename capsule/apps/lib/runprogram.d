@@ -1,22 +1,33 @@
+/**
+
+This module is used by the Capsule virtual machine application (capsule)
+to actually run a loaded program. Much of this module's content is
+dedicated in particular to running a program in debug mode.
+
+*/
+
 module capsule.apps.lib.runprogram;
 
-import capsule.string.ascii : isDigit, toLower;
-import capsule.digest.crc : CRC32;
-import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
-import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberName;
-import capsule.string.hex : parseHexString, getHexString, getByteHexString;
+private:
+
 import capsule.algorithm.lz77 : lz77Inflate;
+import capsule.digest.crc : CRC32;
+import capsule.io.stdio : stdio;
+import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberName;
+import capsule.string.ascii : isDigit, toLower;
+import capsule.string.hex : parseHexString, getHexString, getByteHexString;
+import capsule.string.parseint : parseInt, parseUnsignedInt;
+import capsule.string.substring : startsWith;
+import capsule.string.writeint : writeInt;
+
+import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.core.memory : CapsuleMemoryStatus;
 import capsule.core.obj : CapsuleObjectReferenceLocalType;
-import capsule.string.parseint : parseInt, parseUnsignedInt;
 import capsule.core.program : CapsuleProgram;
-import capsule.io.stdio : stdio;
-import capsule.string.strings : startsWith;
-import capsule.core.types : CapsuleOpcode, CapsuleExceptionCode;
 import capsule.core.types : CapsuleInstruction;
-import capsule.core.typestrings : getCapsuleOpcodeWithName;
+import capsule.core.types : CapsuleOpcode, CapsuleExceptionCode;
 import capsule.core.typestrings : CapsuleRegisterNames;
-import capsule.string.writeint : writeInt;
+import capsule.core.typestrings : getCapsuleOpcodeWithName;
 
 public:
 

@@ -1,11 +1,21 @@
+/**
+
+This module provides a helper for getting a null-terminated string
+from some input D string, such as might be needed to interface with
+a C extern function.
+
+*/
+
 module capsule.string.stringz;
 
 public:
 
+/// Get a null-terminated string corresponding to the input string.
 auto stringz(T)(in T[] text) {
     return StringZ!T(text);
 }
 
+/// Null-terminated string type.
 struct StringZ(T) {
     nothrow @safe:
     
@@ -42,12 +52,14 @@ struct StringZ(T) {
     }
 }
 
+/// Test StringZ with an empty string
 unittest {
     auto str = StringZ!char("");
     assert(str.length == 0);
     assert(str.ptr[0] == '\0');
 }
 
+/// Test StringZ with a non-empty string
 unittest {
     auto str = StringZ!char("hello");
     assert(str.length == 5);
@@ -56,6 +68,7 @@ unittest {
     assert(str.ptr[5] == '\0');
 }
 
+/// Test coverage for stringz
 unittest {
     auto str = stringz("hi");
     assert(str.length == 2);

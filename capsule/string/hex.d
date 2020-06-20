@@ -1,13 +1,25 @@
+/**
+
+This module defines types and functions related to parsing or
+producing string representations of hexadecimal integers.
+
+*/
+
 module capsule.string.hex;
+
+private:
 
 import capsule.range.range : isArray;
 
 public pure nothrow @safe @nogc:
 
+/// Lower case hexadecimal digits, in order.
 static const string LowerHexDigits = "0123456789abcdef";
 
+/// Upper case hexadecimal digits, in order.
 static const string UpperHexDigits = "0123456789ABCDEF";
 
+/// Check if a character is a valid hexadecimal digit.
 uint isHexDigit(in char digit) {
     return (
         (digit >= '0' && digit <= '9') ||
@@ -16,6 +28,8 @@ uint isHexDigit(in char digit) {
     );
 }
 
+/// Get the hexadecimal value represented by a single digit
+/// character.
 uint getHexDigitValue(in char digit) {
     switch(digit) {
         case '0': return 0x0;

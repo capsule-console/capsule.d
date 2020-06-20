@@ -1,3 +1,10 @@
+/**
+
+This module provides functionality for converting an integer
+to a decimal (base 10) string representation.
+
+*/
+
 module capsule.string.writeint;
 
 public pure nothrow @safe @nogc:

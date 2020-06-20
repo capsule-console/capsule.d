@@ -1,19 +1,30 @@
+/**
+
+This module provides functionality for parsing an integer literal
+string.
+
+*/
+
 module capsule.string.parseint;
+
+private:
 
 import capsule.string.hex : parseHexString;
 
-pure nothrow @safe @nogc public:
+public:
 
 struct ParseIntResult(T) {
+    nothrow @safe @nogc:
+    
     bool ok;
     T value;
     
-    auto opCast(X: ParseIntResult!Y, Y)() const {
+    auto opCast(X: ParseIntResult!Y, Y)() pure const {
         return ParseIntResult!Y(this.ok, cast(Y) this.value);
     }
 }
 
-auto parseInt(T)(in char[] text) {
+auto parseInt(T)(in char[] text) pure nothrow @safe @nogc {
     static if(T.sizeof == 1) {
         alias Signed = byte;
         alias Unsigned = ubyte;
@@ -37,7 +48,7 @@ auto parseInt(T)(in char[] text) {
     }
 }
 
-auto parseSignedInt(T)(in char[] text) {
+auto parseSignedInt(T)(in char[] text) pure nothrow @safe @nogc {
     alias Result = ParseIntResult!T;
     if(!text.length) return Result(false);
     T value = 0;
@@ -50,7 +61,7 @@ auto parseSignedInt(T)(in char[] text) {
     return Result(true, negative ? -value : +value);
 }
 
-auto parseUnsignedInt(T)(in char[] text) {
+auto parseUnsignedInt(T)(in char[] text) pure nothrow @safe @nogc {
     alias Result = ParseIntResult!T;
     if(!text.length) return Result(false);
     if(text.length > 2 && text[0] == '0' && (
