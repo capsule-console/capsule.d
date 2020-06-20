@@ -1,15 +1,32 @@
+/**
+
+This module implements functionality for dealing with a Capsule program's
+source map, which is a data structure that can be included in a program
+to describe what part of what source file was associated with some given
+bytecode or other compiled data that ended up in the program.
+
+*/
+
 module capsule.core.programsource;
+
+private:
 
 import capsule.digest.crc : CRC32;
 import capsule.io.file : FileLocation;
 
 public:
 
+/// Enumeration of recognized encodings that may be used when representing
+/// a source file.
 enum CapsuleProgramSourceEncoding: ushort {
+    /// No encoding.
     @("none") None = 0,
+    // Source was compressed using the Capsule LZ77 algorithm.
     @("clz77") CapsuleLZ77 = 1,
 }
 
+/// Represents a source code file that was used in compiling a
+/// Capsule program.
 struct CapsuleProgramSource {
     nothrow @safe @nogc:
     
@@ -17,12 +34,19 @@ struct CapsuleProgramSource {
     alias Location = CapsuleProgramSourceLocation;
     alias Map = CapsuleProgramSourceMap;
     
+    /// How the source content was encoded, or None if the content was
+    /// not modified in any way.
     Encoding encoding = Encoding.None;
+    /// Unused half word.
     ushort unused;
+    /// Checksum of the source's name and content, for verifying integrity.
     uint checksum = 0;
+    /// Name identifying the source, e.g. a normalized file path.
     string name = null;
+    /// The encoded content of the source file.
     string content = null;
     
+    /// Get a checksum given a source's name and content.
     static uint getChecksum(A, B)(in A[] name, in B[] content) {
         CRC32 crc;
         crc.put(name);
@@ -31,38 +55,61 @@ struct CapsuleProgramSource {
         return crc.result;
     }
     
+    /// Get the length of the source's encoded content in bytes.
     size_t length() const {
         return this.content.length;
     }
 }
 
+/// Associates a span of addresses in a compiled program with a
+/// span of indices in one of its source files.
 struct CapsuleProgramSourceLocation {
     nothrow @safe @nogc:
     
+    /// Index identifying which source file this location refers to.
     uint source = 0;
+    /// Location applies starting at this program memory address (inclusive).
     uint startAddress = 0;
+    /// Location applies ending at this program memory address (exclusive).
     uint endAddress = 0;
+    /// Location is associated with the source file content starting
+    /// at this byte index (inclusive).
     uint contentStartIndex = 0;
+    /// Location is associated with the source file content ending
+    /// at this byte index (exclusive).
     uint contentEndIndex = 0;
+    /// Indicates a line number in the source file that is associated
+    /// with this location.
     uint contentLineNumber = 0;
     
+    /// Get the length in bytes of program memory that this location
+    /// applies to.
     uint dataLength() const {
         return this.endAddress - this.startAddress;
     }
     
+    /// Get the length in bytes of the source file content that
+    /// this location applies to.
     uint contentLength() const {
         return this.contentEndIndex - this.contentStartIndex;
     }
     
+    /// Returns true if the location has a start address or an end
+    /// address, i.e. if it is meaningful and valid.
     bool opCast(T: bool)() const {
-        return this.startAddress || this.endAddress;
+        return this.startAddress > 0 || this.endAddress > 0;
     }
     
+    /// Comparison used to order source locations by their starting
+    /// address in program memory.
     int opCmp(in typeof(this) location) const {
         return this.startAddress - location.startAddress;
     }
 }
 
+/// Data structure that can be used to associate spans of addresses
+/// in a compiled program's memory with spans in one or more source
+/// code files.
 struct CapsuleProgramSourceMap {
     nothrow @safe:
     
@@ -164,6 +211,7 @@ struct CapsuleProgramSourceMap {
     }
 }
 
+/// Test coverage for CapsuleProgramSourceMap and related types
 unittest {
     alias Source = CapsuleProgramSource;
     Source source0 = {
