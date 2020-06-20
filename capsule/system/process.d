@@ -1,10 +1,19 @@
+/**
+
+This module implements functionality related to executing a process
+as though on the command line.
+
+*/
+
 module capsule.system.process;
+
+private:
 
 import core.stdc.stdlib : system;
 
-nothrow @safe public:
+public:
 
-bool shouldEscapeProcessArg(in const(char)[] arg) {
+bool shouldEscapeProcessArg(in const(char)[] arg) nothrow @safe {
     foreach(ch; arg) {
         if(ch != '-' && ch != '_' &&
             !(ch >= '0' && ch <= '9') &&
@@ -19,7 +28,7 @@ bool shouldEscapeProcessArg(in const(char)[] arg) {
 
 /// Helper to escape a string to be used as a command line argument.
 /// e.g. `hello "world"` -> `"hello \"world\""`
-string escapeProcessArg(in const(char)[] arg) {
+string escapeProcessArg(in const(char)[] arg) nothrow @safe {
     string escaped = `"`;
     foreach(ch; arg) {
         if(ch == '\"') {
@@ -36,7 +45,7 @@ string escapeProcessArg(in const(char)[] arg) {
     return escaped;
 }
 
-int getSystemExitStatusCode(in int code) pure @nogc {
+int getSystemExitStatusCode(in int code) pure nothrow @safe @nogc {
     version(Windows) {
         return code;
     }
@@ -45,7 +54,9 @@ int getSystemExitStatusCode(in int code) pure @nogc {
     }
 }
 
-const(char)[] getRunProcessString(in const(char)[] name, in const(char)[][] args) {
+const(char)[] getRunProcessString(
+    in const(char)[] name, in const(char)[][] args
+) pure nothrow @safe {
     const(char)[] command = name;
     foreach(arg; args) {
         if(arg !is null) {
@@ -61,7 +72,9 @@ const(char)[] getRunProcessString(in const(char)[] name, in const(char)[][] args
 }
 
 /// TODO: Use an API with less negative security implications than system
-int runProcess(in const(char)[] name, in const(char)[][] args) @trusted {
+int runProcess(
+    in const(char)[] name, in const(char)[][] args
+) nothrow @trusted {
     const command = getRunProcessString(name, args) ~ '\0';
     const status = system(command.ptr);
     return getSystemExitStatusCode(status);
