@@ -13,7 +13,7 @@ import core.stdc.stdlib : system;
 
 public:
 
-bool shouldEscapeProcessArg(in const(char)[] arg) nothrow @safe {
+bool shouldEscapeProcessArg(in const(char)[] arg) pure nothrow @safe @nogc {
     foreach(ch; arg) {
         if(ch != '-' && ch != '_' &&
             !(ch >= '0' && ch <= '9') &&
@@ -56,7 +56,7 @@ int getSystemExitStatusCode(in int code) pure nothrow @safe @nogc {
 
 const(char)[] getRunProcessString(
     in const(char)[] name, in const(char)[][] args
-) pure nothrow @safe {
+) nothrow @safe {
     const(char)[] command = name;
     foreach(arg; args) {
         if(arg !is null) {
