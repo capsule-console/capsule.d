@@ -8,14 +8,17 @@ primarily for debugging purposes.
 
 module capsule.core.objstring;
 
-import capsule.range.concat : concat;
+private:
+
 import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
-import capsule.string.hex : getHexString, getByteHexString;
+import capsule.range.concat : concat;
 import capsule.range.join : join;
 import capsule.range.map : map;
-import capsule.core.obj : CapsuleObject;
 import capsule.range.range : toArray;
+import capsule.string.hex : getHexString, getByteHexString;
 import capsule.string.writeint : writeInt;
+
+import capsule.core.obj : CapsuleObject;
 
 nothrow public:
 

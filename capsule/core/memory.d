@@ -1,8 +1,17 @@
+/**
+
+This module implements types used by the Capsule virtual machine to handle
+loads and stores to memory.
+
+*/
+
 module capsule.core.memory;
+
+private:
 
 import core.stdc.stdlib : free, calloc;
 
-public nothrow @safe @nogc:
+public:
 
 /// Enumeration of possible memory operation status values.
 enum CapsuleMemoryStatus: uint {

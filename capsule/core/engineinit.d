@@ -1,4 +1,15 @@
+/**
+
+This module provides utility functions for initializing a Capsule
+engine instance (which is used to execute bytecode) given a Capsule
+program. This is used as part of the process of loading a program
+when running the Capsule virtual machine (capsule).
+
+*/
+
 module capsule.core.engineinit;
+
+private:
 
 import capsule.core.engine : CapsuleEngine;
 import capsule.core.program : CapsuleProgram;

@@ -7,7 +7,10 @@ a Capsule object file using a condensed binary format.
 
 module capsule.core.objencode;
 
+private:
+
 import capsule.digest.crc : CRC64ISO;
+
 import capsule.core.obj : CapsuleObject;
 
 import capsule.core.encoding;

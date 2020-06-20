@@ -217,7 +217,7 @@ mixin template CapsuleCoderMixin() {
 }
 
 mixin template CapsuleEncoderMixin() {
-    import capsule.meta.templates : Unconst;
+    private import capsule.meta.templates : Unconst;
     
     mixin CapsuleCoderMixin;
     
@@ -401,7 +401,7 @@ mixin template CapsuleEncoderMixin() {
 }
 
 mixin template CapsuleDecoderMixin() {
-    import capsule.algorithm.sort : sort;
+    private import capsule.algorithm.sort : sort;
     
     mixin CapsuleCoderMixin;
     

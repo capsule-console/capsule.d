@@ -1,41 +1,31 @@
+/**
+
+This module implements functionality related to creating or parsing
+string representations of fundamental Capsule data types.
+
+*/
+
 module capsule.core.typestrings;
 
-import capsule.string.ascii : eitherCaseStringEquals;
+private:
+
 import capsule.meta.enums : getEnumMemberAttribute;
+import capsule.string.ascii : eitherCaseStringEquals;
 import capsule.string.hex : CapsuleByteHexStrings, getByteHexString, getHexString;
-import capsule.core.types : CapsuleInstruction, CapsuleOpcode;
 import capsule.string.writeint : writeInt;
 
-public pure nothrow @safe:
+import capsule.core.types : CapsuleInstruction, CapsuleOpcode;
+
+public:
 
 const string CapsuleUnknownExceptionDescription = "Unknown exception";
 
-/// Names corresponding to register numbers
+/// Name srtings corresponding to register numbers.
 const string[8] CapsuleRegisterNames = [
     "Z", "A", "B", "C", "R", "S", "X", "Y",
 ];
 
-/// Names corresponding to exception codes
-const string[16] CapsuleExceptionNames = [
-    "enone",
-    "etriple",
-    "edouble",
-    "einstr",
-    "ebreak",
-    "elmis",
-    "esmis",
-    "epcmis",
-    "elbounds",
-    "esbounds",
-    "epcbounds",
-    "esro",
-    "eovf",
-    "edivz",
-    "eextmiss",
-    "eexterr",
-];
-
-/// Brief descriptions corresponding to exception codes
+/// Brief descriptions corresponding to exception codes.
 const string[16] CapsuleExceptionDescriptions = [
     "Missing exception",
     "Triple fault",
@@ -56,9 +46,9 @@ const string[16] CapsuleExceptionDescriptions = [
 ];
 
 /// Get a string representation of an opcode
-/// Opcodes without names are represented like `0x00`
+/// Opcodes without names are represented like `0x00`,
 /// where the hexadecimal number is the opcode value.
-string getCapsuleOpcodeName(in ubyte opcode) @nogc {
+string getCapsuleOpcodeName(in ubyte opcode) pure nothrow @safe @nogc {
     const name = getEnumMemberAttribute!string(cast(CapsuleOpcode) opcode);
     if(opcode > 0 && name.length > 0) {
         return name;
@@ -68,7 +58,24 @@ string getCapsuleOpcodeName(in ubyte opcode) @nogc {
     }
 }
 
-CapsuleOpcode getCapsuleOpcodeWithName(T)(in T[] name) {
+/// Get a string representation of an exception code.
+/// Exception codes without names are represented like `0x00`,
+/// where the hexadecimal number is the opcode value.
+string getCapsuleExceptionName(in ubyte exception) pure nothrow @safe @nogc {
+    const name = getEnumMemberAttribute!string(cast(CapsuleException) exception);
+    if(exception > 0 && name.length > 0) {
+        return name;
+    }
+    else {
+        return CapsuleByteHexStrings[exception];
+    }
+}
+
+/// Get the Capsule opcode matching a given name string.
+/// Returns CapsuleOpcode.None when there was no match.
+CapsuleOpcode getCapsuleOpcodeWithName(T)(
+    in T[] name
+) pure nothrow @safe @nogc {
     foreach(member; __traits(allMembers, CapsuleOpcode)) {
         static assert(member.length);
         enum type = __traits(getMember, CapsuleOpcode, member);
@@ -82,26 +89,16 @@ CapsuleOpcode getCapsuleOpcodeWithName(T)(in T[] name) {
 
 /// Get a string representation of a register.
 /// Triggers an assertion error for an invalid register number.
-string getCapsuleRegisterName(in ubyte register) @nogc {
+string getCapsuleRegisterName(in ubyte register) pure nothrow @safe @nogc {
     assert(register < 8);
     return CapsuleRegisterNames[register & 0x7];
 }
 
-/// Get a string representation of an exception code.
-/// Exception codes without names are represented like `0x00`
-/// where the hexadecimal number is the opcode value.
-string getCapsuleExceptionName(in ubyte exception) @nogc {
-    if(exception < CapsuleExceptionNames.length) {
-        return CapsuleExceptionNames[exception];
-    }
-    else {
-        return CapsuleByteHexStrings[exception];
-    }
-}
-
 /// Get a string containing a brief description of an exception code.
 /// Unknown exception codes are identified as such.
-string getCapsuleExceptionDescription(in ubyte exception) @nogc {
+string getCapsuleExceptionDescription(
+    in ubyte exception
+) pure nothrow @safe @nogc {
     if(exception < CapsuleExceptionDescriptions.length) {
         return CapsuleExceptionDescriptions[exception];
     }
@@ -110,7 +107,9 @@ string getCapsuleExceptionDescription(in ubyte exception) @nogc {
     }
 }
 
-int getCapsuleRegisterIndex(in char name) @nogc {
+/// Given a single-character register name (e.g. 'A', 'Z', 'r', 's')
+/// get the register index associated with that name.
+int getCapsuleRegisterIndex(in char name) pure nothrow @safe @nogc {
     switch(name) {
         case 'z': goto case;
         case 'Z': return 0;

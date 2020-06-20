@@ -1,14 +1,25 @@
+/**
+
+This module defines types that are used to represent a Capsule program.
+
+*/
+
 module capsule.core.program;
 
+private:
+
 import capsule.digest.crc : CRC32;
+
 import capsule.core.encoding : CapsuleArchitecture;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
 import capsule.core.obj : CapsuleObject;
 import capsule.core.programsource : CapsuleProgramSource;
 
-nothrow @safe @nogc public:
+public:
 
 struct CapsuleProgramSegmentProperties {
+    nothrow @safe @nogc:
+    
     alias Type = CapsuleObject.Section.Type;
     
     /// Represent properties of a missing or absent segment.
@@ -43,6 +54,8 @@ struct CapsuleProgramSegmentProperties {
 }
 
 struct CapsuleProgramSymbol {
+    nothrow @safe @nogc:
+    
     alias Type = CapsuleObject.Symbol.Type;
     
     static enum uint NoName = uint.max;
@@ -159,6 +172,8 @@ struct CapsuleProgramSegment {
 }
 
 struct CapsuleProgram {
+    nothrow @safe @nogc:
+    
     alias Architecture = CapsuleArchitecture;
     alias Segment = CapsuleProgramSegment;
     alias Source = CapsuleProgramSource;

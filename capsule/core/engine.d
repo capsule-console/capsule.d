@@ -1,9 +1,18 @@
+/**
+
+This module implements a virtual machine for executing Capsule bytecode.
+
+*/
+
 module capsule.core.engine;
+
+private:
 
 import capsule.bits.clz : clz;
 import capsule.bits.ctz : ctz;
 import capsule.bits.pcnt : pcnt;
 import capsule.math.minmax : min, max;
+
 import capsule.core.memory : CapsuleMemory;
 import capsule.core.typestrings : getCapsuleExceptionDescription;
 import capsule.core.types : CapsuleOpcode, CapsuleExceptionCode;

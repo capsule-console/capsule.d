@@ -1,21 +1,18 @@
+/**
+
+This module provides an enumeration of extension IDs that should be
+recognized by a Capsule virtual machine.
+
+Extension IDs are used to identify what should happen when the Capsule
+virtual machine encounters an ecall (extension call) instruction.
+
+*/
+
 module capsule.core.extension;
 
 public nothrow @safe @nogc:
 
-/* Tentatively planned extensions
-
-Exception Handling Module 00 00 .. .. (exc_init, exc_quit, exc_get_code)
-
-Memory management module (00 00 .. ..) (mem_brk)
-
-Configuration Preferences Module
-
-Saved Data Module
-
-External Assets Module
-
-*/
-
+/// Enumeration of Capsule extension IDs.
 enum CapsuleExtension: uint {
     // Meta Module (00 00 00 xx)
     meta_noop = 0x0000,

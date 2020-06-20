@@ -1,14 +1,15 @@
+/**
+
+This module defines fundamental types that are used by the Capsule
+virtual machine (capsule) and by the tools that produce Capsule program
+files to represent and understand technical information such as
+exception codes or bytecode instructions.
+
+*/
+
 module capsule.core.types;
 
-public pure nothrow @safe @nogc:
-
-enum CapsuleDataSize: uint {
-    None = 0,
-    Byte = 8,
-    HalfWord = 16,
-    Word = 32,
-    DoubleWord = 64,
-}
+public:
 
 /// Enumeration of Capsule instruction opcodes
 /// Attributes: (name, registers, immediate: never(0), sometimes(1), always(2))
