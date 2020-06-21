@@ -155,27 +155,33 @@ struct CapsuleMessageLog(T) {
     alias AddMessageCallback = void delegate(in Message message);
     
     AddMessageCallback onAddMessage = null;
-    Message[] messages; // TODO: Don't keep a list, make it @nogc
     size_t nextMessageId = 0;
     Severity maxSeverity = Severity.None;
+    size_t addMessageCount = 0;
     
     this(AddMessageCallback onAddMessage) {
         this.onAddMessage = onAddMessage;
     }
     
-    bool empty() const @nogc {
-        return this.messages.length == 0;
+    bool empty() const nothrow @nogc @safe {
+        return this.addMessageCount == 0;
     }
     
-    size_t length() const @nogc {
-        return this.messages.length;
+    size_t length() const nothrow @nogc @safe {
+        return this.addMessageCount;
     }
     
-    bool anyErrors() const @nogc {
+    bool anyErrors() const nothrow @nogc @safe {
         return this.maxSeverity >= Severity.Error;
     }
     
-    Message add(in Severity severity, in Status status, in string context = null) {
+    bool anyWarnings() const nothrow @nogc @safe {
+        return this.maxSeverity >= Severity.Warning;
+    }
+    
+    Message add(
+        in Severity severity, in Status status, in string context = null
+    ) {
         return this.add(FileLocation.init, severity, status, context);
     }
     
@@ -205,7 +211,6 @@ struct CapsuleMessageLog(T) {
     ) {
         const id = this.nextMessageId++;
         const message = Message(id, location, severity, status, context);
-        this.messages ~= message;
         this.maxSeverity = (
             severity > this.maxSeverity ? severity : this.maxSeverity
         );
@@ -215,31 +220,27 @@ struct CapsuleMessageLog(T) {
         return message;
     }
     
-    Message addString(in FileLocation location, in string message) {
-        return this.add(location, Severity.None, cast(Status) 0, message);
-    }
-    
-    Message addDebug(in FileLocation location, in Status status, in string context = null) {
+    Message addDebug(
+        in FileLocation location, in Status status, in string context = null
+    ) {
         return this.add(location, Severity.Debug, status, context);
     }
     
-    Message addInfo(in FileLocation location, in Status status, in string context = null) {
+    Message addInfo(
+        in FileLocation location, in Status status, in string context = null
+    ) {
         return this.add(location, Severity.Info, status, context);
     }
     
-    Message addWarning(in FileLocation location, in Status status, in string context = null) {
+    Message addWarning(
+        in FileLocation location, in Status status, in string context = null
+    ) {
         return this.add(location, Severity.Warning, status, context);
     }
     
-    Message addError(in FileLocation location, in Status status, in string context = null) {
+    Message addError(
+        in FileLocation location, in Status status, in string context = null
+    ) {
         return this.add(location, Severity.Error, status, context);
-    }
-    
-    auto toStringRange() const {
-        return join("\n", map!(message => message.toString())(this.messages));
-    }
-    
-    string toString() const {
-        return cast(string) this.toStringRange().toArray();
     }
 }

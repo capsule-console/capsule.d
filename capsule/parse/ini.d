@@ -41,6 +41,8 @@ enum IniMessageStatus: uint {
     InvalidEscapeSequenceError,
     @('E', "Invalid line continuation.")
     InvalidLineContinuationError,
+    @('E', "Property has no name.")
+    NoPropertyNameError,
     @('E', "Section has no name.")
     NoSectionNameError,
 }
@@ -233,7 +235,7 @@ struct IniParser {
     /// The INI data being assembled from the parsed text
     Ini ini;
     /// A log of error or message statuses encountered during parsing
-    Log log;
+    Log* log;
     
     static string trimText(in string text) {
         size_t start = 0;
@@ -249,19 +251,24 @@ struct IniParser {
         return text[0 .. end];
     }
     
-    this(File file) {
+    this(Log* log, File file) {
+        assert(log !is null);
+        this.log = log;
         this.reader = file.reader;
     }
     
-    this(FileReader reader) {
+    this(Log* log, FileReader reader) {
+        assert(log !is null);
+        this.log = log;
         this.reader = reader;
     }
     
     bool ok() const {
-        return !this.log.anyErrors;
+        return this.log && !this.log.anyErrors;
     }
     
     void addStatus(in FileLocation location, in Status status, in string context = null) {
+        assert(this.log);
         assert(status !is Status.Ok);
         auto severityChar = getEnumMemberAttribute!char(status);
         auto severity = getCapsuleMessageSeverityByChar(severityChar);
@@ -344,7 +351,7 @@ struct IniParser {
         }
         if(text[0] == '[' && text[$ - 1] == ']') {
             if(text.length <= 2) {
-                this.addStatus(this.reader.location, Status.NoSectionNameError);
+                this.addStatus(line.location, Status.NoSectionNameError);
                 return;
             }
             this.ini.addSection(text[1 .. $ - 1]);
@@ -366,6 +373,9 @@ struct IniParser {
         const string value = cast(string) (
             unescapeCapsuleText(escapedValue).toArray()
         );
+        if(!key.length) {
+            this.addStatus(line.location, Status.NoPropertyNameError);
+        }
         if(!this.ini.sections.length) {
             this.ini.globals.append(key, value);
         }
@@ -390,10 +400,14 @@ continuation=why\neven      ; line 2
 [section-3]
 ok=ok...
 `;
-import capsule.io.stdio;
+
 /// Test the INI parser and related functionality
 unittest {
-    auto parser = IniParser(File("test.ini", IniTestContent));
+    void eatLogMessage(in IniParser.Log.Message message) {
+        // Do nothing
+    }
+    auto log = IniParser.Log(&eatLogMessage);
+    auto parser = IniParser(&log, File("test.ini", IniTestContent));
     parser.parse();
     assert(parser.ok);
     auto ini = parser.ini;

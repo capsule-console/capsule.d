@@ -255,17 +255,23 @@ CapsuleApplicationStatus check(string[] args) {
         writeln("A test configuration INI file path must be given.");
         return Status.ConfigInvalidOptionValueError;
     }
+    // Set up a logger for use during INI config file loading
+    void onLogMessage(in Ini.Parser.Log.Message message) {
+        if(verbose || message.severity > Ini.Parser.Log.Severity.Debug) {
+            writeln(message.toString());
+        }
+    }
+    auto log = Ini.Parser.Log(&onLogMessage);
     // Load and parse the INI file
     auto iniFile = File.read(iniPath);
     if(!iniFile.ok) {
         writeln("Error reading test configuration INI file.");
         return Status.ConfigFileReadError;
     }
-    auto iniParser = Ini.Parser(iniFile);
+    auto iniParser = Ini.Parser(&log, iniFile);
     iniParser.parse();
-    if(!iniFile.ok) {
+    if(!iniParser.ok) {
         writeln("Error parsing test configuration INI file.");
-        writeln(iniParser.log.toString());
         return Status.ConfigFileParseError;
     }
     // Get configuration options
