@@ -23,6 +23,7 @@ import capsule.parse.config : getCapsuleConfigUsageString;
 
 import capsule.algorithm.indexof : lastIndexOf;
 import capsule.io.file : File;
+import capsule.io.filesystem : isDirectory, ensureDirectory;
 import capsule.io.path : Path;
 import capsule.io.stdio : stdio;
 import capsule.meta.enums : getEnumMemberAttribute;
@@ -309,6 +310,17 @@ CapsuleApplicationStatus compile(string[] args) {
     else {
         assert(inputPaths.length);
         outputPath = getDefaultOutputPath(inputPaths.length ? inputPaths[0] : "");
+    }
+    // Ensure the object file directory exists
+    verboseln("Ensuring object file output directory exists.");
+    const outputDir = Path(outputPath).dirName;
+    if(!isDirectory(outputDir)) {
+        verboseln("Creating output directory ", outputDir);
+        const dirStatus = ensureDirectory(outputDir);
+        if(!dirStatus) {
+            writeln("Failed to create output directory ", outputDir);
+            return Status.ObjectFileWriteError;
+        }
     }
     // Write the object file
     verboseln("Writing object file to the output path.");

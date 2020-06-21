@@ -162,6 +162,31 @@ bool makeDirectory(in const(char)[] path) {
     }
 }
 
+/// If a directory path doesn't exist, create it.
+/// Returns true if the directory should now exist, and false
+/// if there was some issue.
+bool ensureDirectory(in const(char)[] path) {
+    size_t lastSep = 0;
+    for(size_t i = 0; i < path.length; i++) {
+        if(path[i] == '/' || path[i] == '\\') {
+            if(i > lastSep + 1) {
+                const dirPath = path[0 .. i];
+                if(!fileExists(dirPath)) {
+                    const makeStatus = makeDirectory(dirPath);
+                    if(!makeStatus) {
+                        return false;
+                    }
+                }
+                else if(!isDirectory(dirPath)) {
+                    return false;
+                }
+            }
+            lastSep = i;
+        }
+    }
+    return true;
+}
+
 /// Get whether a path refers to any existing file.
 bool fileExists(in const(char)[] path) @trusted {
     version(Windows) {

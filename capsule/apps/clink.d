@@ -20,6 +20,8 @@ import capsule.parse.config : getCapsuleConfigUsageString;
 
 import capsule.algorithm.indexof : lastIndexOf;
 import capsule.io.file : File;
+import capsule.io.filesystem : isDirectory, ensureDirectory;
+import capsule.io.path : Path;
 import capsule.io.stdio : stdio;
 
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
@@ -285,6 +287,17 @@ CapsuleApplicationStatus link(string[] args) {
     else {
         assert(inputPaths.length);
         outputPath = getDefaultOutputPath(inputPaths.length ? inputPaths[0] : "");
+    }
+    // Ensure the program file directory exists
+    verboseln("Ensuring program file output directory exists.");
+    const outputDir = Path(outputPath).dirName;
+    if(!isDirectory(outputDir)) {
+        verboseln("Creating output directory ", outputDir);
+        const dirStatus = ensureDirectory(outputDir);
+        if(!dirStatus) {
+            writeln("Failed to create output directory ", outputDir);
+            return Status.ObjectFileWriteError;
+        }
     }
     // Write the program data to the output file path
     verboseln("Writing program file to the output path.");
