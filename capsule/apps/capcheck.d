@@ -54,7 +54,7 @@ struct CapsuleCheckConfig {
         .setHelpText([
             "Object and program files built from test sources",
             "will be saved inside this directory, as well as any",
-            "logs or other outputted files."
+            "logs or other outputted files.",
         ])
     )
     string outputPath;
@@ -63,7 +63,7 @@ struct CapsuleCheckConfig {
         .setOptional(false)
         .setHelpText([
             "When this flag is set, debugging information will be",
-            "included in the outputted object and program files."
+            "included in the outputted object and program files.",
         ])
     )
     bool writeDebugInfo;
@@ -72,7 +72,7 @@ struct CapsuleCheckConfig {
         .setOptional("casm")
         .setHelpText([
             "Command or path to binary to use when compiling Capsule",
-            "assembly source code files."
+            "assembly source code files.",
         ])
     )
     string asmCommand;
@@ -81,7 +81,7 @@ struct CapsuleCheckConfig {
         .setOptional("clink")
         .setHelpText([
             "Command or path to binary to use when linking compiled",
-            "Capsule object files."
+            "Capsule object files.",
         ])
     )
     string linkCommand;
@@ -90,7 +90,7 @@ struct CapsuleCheckConfig {
         .setOptional("capsule")
         .setHelpText([
             "Command or path to binary to use for executing compiled",
-            "Capsule program files."
+            "Capsule program files.",
         ])
     )
     string runCommand;
@@ -100,10 +100,20 @@ struct CapsuleCheckConfig {
         .setHelpText([
             "Run only those tests whose name is the same as the one",
             "or more strings given with this option. Do not run tests",
-            "whose names are not listed."
+            "whose names are not listed.",
         ])
     )
     string[] onlyTestNames;
+    
+    @(CapsuleConfigAttribute!bool("list")
+        .setOptional(false)
+        .setHelpText([
+            "When this flag is set, the program will list the tests",
+            "given in the loaded configuration file without actually",
+            "running any of them.",
+        ])
+    )
+    bool listTests;
     
     @(CapsuleConfigAttribute!bool("verbose", "v")
         .setOptional(false)
@@ -352,6 +362,19 @@ CapsuleApplicationStatus check(string[] args) {
         if(!config.shouldRunTest(test)) {
             continue;
         }
+        // Handle the --list-tests CLI option which displays all the
+        // tests without actually running any of them
+        if(config.listTests) {
+            if(test.cases.length == 1 && test.cases[0].name == test.name) {
+                writeln(test.name);
+            }
+            else {
+                foreach(testCase; test.cases) {
+                    writeln(test.name, "/", testCase.name);
+                }
+            }
+            continue;
+        }
         // Build the test program
         CapsuleCheckTestBuilder builder = {
             test: test,
@@ -420,12 +443,14 @@ CapsuleApplicationStatus check(string[] args) {
         }
     }
     // Write summmary of test results
-    verboseln("Finished running tests.");
-    writeln(
-        "Passed: ", writeInt(testsPassed), " of ", writeInt(totalTestCases)
-    );
-    if(testsFailed) {
-        writeln("Failed: ", writeInt(testsFailed));
+    if(!config.listTests) {
+        verboseln("Finished running tests.");
+        writeln(
+            "Passed: ", writeInt(testsPassed), " of ", writeInt(totalTestCases)
+        );
+        if(testsFailed) {
+            writeln("Failed: ", writeInt(testsFailed));
+        }
     }
     return testsFailed ? Status.CheckTestFailure : Status.Ok;
 }
