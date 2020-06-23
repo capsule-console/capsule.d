@@ -420,9 +420,12 @@ CapsuleApplicationStatus check(string[] args) {
             else if(testCase.status is Status.Ok) {
                 const statusName = getEnumMemberName(runner.status);
                 write("TEST FAIL: ", testCase.name, " (Error status: ",
-                    getByteHexString(cast(ubyte) runner.status), ", ",
-                    statusName,
-                ") (");
+                    getByteHexString(cast(ubyte) runner.status)
+                );
+                if(statusName.length) {
+                    write(", ", statusName);
+                }
+                write(") (");
                 testsFailed++;
             }
             else {
