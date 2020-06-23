@@ -8,9 +8,22 @@
     "license": "GNU AGPLv3",
     "buildRequirements": ["silenceWarnings"],
     "sourcePaths": [
+        "capsule/algorithm",
         "capsule/apps",
+        "capsule/bits",
         "capsule/casm",
-        "capsule/core"
+        "capsule/core",
+        "capsule/extension",
+        "capsule/digest",
+        "capsule/io",
+        "capsule/math",
+        "capsule/meta",
+        "capsule/parse",
+        "capsule/range",
+        "capsule/string",
+        "capsule/system",
+        "capsule/time",
+        "capsule/utf"
     ],
     "importPaths": ["."],
     "excludedSourceFiles": [
