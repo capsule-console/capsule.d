@@ -222,7 +222,10 @@ bool isFile(in const(char)[] path) {
 /// Returns true when the path exists and refers to a directory.
 bool isDirectory(in const(char)[] path) {
     version(Windows) {
-        return (getFileAttributes(path) & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        const attributes = getFileAttributes(path);
+        return (attributes != INVALID_FILE_ATTRIBUTES &&
+            ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+        );
     }
     else version(Posix) {
         stat_t st;
