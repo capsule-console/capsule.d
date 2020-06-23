@@ -19,11 +19,13 @@ public:
 /// Helper to initialize a CapsuleEngine instance to be used for running
 /// a given CapsuleProgram.
 auto initializeCapsuleEngine(
-    in CapsuleProgram program, CapsuleEngine.ExtensionCallHandler ecall
+    in CapsuleProgram program,
+    CapsuleEngine.ExtensionCallHandler ecall,
+    void* ecallData = null,
 ) {
     alias Engine = CapsuleEngine;
     Engine engine;
-    engine.initialize(initializeCapsuleMemory(program), ecall);
+    engine.initialize(initializeCapsuleMemory(program), ecall, ecallData);
     return engine;
 }
 

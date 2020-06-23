@@ -19,9 +19,8 @@ enum CapsuleExtension: uint {
     meta_exit_ok = 0x0001,
     meta_exit_error = 0x0002,
     meta_check_ext = 0x0003,
-    meta_list_exts = 0x0004,
-    meta_host_uuid = 0x0005,
-    meta_host_name = 0x0006,
+    meta_host_uuid = 0x0004,
+    meta_host_name = 0x0005,
     // Standard Input and Output Module (00 00 01 xx)
     stdio_init = 0x0100,
     stdio_quit = 0x0101,

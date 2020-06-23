@@ -21,7 +21,7 @@ import capsule.core.types : CapsuleRegister, CapsuleInstruction;
 public:
 
 alias CapsuleExtensionCallHandler = CapsuleExtensionCallResult function(
-    CapsuleEngine* engine, in uint id, in uint arg
+    void* data, CapsuleEngine* engine, in uint id, in uint arg
 );
 
 enum CapsuleEngineStatus: uint {
@@ -48,8 +48,8 @@ struct CapsuleExtensionCallResult {
     
     alias ExceptionCode = CapsuleExceptionCode;
     
-    static enum ExtError = typeof(this).Exception(ExceptionCode.ExtensionError);
-    static enum ExtMissing = typeof(this).Exception(ExceptionCode.ExtensionMissing);
+    static enum Error = typeof(this).Exception(ExceptionCode.ExtensionError);
+    static enum Missing = typeof(this).Exception(ExceptionCode.ExtensionMissing);
     
     uint value = 0;
     CapsuleExceptionCode exc = ExceptionCode.None;
@@ -84,6 +84,10 @@ struct CapsuleEngine {
     Memory mem = Memory.init;
     /// Handles extension calls (ecall instructions)
     ExtensionCallHandler ecall = null;
+    /// Data pointer passed to extension call handler
+    void* ecallData = null;
+    /// Most recent extension call ID
+    uint ecallId = uint.max;
     /// Program counter at execution start
     int entry = 0;
     /// Program counter
@@ -95,10 +99,13 @@ struct CapsuleEngine {
     /// Exception code indicating the reason for a fatal error
     ExceptionCode exception = ExceptionCode.None;
     
-    void initialize(Memory mem, ExtensionCallHandler ecall) nothrow @safe @nogc {
+    void initialize(
+        Memory mem, ExtensionCallHandler ecall, void* ecallData = null
+    ) nothrow @safe @nogc {
         this.status = Status.Initialized;
         this.mem = mem;
         this.ecall = ecall;
+        this.ecallData = ecallData;
     }
     
     /// Set status to Running
@@ -172,9 +179,7 @@ struct CapsuleEngine {
     
     /// Decode and execute the instruction under the PC
     void step() {
-        assert(this.status is Status.Running);
         this.next();
-        if(this.status !is Status.Running) return;
         this.exec();
     }
     
@@ -526,8 +531,10 @@ struct CapsuleEngine {
                 break;
             case Opcode.ExtensionCall:
                 assert(this.ecall !is null);
-                const uint id = ru(i.rs2) + i.i32;
-                const result = this.ecall(&this, id, ru(i.rs1));
+                this.ecallId = ru(i.rs2) + i.i32;
+                const result = this.ecall(
+                    this.ecallData, &this, this.ecallId, ru(i.rs1)
+                );
                 if(result.ok) {
                     rset(i.rd, result.value);
                     pc += 4;

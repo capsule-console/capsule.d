@@ -1,6 +1,17 @@
-module capsule.apps.lib.pxgfx;
+/**
+
+This module implements Capsule's pixel graphics extensions (pxgfx)
+via the SDL library.
+
+http://www.libsdl.org/
+
+*/
+
+module capsule.extension.pxgfx;
 
 version(CapsuleSDL2Graphics):
+
+private:
 
 import core.stdc.string : memcpy;
 
@@ -10,32 +21,91 @@ import capsule.io.file : File, FileWriter;
 import capsule.string.hex : getHexString;
 import capsule.math.ispow2 : isPow2;
 import capsule.range.range : toArray;
+import capsule.time.monotonic : monotonicns;
 
-import capsule.apps.lib.extcommon : CapsuleExtensionMixin;
-import capsule.sdl : CapsuleSDL, CapsuleSDLWindow;
+import capsule.core.extension : CapsuleExtension;
+
+import capsule.extension.common : CapsuleModuleMixin;
+import capsule.extension.list : CapsuleExtensionListEntry;
+
+import capsule.sdl.events : CapsuleSDLEventQueue, CapsuleSDLEventType;
+import capsule.sdl.events : CapsuleSDLWindowEventID;
+import capsule.sdl.sdl : CapsuleSDL;
+import capsule.sdl.window : CapsuleSDLWindow;
+
+import derelict.sdl2.sdl;
 
 public:
 
-struct CapsuleSDLPixelGraphics {
-    mixin CapsuleExtensionMixin;
+struct CapsuleSDLPixelGraphicsModule {
+    mixin CapsuleModuleMixin;
     
     alias ecall_pxgfx_init = .ecall_pxgfx_init;
     alias ecall_pxgfx_flip = .ecall_pxgfx_flip;
     
+    alias Extension = CapsuleExtension;
     alias Mode = CapsuleSDLPixelGraphicsMode;
     alias PixelFormat = CapsuleSDLWindow.PixelFormat;
     alias Resolution = CapsuleSDLPixelGraphicsResolution;
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
     alias Window = CapsuleSDLWindow;
     
-    /// Global instance shared by ecalls
-    static typeof(this) global;
-    
-    int scale = 1;
-    string windowTitle = "Capsule";
-    Window window;
+    /// TODO: A list of resolutions that the host will permit the
+    /// application to run at
     Resolution[] resolutionList;
+    /// The settings that were indicated in a pxgfx.init ecall
     Settings settings;
+    /// TODO: X offset within full window to display image data
+    int offsetX = 0;
+    /// TODO: Y offset within full window to display image data
+    int offsetY = 0;
+    /// TODO: Width within full window at which to display image data
+    int width = 1;
+    /// TODO: Height within full window at which to display image data
+    int height = 1;
+    /// Current frame/tick
+    uint ticks = 0;
+    /// Monotonic time of last pxgfx.flip ecall
+    long lastFlipNanoseconds = 0;
+    /// Title to use for the application window
+    string windowTitle = "Capsule";
+    /// Reference to an SDL_Window containing the application image data
+    Window window;
+    
+    import capsule.io.stdio;
+    import capsule.meta.enums;
+    
+    extern(C) static int onEvent(void* data, SDL_Event* event) nothrow {
+        // TODO: Ask the user to confirm
+        assert(data);
+        stdio.writeln("EVENT: ", getEnumMemberName(event.type));
+        if(event.type == SDL_WINDOWEVENT) {
+            stdio.writeln("WINDOW: ", getEnumMemberName(event.window.event));
+        }
+        if(event && (event.type == SDL_QUIT || (
+            event.type == SDL_WINDOWEVENT &&
+            event.window.event == SDL_WINDOWEVENT_CLOSE
+        ))) {
+            auto engine = cast(CapsuleEngine*) data;
+            engine.status = CapsuleEngine.Status.Terminated;
+            assert(false);
+        }
+        return 0;
+    }
+    
+    static bool isSupportedWindowPixelFormat(in PixelFormat format) {
+        switch(format) {
+            case PixelFormat.RGB24: goto case;
+            case PixelFormat.RGB888: goto case;
+            case PixelFormat.RGBA8888: goto case;
+            case PixelFormat.ARGB8888: return true;
+            default: return false;
+        }
+    }
+    
+    this(ErrorMessageCallback onErrorMessage) {
+        this.onErrorMessage = onErrorMessage;
+    }
     
     bool ok() const {
         return this.window.ok && this.settings.ok;
@@ -53,20 +123,33 @@ struct CapsuleSDLPixelGraphics {
         }
     }
     
-    static bool isSupportedWindowPixelFormat(in PixelFormat format) {
-        switch(format) {
-            case PixelFormat.RGB24: goto case;
-            case PixelFormat.RGB888: goto case;
-            case PixelFormat.RGBA8888: goto case;
-            case PixelFormat.ARGB8888: return true;
-            default: return false;
+    CapsuleExtensionListEntry[] getExtensionList() {
+        alias Entry = CapsuleExtensionListEntry;
+        return [
+            Entry(Extension.pxgfx_init, &ecall_pxgfx_init, &this),
+            Entry(Extension.pxgfx_flip, &ecall_pxgfx_flip, &this),
+        ];
+    }
+    
+    void handleSDLEvent(CapsuleEngine* engine, in SDL_Event event) {
+        stdio.writeln("EVENT: ", getEnumMemberName(event.type));
+        if(event.type == SDL_WINDOWEVENT) {
+            stdio.writeln("WINDOW: ", getEnumMemberName(event.window.event));
+        }
+        if(event.type == SDL_QUIT || (
+            event.type == SDL_WINDOWEVENT &&
+            event.window.event == SDL_WINDOWEVENT_CLOSE
+        )) {
+            engine.status = CapsuleEngine.Status.Terminated;
+            assert(false, "Terminated!!!");
         }
     }
 }
 
 struct CapsuleSDLPixelGraphicsResolution {
-    int width;
-    int height;
+    int width = 0;
+    int height = 0;
+    int scale = 1; // TODO
 }
 
 enum CapsuleSDLPixelGraphicsMode: uint {
@@ -95,27 +178,43 @@ struct CapsuleSDLPixelGraphicsInitSettings {
             isPow2(this.pitch)
         );
     }
+    
+    /// Return the number of microseconds that each frame is expected
+    /// to take at minimum, given the frameLimit FPS value.
+    uint frameLimitMicroseconds() const {
+        return this.frameLimit == 0 ? 0 : 1_000_000 / this.frameLimit;
+    }
 }
 
+/// Implement pxgfx.init extension.
+/// The data pointer must refer to a CapsuleSDLPixelGraphicsModule instance.
 CapsuleExtensionCallResult ecall_pxgfx_init(
-    CapsuleEngine* engine, in uint arg
+    void* data, CapsuleEngine* engine, in uint arg
 ) {
+    assert(data);
     // TODO: Return status flag instead of always producing an exception
     // TODO: Should pixel and palette ptrs be absolute? (I think no..?)
     // TODO: Should ptrs be relative to the beginning of the struct?
+    // TODO: SDL_Texture and SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest"); 
     alias Mode = CapsuleSDLPixelGraphicsMode;
     alias PixelFormat = CapsuleSDLWindow.PixelFormat;
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
-    alias pxgfx = CapsuleSDLPixelGraphics.global;
+    auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
     if(pxgfx.window.ok) {
         pxgfx.addErrorMessage("pxgfx.init: Already initialized.");
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
     if(!CapsuleSDL.loaded) {
         CapsuleSDL.load();
     }
     if(!CapsuleSDL.initialized) {
-        CapsuleSDL.initialize(cast(uint) CapsuleSDL.System.Video);
+        CapsuleSDL.initialize(
+            cast(uint) CapsuleSDL.System.Video |
+            cast(uint) CapsuleSDL.System.Events
+        );
+        //CapsuleSDLEventQueue.addWatch(
+        //    &CapsuleSDLPixelGraphicsModule.onEvent, engine
+        //);
     }
     const lResX = engine.mem.loadWord(arg);
     const lResY = engine.mem.loadWord(arg + 4);
@@ -132,7 +231,7 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         !lUnusedHalf.ok || !lUnusedWord.ok
     ) {
         pxgfx.addErrorMessage("pxgfx.init: Invalid settings pointer.");
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
     Settings settings = {
         resolutionX: lResX.value,
@@ -146,19 +245,19 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     pxgfx.settings = settings;
     if(!settings.ok) {
         pxgfx.addErrorMessage("pxgfx.init: Invalid settings data.");
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
     pxgfx.window = CapsuleSDLWindow(
         pxgfx.windowTitle,
-        pxgfx.scale * settings.resolutionX,
-        pxgfx.scale * settings.resolutionY,
+        settings.resolutionX,
+        settings.resolutionY,
         CapsuleSDLWindow.Flag.Shown
     );
     if(!pxgfx.window.ok) {
         pxgfx.addErrorMessage("pxgfx.init: Failed to create window.");
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
-    else if(!CapsuleSDLPixelGraphics.isSupportedWindowPixelFormat(
+    else if(!CapsuleSDLPixelGraphicsModule.isSupportedWindowPixelFormat(
         cast(PixelFormat) pxgfx.window.surface.format.format
     )) {
         const format = pxgfx.window.surface.format.format;
@@ -168,7 +267,7 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
             toArray(getHexString(format)) ~
             (formatName.length ? " " ~ formatName : "")
         );
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
     else {
         return CapsuleExtensionCallResult.Ok(0);
@@ -192,12 +291,20 @@ void pxgfxFlipSurfaceImpl(alias getColor, alias setColor)(
     }
 }
 
+size_t endi = 0;
+import capsule.io.stdio;
+import capsule.string.writeint;
+
 CapsuleExtensionCallResult ecall_pxgfx_flip(
-    CapsuleEngine* engine, in uint arg
+    void* data, CapsuleEngine* engine, in uint arg
 ) {
+    if(endi++ > 60) {
+        engine.status = CapsuleEngine.Status.Terminated;
+        //assert(false);
+    }
+    assert(data);
     alias Mode = CapsuleSDLPixelGraphicsMode;
     alias PixelFormat = CapsuleSDLWindow.PixelFormat;
-    alias pxgfx = CapsuleSDLPixelGraphics.global;
     bool checkProgramMemory(in int address, in int length) {
         return (
             address >= 0 && length >= 0 &&
@@ -206,9 +313,10 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
             (address + length) < engine.mem.length
         );
     }
+    auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
     if(!pxgfx.ok) {
         pxgfx.addErrorMessage("pxgfx.flip: Module not initialized.");
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
     const surfaceFormat = pxgfx.window.surface.format.format;
     const width = pxgfx.window.surface.w;
@@ -224,13 +332,13 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
     }
     if(!checkProgramMemory(pxgfx.settings.pixelsPtr, length)) {
         pxgfx.addErrorMessage("pxgfx.flip: Invalid pixel data pointer.");
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
     const(ubyte)* programPtr = (
         engine.mem.data + pxgfx.settings.pixelsPtr
     );
     pxgfx.window.lockSurface();
-    if(mode is Mode.Truecolor24Bit && pxgfx.scale == 1 && (
+    if(mode is Mode.Truecolor24Bit && (
         surfaceFormat == PixelFormat.RGB888 ||
         surfaceFormat == PixelFormat.RGBA8888
     )) {
@@ -298,5 +406,52 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
     }
     pxgfx.window.unlockSurface();
     pxgfx.window.flipSurface();
+    if(pxgfx.settings.frameLimit > 0) {
+        // Expected microseconds per frame
+        const limitMicroseconds = pxgfx.settings.frameLimitMicroseconds;
+        // Microseconds since the last pxgfx.flip ecall
+        const deltaMicroseconds = (
+            (monotonicns() - pxgfx.lastFlipNanoseconds) / 1_000
+        );
+        if(deltaMicroseconds < limitMicroseconds) {
+            const waitMicroseconds = limitMicroseconds - deltaMicroseconds;
+            const waitFraction = waitMicroseconds % 1_000;
+            uint waitMilliseconds = cast(uint) (waitMicroseconds / 1_000);
+            if(waitFraction >= 875) {
+                waitMilliseconds += (pxgfx.ticks & 7 ? 1 : 0);
+            }
+            if(waitFraction >= 750) {
+                waitMilliseconds += (pxgfx.ticks & 3 ? 1 : 0);
+            }
+            if(waitFraction >= 600) {
+                // 60 fps -> 16.666 ms/f
+                // 24 fps -> 41.666 ms/f
+                waitMilliseconds += (pxgfx.ticks % 3 > 0 ? 1 : 0);
+            }
+            else if(waitFraction >= 500) {
+                waitMilliseconds += (pxgfx.ticks & 1 ? 1 : 0);
+            }
+            else if(waitFraction >= 300) {
+                // 120 fps -> 8.333 ms/f
+                // 30 fps -> 33.333 ms/f
+                waitMilliseconds += (pxgfx.ticks % 3 > 1 ? 1 : 0);
+            }
+            else if(waitFraction >= 250) {
+                waitMilliseconds += ((pxgfx.ticks & 3) == 3 ? 1 : 0);
+            }
+            else if(waitFraction >= 125) {
+                waitMilliseconds += ((pxgfx.ticks & 7) == 7 ? 1 : 0);
+            }
+            //stdio.writeln(writeInt(endi), " UNDER ms budget: ", writeInt(waitMilliseconds));
+            SDL_Delay(waitMilliseconds);
+        }
+        //else {
+        //    stdio.writeln(writeInt(endi), " OVER ms budget: ", writeInt(
+        //        cast(uint) ((limitMicroseconds - deltaMicroseconds) / 1_000)
+        //    ), " (delta microseconds: ", writeInt(deltaMicroseconds), ")");
+        //}
+    }
+    pxgfx.ticks++;
+    pxgfx.lastFlipNanoseconds = monotonicns();
     return CapsuleExtensionCallResult.Ok(0);
 }

@@ -1,22 +1,37 @@
-module capsule.apps.lib.stdio;
+/**
+
+This module implements Capsule's standard IO extensions (stdio).
+
+https://en.wikipedia.org/wiki/Standard_streams
+
+*/
+
+module capsule.extension.stdio;
+
+private:
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.io.file : File, FileWriter;
 import capsule.io.stdio : stdio;
 
-import capsule.apps.lib.extcommon : CapsuleExtensionMixin;
+import capsule.core.extension : CapsuleExtension;
+
+import capsule.extension.common : CapsuleModuleMixin;
+import capsule.extension.list : CapsuleExtensionListEntry;
 
 public:
 
-struct CapsuleStandardIO {
-    mixin CapsuleExtensionMixin;
+struct CapsuleStandardIOModule {
+    mixin CapsuleModuleMixin;
     
     alias ecall_stdio_init = .ecall_stdio_init;
+    // TODO: ecall_stdio_quit
     alias ecall_stdio_put_byte = .ecall_stdio_put_byte;
     alias ecall_stdio_get_byte = .ecall_stdio_get_byte;
+    // TODO: ecall_stdio_flush
+    // TODO: ecall_stdio_eof
     
-    /// Global instance shared by ecalls
-    static typeof(this) global;
+    alias Extension = CapsuleExtension;
     
     bool stdinHasContent = false;
     string stdinPath = null;
@@ -24,6 +39,10 @@ struct CapsuleStandardIO {
     string stdinContent = null;
     size_t stdinIndex = 0;
     FileWriter stdoutWriter = FileWriter(null);
+    
+    this(ErrorMessageCallback onErrorMessage) {
+        this.onErrorMessage = onErrorMessage;
+    }
     
     void setInputContent(in string content) {
         this.stdinContent = content;
@@ -43,12 +62,22 @@ struct CapsuleStandardIO {
             this.stdoutWriter.close();
         }
     }
+    
+    CapsuleExtensionListEntry[] getExtensionList() {
+        alias Entry = CapsuleExtensionListEntry;
+        return [
+            Entry(Extension.stdio_init, &ecall_stdio_init, &this),
+            Entry(Extension.stdio_put_byte, &ecall_stdio_put_byte, &this),
+            Entry(Extension.stdio_get_byte, &ecall_stdio_get_byte, &this),
+        ];
+    }
 }
 
 CapsuleExtensionCallResult ecall_stdio_init(
-    CapsuleEngine* engine, in uint arg
+    void* data, CapsuleEngine* engine, in uint arg
 ) {
-    alias io = CapsuleStandardIO.global;
+    assert(data);
+    auto io = cast(CapsuleStandardIOModule*) data;
     bool anyFailure = false;
     if(io.stdoutWriter) {
         io.addErrorMessage("stdio.init: Already initialized.");
@@ -72,7 +101,7 @@ CapsuleExtensionCallResult ecall_stdio_init(
         }
     }
     if(anyFailure) {
-        return CapsuleExtensionCallResult.ExtError;
+        return CapsuleExtensionCallResult.Error;
     }
     else {
         return CapsuleExtensionCallResult.Ok(0);
@@ -80,9 +109,10 @@ CapsuleExtensionCallResult ecall_stdio_init(
 }
 
 CapsuleExtensionCallResult ecall_stdio_put_byte(
-    CapsuleEngine* engine, in uint arg
+    void* data, CapsuleEngine* engine, in uint arg
 ) {
-    alias io = CapsuleStandardIO.global;
+    assert(data);
+    auto io = cast(CapsuleStandardIOModule*) data;
     if(io.stdoutWriter) {
         io.stdoutWriter.put(cast(char) arg);
     }
@@ -93,9 +123,10 @@ CapsuleExtensionCallResult ecall_stdio_put_byte(
 }
 
 CapsuleExtensionCallResult ecall_stdio_get_byte(
-    CapsuleEngine* engine, in uint arg
+    void* data, CapsuleEngine* engine, in uint arg
 ) {
-    alias io = CapsuleStandardIO.global;
+    assert(data);
+    auto io = cast(CapsuleStandardIOModule*) data;
     if(!io.stdinHasContent) {
         const ch = stdio.readChar();
         return CapsuleExtensionCallResult.Ok(cast(uint) ch);

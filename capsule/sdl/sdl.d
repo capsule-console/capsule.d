@@ -1,4 +1,13 @@
+/**
+
+This module provides functions related to initializing and
+uninitializing an SDL2 dependency.
+
+*/
+
 module capsule.sdl.sdl;
+
+private:
 
 import derelict.sdl2.sdl : DerelictSDL2;
 import derelict.util.loader : SharedLibVersion;

@@ -31,7 +31,7 @@ import capsule.core.typestrings : getCapsuleOpcodeWithName;
 
 public:
 
-void logInstruction(in CapsuleEngine engine) {
+void logInstruction(in CapsuleEngine* engine) {
     logInstruction(engine.pc, engine.instr);
 }
 
@@ -100,7 +100,7 @@ void logMemoryLoadResult(T, alias stringify = writeInt)(
 }
 
 auto parseNumberInput(
-    in CapsuleProgram program, in CapsuleEngine engine, in char[] input
+    in CapsuleProgram program, in CapsuleEngine* engine, in char[] input
 ) {
     struct Result {
         bool ok;
@@ -237,7 +237,8 @@ ptrdiff_t getLocalSymbolIndex(
     }
 }
 
-void runProgram(ref CapsuleEngine engine) {
+void runProgram(CapsuleEngine* engine) {
+    assert(engine);
     assert(engine.ok);
     while(engine.status is CapsuleEngine.Status.Running) {
         engine.step();
@@ -246,7 +247,8 @@ void runProgram(ref CapsuleEngine engine) {
 
 bool runProgramUntilBreakpoint = true;
 
-void runProgramUntil(alias until)(ref CapsuleEngine engine) {
+void runProgramUntil(alias until)(CapsuleEngine* engine) {
+    assert(engine);
     if(engine.status !is CapsuleEngine.Status.Running) {
         stdio.writeln("Program ended.");
         return;
@@ -305,7 +307,7 @@ list sources - List program sources
 list sym - List symbols in program
 `;
 
-void debugProgram(CapsuleProgram program, ref CapsuleEngine engine) {
+void debugProgram(CapsuleProgram program, CapsuleEngine* engine) {
     alias Source = CapsuleProgram.Source;
     alias Status = CapsuleEngine.Status;
     assert(program.ok);
