@@ -11,7 +11,7 @@ module capsule.time.monotonic;
 private:
 
 version(OSX) {
-    import core.sys.darwin.mach.kern_return;
+    import core.sys.darwin.mach.kern_return : kern_return_t, KERN_SUCCESS;
     extern(C) nothrow @nogc {
         struct mach_timebase_info_data_t {
             uint numer;
@@ -48,9 +48,14 @@ public nothrow @trusted @nogc:
 /// The OSX monotonic clock should be accurate to the nanosecond.
 /// The clock counts up from the last reboot time. The clock
 /// does not count up while the system is asleep or hibernating.
+/// https://developer.apple.com/library/archive/qa/qa1398/_index.html
+/// https://stackoverflow.com/questions/1450737/what-is-mach-absolute-time-based-on-on-iphone/4753909#4753909
 version(OSX) long monotonicns() {
-    const ulong ns = mach_absolute_time();
-    return cast(long) ns;
+    const ulong absolute = mach_absolute_time();
+    mach_timebase_info_data_t info;
+    const kernStatus = mach_timebase_info(&info);
+    if(kernStatus != KERN_SUCCESS) assert(false, "Failed to get timebase info.");
+    return cast(long) ((absolute * info.numer) / (1_000_000 * info.denom));
 }
 
 /// Get monotonic time as a number of nanoseconds on Posix platforms
@@ -86,4 +91,15 @@ else version(Windows) long monotonicns() {
     assert(status != 0, "Monotonic clock not available for this platform.");
     // Convert the number of ticks to a number of nanoseconds
     return tickstons(ticks, ticksPerSecond);
+}
+
+/// Test coverage for monotonicns
+unittest {
+    long[256] ns;
+    for(uint i = 0; i < ns.length; i++) {
+        ns[i] = monotonicns();
+    }
+    for(uint i = 1; i < ns.length; i++) {
+        assert(ns[i - 1] <= ns[i]);
+    }
 }
