@@ -41,6 +41,7 @@
             "targetName": "capsule",
             "versions": [
                 "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain",
                 "CapsuleExcludeLinkerMain"
@@ -53,6 +54,7 @@
             "targetName": "capsule",
             "versions": [
                 "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeLinkerMain"
             ],
@@ -67,6 +69,7 @@
             ],
             "versions": [
                 "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeLinkerMain",
                 "CapsuleSDL2Graphics"
@@ -81,6 +84,7 @@
             "targetPath": "bin",
             "targetName": "casm",
             "versions": [
+                "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain",
                 "CapsuleExcludeLinkerMain"
@@ -93,6 +97,7 @@
             "targetName": "clink",
             "versions": [
                 "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain"
             ],
@@ -104,6 +109,19 @@
             "targetName": "capcheck",
             "versions": [
                 "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeBuilderMain",
+                "CapsuleExcludeExecutionMain",
+                "CapsuleExcludeLinkerMain"
+            ],
+        },
+        {
+            "name": "capable",
+            "targetType": "executable",
+            "targetPath": "bin",
+            "targetName": "capable",
+            "versions": [
+                "CapsuleExcludeAssemblerMain",
+                "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain",
                 "CapsuleExcludeLinkerMain"
             ],
