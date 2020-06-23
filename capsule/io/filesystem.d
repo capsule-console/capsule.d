@@ -20,7 +20,8 @@ version(Posix) {
 version(Windows) {
     import core.sys.windows.winnt : INVALID_FILE_ATTRIBUTES;
     import core.sys.windows.winnt : FILE_ATTRIBUTE_DIRECTORY;
-    import capsule.utf.utf16decode : utf16Encode;
+    import capsule.range.range : toArray;
+    import capsule.utf.utf16encode : utf16Encode;
     import capsule.utf.utf8decode : utf8Decode;
 }
 
@@ -33,7 +34,7 @@ version(Windows) {
 }
 
 version(CRuntime_Microsoft){
-    extern(C) @nogc nothrow int _fseeki64(FileHandle, long, int);
+    extern(C) @nogc nothrow int _fseeki64(FILE*, long, int);
 }
 
 import capsule.string.stringz : stringz, StringZ;
@@ -84,7 +85,7 @@ version(Windows) struct WStringZResult {
 /// with the Windows file system API.
 version(Windows) auto getWStringZ(in const(char)[] text) {
     alias Result = WStringZResult;
-    auto encode = utf16Encode(utf8Decode(path));
+    auto encode = utf16Encode(utf8Decode(text));
     const wtext = encode.toArray();
     const Result result = {
         invalid: encode.invalid || encode.source.invalid,
@@ -151,7 +152,7 @@ bool makeDirectory(in const(char)[] path) {
         // https://msdn.microsoft.com/en-us/library/windows/desktop/aa363855(v=vs.85).aspx
         import core.sys.windows.winbase : CreateDirectoryW;
         const pathwz = getWStringZ(path);
-        return pathwz.invalid ? false : CreateDirectoryW(pathwz.ptr, null);
+        return pathwz.invalid ? false : CreateDirectoryW(pathwz.ptr, null) != 0;
     }
     else version(Posix) {
         import core.sys.posix.sys.stat : mkdir;
