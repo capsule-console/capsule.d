@@ -107,9 +107,19 @@ struct File {
     
     alias Status = FileStatus;
     
-    string path;
-    string content;
+    string path = null;
+    string content = null;
     Status status = Status.Ok;
+    
+    this(in Status status) {
+        this.status = status;
+    }
+    
+    this(in string path, in string content = null, in Status status = Status.Ok) {
+        this.path = path;
+        this.content = content;
+        this.status = status;
+    }
     
     /// Read a file and its content completely and get a File
     /// instance representing that file.

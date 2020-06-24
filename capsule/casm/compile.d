@@ -2052,7 +2052,7 @@ struct CapsuleAsmCompiler {
                 return file;
             }
         }
-        return File.init;
+        return File(File.Status.FilePathError);
     }
     
     /// Process a node representing an .incbin or .include directive.
