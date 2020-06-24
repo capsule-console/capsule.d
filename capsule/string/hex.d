@@ -11,7 +11,7 @@ private:
 
 import capsule.range.range : isArray;
 
-public pure nothrow @safe @nogc:
+public:
 
 /// Lower case hexadecimal digits, in order.
 static const string LowerHexDigits = "0123456789abcdef";
@@ -20,7 +20,7 @@ static const string LowerHexDigits = "0123456789abcdef";
 static const string UpperHexDigits = "0123456789ABCDEF";
 
 /// Check if a character is a valid hexadecimal digit.
-uint isHexDigit(in char digit) {
+uint isHexDigit(in char digit) pure nothrow @safe @nogc {
     return (
         (digit >= '0' && digit <= '9') ||
         (digit >= 'a' && digit <= 'f') ||
@@ -30,7 +30,7 @@ uint isHexDigit(in char digit) {
 
 /// Get the hexadecimal value represented by a single digit
 /// character.
-uint getHexDigitValue(in char digit) {
+uint getHexDigitValue(in char digit) pure nothrow @safe @nogc {
     switch(digit) {
         case '0': return 0x0;
         case '1': return 0x1;
@@ -58,11 +58,11 @@ uint getHexDigitValue(in char digit) {
     }
 }
 
-string getByteHexString(in ubyte value) {
+string getByteHexString(in ubyte value) pure nothrow @safe @nogc {
     return CapsuleByteHexStrings[value];
 }
 
-auto parseHexString(T, C)(in C[] hex) {
+auto parseHexString(T, C)(in C[] hex) pure nothrow @safe @nogc {
     struct Result {
         bool ok;
         T value;
@@ -112,12 +112,26 @@ const string[256] CapsuleByteHexStrings = [
     "0xf8", "0xf9", "0xfa", "0xfb", "0xfc", "0xfd", "0xfe", "0xff",
 ];
 
-auto getHexString(T)(auto ref T value) if(isArray!T) {
+auto getHexString(T)(auto ref T value) pure nothrow @safe @nogc if(
+    isArray!T
+) {
     return ArrayHexStringRange!T(value);
 }
 
-auto getHexString(T)(in T value) if(is(typeof({T i = 0;}))) {
+auto getHexString(T)(in T value) pure nothrow @safe @nogc if(
+    is(typeof({T i = 0;}))
+) {
     return ValueHexStringRange!T(value);
+}
+
+auto writeHexDigits(T)(in T value) pure nothrow @safe @nogc {
+    enum digits = 2 * T.sizeof;
+    char[digits] hex;
+    for(uint i = 0; i < digits; i++) {
+        const ch = (value >> (i * 4)) & 0xf;
+        hex[hex.length - i - 1] = LowerHexDigits[ch];
+    }
+    return hex;
 }
 
 struct ValueHexStringRange(T) {
@@ -206,4 +220,44 @@ unittest {
     assert(rangesEqual(
         asRange("0x010203f4"), getHexString(bytes)
     ));
+}
+
+// Test coverage for writeHexDigits
+unittest {
+    // int
+    assert(writeHexDigits(int(0)) == "00000000");
+    assert(writeHexDigits(int(1)) == "00000001");
+    assert(writeHexDigits(int(0x89abcdef)) == "89abcdef");
+    assert(writeHexDigits(int(0xffffffff)) == "ffffffff");
+    assert(writeHexDigits(int.max) == "7fffffff");
+    assert(writeHexDigits(int.min) == "80000000");
+    // uint
+    assert(writeHexDigits(uint(0)) == "00000000");
+    assert(writeHexDigits(uint(1)) == "00000001");
+    assert(writeHexDigits(uint(0x89abcdef)) == "89abcdef");
+    assert(writeHexDigits(uint.max) == "ffffffff");
+    // short
+    assert(writeHexDigits(short(0)) == "0000");
+    assert(writeHexDigits(short(1)) == "0001");
+    assert(writeHexDigits(cast(short) (0xcdef)) == "cdef");
+    assert(writeHexDigits(cast(short) (0xffff)) == "ffff");
+    assert(writeHexDigits(short.max) == "7fff");
+    assert(writeHexDigits(short.min) == "8000");
+    // ushort
+    assert(writeHexDigits(ushort(0)) == "0000");
+    assert(writeHexDigits(ushort(1)) == "0001");
+    assert(writeHexDigits(ushort(0xcdef)) == "cdef");
+    assert(writeHexDigits(ushort.max) == "ffff");
+    // byte
+    assert(writeHexDigits(byte(0)) == "00");
+    assert(writeHexDigits(byte(1)) == "01");
+    assert(writeHexDigits(cast(byte) (0xcd)) == "cd");
+    assert(writeHexDigits(cast(byte) (0xff)) == "ff");
+    assert(writeHexDigits(byte.max) == "7f");
+    assert(writeHexDigits(byte.min) == "80");
+    // ubyte
+    assert(writeHexDigits(ubyte(0)) == "00");
+    assert(writeHexDigits(ubyte(1)) == "01");
+    assert(writeHexDigits(ubyte(0xcd)) == "cd");
+    assert(writeHexDigits(ubyte.max) == "ff");
 }
