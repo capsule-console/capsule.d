@@ -1,0 +1,77 @@
+; This program displays a static test pattern using the pxgfx extension
+; module and its truecolor_24_bit display mode.
+;
+; The test pattern divides the render area into an equal 4 by 4 grid,
+; making a total of 16 cells. The cells are, in row major order:
+;
+; White   ffffff / Pink    ffc0c0 / Rose    ff8080 / Red     ff0000
+; Ice     c0c0ff / Black   000000 / Magenta ff00ff / Orange  ff8040
+; Azure   8080ff / Violet  8000ff / Grey    808080 / Yellow  ffff00
+; Blue    0000ff / Aqua    4080ff / Cyan    00ffff / Green   00ff00
+;
+; The bottom-right most pixel of each cell will additionally have its
+; color inverted.
+
+.include "../../lib/constants.casm"
+
+.rodata
+; Settings data provided to pxgfx.init
+pxgfx_settings:
+    .word 128, 128 ; resolution
+    .word 512 ; pitch
+    .word pxgfx_mode.truecolor_24_bit ; display mode
+    .word pixels[pcrel_word][+16] ; pointer to pixels
+    .word 0 ; pointer to palette (unused)
+    .word 0, 0 ; padding
+; Define the colors to use in the test pattern
+test_pattern_colors:
+    .word 0xffffff, 0xffc0c0, 0xff8080, 0xff0000
+    .word 0xc0c0ff, 0x000000, 0xff00ff, 0xff8040
+    .word 0x8080ff, 0x8000ff, 0x808080, 0xffff00
+    .word 0x0000ff, 0x4080ff, 0x00ffff, 0x00ff00
+    
+.bss
+    pixels: .resb 0x10000
+
+.text .entry
+    ; Initialize
+    la A, pxgfx_settings
+    ecalli X, A, pxgfx.init
+    beqz X, init_pixels
+pxgfx_init_failure:
+    ; Handle pxgfx initialization failure
+    ecalli Z, Z, meta.exit_error
+init_pixels:
+    ; Initialize test pattern pixel data
+    la C, pixels
+    la S, test_pattern_colors
+init_pixels_loop:
+    ; Set pixel color based on the test pattern
+    la A, pixels
+    sub X, C, A
+    ; X: bits 2 through 9, Y: bits 10 through 17
+    srli Y, X, 12
+    andi Y, Y, 0xc
+    srli X, X, 7
+    andi X, X, 0x3
+    or X, X, Y
+    slli X, X, 2
+    add X, X, S
+    lw X, X, 0
+    sw X, C, 0
+    ; Check if pixel data has been filled, loop again if not
+    la A, pixels[end_pcrel_word]
+    addi C, C, 4
+    blt C, A, init_pixels_loop
+init_pixels_end:
+    ; Render the test pattern to the screen
+    ecalli A, Z, pxgfx.flip
+main_loop:
+    ; Loop until the program is externally terminated
+    ; Let Capsule do its bookkeeping
+    ecalli A, Z, meta.defer
+    ; Sleep 100ms - keep the program alive and looping without hogging CPU
+    li X, 100
+    ecalli A, X, time.sleep_ms
+    ; Repeat
+    j main_loop

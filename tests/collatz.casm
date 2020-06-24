@@ -3,7 +3,7 @@
 ; https://en.wikipedia.org/wiki/Collatz_conjecture
 ; https://esolangs.org/wiki/Collatz_sequence
 
-.include "lib/constants.casm"
+.include "../casm/lib/constants.casm"
 
 .extern read_int
 .extern write_int

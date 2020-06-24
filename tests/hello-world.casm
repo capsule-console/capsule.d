@@ -1,6 +1,6 @@
 ; Normal, idiomatic hello world example
 
-.include "lib/constants.casm"
+.include "../casm/lib/constants.casm"
 
 .rodata
     hello_world: .stringz "Hello, world!"

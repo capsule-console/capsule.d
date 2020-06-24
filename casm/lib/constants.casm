@@ -1,0 +1,44 @@
+; Define commonly used constants
+
+.const byte.min, 0x80
+.const byte.max, 0x7f
+.const ubyte.max, 0xff
+.const half.min, 0x8000
+.const half.max, 0x7fff
+.const uhalf.max, 0xffff
+.const word.min, 0x80000000
+.const word.max, 0x7fffffff
+.const uword.max, 0xffffffff
+
+.const meta.nop, 0x0000
+.const meta.exit_ok, 0x0001
+.const meta.exit_error, 0x0002
+.const meta.check_ext, 0x0003
+.const meta.defer, 0x0004
+.const meta.error, 0x0005
+.const meta.host_uuid, 0x0006
+.const meta.host_name, 0x0007
+
+.const stdio.init, 0x0100
+.const stdio.quit, 0x0101
+.const stdio.put_byte, 0x0102
+.const stdio.get_byte, 0x0103
+.const stdio.flush, 0x0104
+.const stdio.eof, 0x0105
+
+.const time.init, 0x0200
+.const time.quit, 0x0201
+.const time.sleep_ms, 0x0202
+.const time.monotonic_ms, 0x0203
+
+.const pxgfx.init, 0x30000000
+.const pxgfx.quit, 0x30000001
+.const pxgfx.check_mode, 0x30000002
+.const pxgfx.list_res, 0x30000003
+.const pxgfx.flip, 0x30000004
+
+.const pxgfx_mode.indexed_1_bit, 0x01
+.const pxgfx_mode.indexed_2_bit, 0x02
+.const pxgfx_mode.indexed_4_bit, 0x03
+.const pxgfx_mode.indexed_8_bit, 0x04
+.const pxgfx_mode.truecolor_24_bit, 0x80
