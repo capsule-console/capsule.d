@@ -55,7 +55,7 @@ version(OSX) long monotonicns() {
     mach_timebase_info_data_t info;
     const kernStatus = mach_timebase_info(&info);
     if(kernStatus != KERN_SUCCESS) assert(false, "Failed to get timebase info.");
-    return cast(long) ((absolute * info.numer) / (1_000_000 * info.denom));
+    return cast(long) ((absolute * info.numer) / info.denom);
 }
 
 /// Get monotonic time as a number of nanoseconds on Posix platforms
