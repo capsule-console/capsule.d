@@ -256,6 +256,24 @@ struct CapsuleBuildConfig {
     )
     string linkCommand;
     
+    @(CapsuleConfigAttribute!string("run-command")
+        .setOptional("capsule")
+        .setHelpText([
+            "Command or path to binary to use for executing compiled",
+            "Capsule program files.",
+        ])
+    )
+    string runCommand;
+    
+    @(CapsuleConfigAttribute!bool("run")
+        .setOptional(false)
+        .setHelpText([
+            "When this flag is set, upon successfully building an",
+            "output Capsule program it will immediately be run."
+        ])
+    )
+    bool runOutputProgram;
+    
     @(CapsuleConfigAttribute!bool("verbose", "v")
         .setOptional(false)
         .setHelpText([
@@ -309,13 +327,17 @@ CapsuleApplicationStatus build(string[] args) {
         return Status.Ok;
     }
     // Starting args without '-' are interpreted as input paths
+    // If the first input path ends with ".ini" then it is treated as
+    // an INI project file path.
     size_t argIndex = 1;
     while(argIndex < args.length && args[argIndex].length && args[argIndex][0] != '-') {
         argIndex++;
     }
-    string[] inputPaths = args[1 .. argIndex];
+    string projectPath = (
+        argIndex > 1 && args[1].endsWith(".ini") ? args[1] : null
+    );
+    string[] inputPaths = args[(projectPath.length ? 2 : 1) .. argIndex];
     // Quick check for the presence of a --silent or --project argument
-    string projectPath = null;
     for(size_t i = argIndex; i < args.length; i++) {
         const string arg = args[i];
         if(arg == "--silent") {
@@ -336,7 +358,8 @@ CapsuleApplicationStatus build(string[] args) {
     File projectIniFile;
     Ini.Parser projectIniParser;
     if(projectPath.length) {
-        File.read(projectPath);
+        writeln("Loading project file: ", projectPath);
+        projectIniFile = File.read(projectPath);
         if(!projectIniFile.ok) {
             writeln("Error reading project configuration INI file.");
             return Status.ConfigFileReadError;
@@ -389,7 +412,15 @@ CapsuleApplicationStatus build(string[] args) {
     else {
         verboseln("Build completed.");
     }
-    return builder.status;
+    if(config.runOutputProgram && builder.status is Status.Ok) {
+        stdio.flush();
+        return cast(Status) runProcess(
+            config.runCommand, [builder.programPath]
+        );
+    }
+    else {
+        return builder.status;
+    }
 }
 
 struct CapsuleBuilder {
