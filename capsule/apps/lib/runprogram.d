@@ -289,10 +289,11 @@ reg - Show registers
 rset [name] [value] - Set register
 resume - Resume execution
 toggle ebreak - Toggle pausing on breakpoints
-until pc [address] - Until PC reaches address
-until sym [name] - Until PC reaches symbol
-until op [opcode] - Until PC reaches an opcode
-until ret - Until returning from the current procedure
+until pc [address] - Resume until PC reaches address
+until reg [name] [value] - Resume until register is set to value
+until sym [name] - Resume until PC reaches symbol
+until op [opcode] - Resume until PC reaches an opcode
+until ret - Resume until returning from the current procedure
 memlen - Show memory length characteristics
 sym [name] - Show symbol information
 lb [address] - Load sign-extended byte
@@ -448,6 +449,18 @@ void debugProgram(CapsuleProgram program, CapsuleEngine* engine) {
             const value = parseNumberInput(program, engine, target);
             if(value.ok) runProgramUntil!(e => e.pc == value.value)(engine);
             else stdio.writeln("Failed to parse target program counter value.");
+        }
+        // Resume execution until a register is set to a given value
+        else if(input.startsWith("until reg ")) {
+            const reg = getRegisterInputStart(input[10 .. $]);
+            const target = input[11 + reg.length .. $];
+            const value = parseNumberInput(program, engine, target);
+            if(!reg.index || !value.ok) {
+                stdio.writeln("Failed to parse target register and value.");
+            }
+            else {
+                runProgramUntil!(e => e.reg[reg.index] == value.value)(engine);
+            }
         }
         // Resume execution until reaching a given symbol
         else if(input.startsWith("until sym ")) {
