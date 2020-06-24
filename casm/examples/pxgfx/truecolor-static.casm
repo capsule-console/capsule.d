@@ -8,9 +8,6 @@
 ; Ice     c0c0ff / Black   000000 / Magenta ff00ff / Orange  ff8040
 ; Azure   8080ff / Violet  8000ff / Grey    808080 / Yellow  ffff00
 ; Blue    0000ff / Aqua    4080ff / Cyan    00ffff / Green   00ff00
-;
-; The bottom-right most pixel of each cell will additionally have its
-; color inverted.
 
 .include "../../lib/constants.casm"
 
