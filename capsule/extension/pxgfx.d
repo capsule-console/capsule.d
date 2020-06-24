@@ -9,7 +9,7 @@ http://www.libsdl.org/
 
 module capsule.extension.pxgfx;
 
-version(CapsuleSDL2Graphics):
+version(CapsuleLibrarySDL2):
 
 private:
 
@@ -20,7 +20,9 @@ import capsule.meta.enums : getEnumMemberName;
 import capsule.io.file : File, FileWriter;
 import capsule.string.hex : getHexString;
 import capsule.math.ispow2 : isPow2;
+import capsule.meta.templates : Aliases;
 import capsule.range.range : toArray;
+import capsule.string.hex : writeHexDigits;
 import capsule.time.monotonic : monotonicns;
 
 import capsule.core.extension : CapsuleExtension;
@@ -50,6 +52,10 @@ struct CapsuleSDLPixelGraphicsModule {
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
     alias Window = CapsuleSDLWindow;
     
+    static enum RequiredSDLSubSystems = (
+        CapsuleSDL.System.Video
+    );
+    
     /// TODO: A list of resolutions that the host will permit the
     /// application to run at
     Resolution[] resolutionList;
@@ -63,46 +69,11 @@ struct CapsuleSDLPixelGraphicsModule {
     int width = 1;
     /// TODO: Height within full window at which to display image data
     int height = 1;
-    /// Current frame/tick
-    uint ticks = 0;
-    /// Monotonic time of last pxgfx.flip ecall
-    long lastFlipNanoseconds = 0;
     /// Title to use for the application window
     string windowTitle = "Capsule";
     /// Reference to an SDL_Window containing the application image data
     Window window;
-    
-    import capsule.io.stdio;
-    import capsule.meta.enums;
-    
-    extern(C) static int onEvent(void* data, SDL_Event* event) nothrow {
-        // TODO: Ask the user to confirm
-        assert(data);
-        stdio.writeln("EVENT: ", getEnumMemberName(event.type));
-        if(event.type == SDL_WINDOWEVENT) {
-            stdio.writeln("WINDOW: ", getEnumMemberName(event.window.event));
-        }
-        if(event && (event.type == SDL_QUIT || (
-            event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE
-        ))) {
-            auto engine = cast(CapsuleEngine*) data;
-            engine.status = CapsuleEngine.Status.Terminated;
-            assert(false);
-        }
-        return 0;
-    }
-    
-    static bool isSupportedWindowPixelFormat(in PixelFormat format) {
-        switch(format) {
-            case PixelFormat.RGB24: goto case;
-            case PixelFormat.RGB888: goto case;
-            case PixelFormat.RGBA8888: goto case;
-            case PixelFormat.ARGB8888: return true;
-            default: return false;
-        }
-    }
-    
+        
     this(ErrorMessageCallback onErrorMessage) {
         this.onErrorMessage = onErrorMessage;
     }
@@ -130,20 +101,6 @@ struct CapsuleSDLPixelGraphicsModule {
             Entry(Extension.pxgfx_flip, &ecall_pxgfx_flip, &this),
         ];
     }
-    
-    void handleSDLEvent(CapsuleEngine* engine, in SDL_Event event) {
-        stdio.writeln("EVENT: ", getEnumMemberName(event.type));
-        if(event.type == SDL_WINDOWEVENT) {
-            stdio.writeln("WINDOW: ", getEnumMemberName(event.window.event));
-        }
-        if(event.type == SDL_QUIT || (
-            event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE
-        )) {
-            engine.status = CapsuleEngine.Status.Terminated;
-            assert(false, "Terminated!!!");
-        }
-    }
 }
 
 struct CapsuleSDLPixelGraphicsResolution {
@@ -153,10 +110,24 @@ struct CapsuleSDLPixelGraphicsResolution {
 }
 
 enum CapsuleSDLPixelGraphicsMode: uint {
-    Indexed2Bit = 0x01,
-    Indexed4Bit = 0x02,
-    Indexed8Bit = 0x03,
+    Indexed1Bit = 0x01,
+    Indexed2Bit = 0x02,
+    Indexed4Bit = 0x03,
+    Indexed8Bit = 0x04,
     Truecolor24Bit = 0x80,
+}
+
+uint capsuleSDLPixelGraphicsModeBitsPerPixel(
+    in CapsuleSDLPixelGraphicsMode mode
+) nothrow pure @safe @nogc {
+    alias Mode = CapsuleSDLPixelGraphicsMode;
+    final switch(mode) {
+        case Mode.Indexed1Bit: return 1;
+        case Mode.Indexed2Bit: return 2;
+        case Mode.Indexed4Bit: return 4;
+        case Mode.Indexed8Bit: return 8;
+        case Mode.Truecolor24Bit: return 32;
+    }
 }
 
 struct CapsuleSDLPixelGraphicsInitSettings {
@@ -166,10 +137,9 @@ struct CapsuleSDLPixelGraphicsInitSettings {
     int resolutionY;
     int pitch;
     Mode mode;
-    int palettePtr;
     int pixelsPtr;
-    ushort frameLimit;
-    short[3] unused;
+    int palettePtr;
+    uint[2] unused;
     
     bool ok() const {
         return (
@@ -179,10 +149,8 @@ struct CapsuleSDLPixelGraphicsInitSettings {
         );
     }
     
-    /// Return the number of microseconds that each frame is expected
-    /// to take at minimum, given the frameLimit FPS value.
-    uint frameLimitMicroseconds() const {
-        return this.frameLimit == 0 ? 0 : 1_000_000 / this.frameLimit;
+    int pixelsLength() const {
+        return this.resolutionY * this.pitch;
     }
 }
 
@@ -193,60 +161,60 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
 ) {
     assert(data);
     // TODO: Return status flag instead of always producing an exception
-    // TODO: Should pixel and palette ptrs be absolute? (I think no..?)
-    // TODO: Should ptrs be relative to the beginning of the struct?
     // TODO: SDL_Texture and SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest"); 
     alias Mode = CapsuleSDLPixelGraphicsMode;
     alias PixelFormat = CapsuleSDLWindow.PixelFormat;
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
     auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
+    // Fail if the module was already initialized
     if(pxgfx.window.ok) {
         pxgfx.addErrorMessage("pxgfx.init: Already initialized.");
         return CapsuleExtensionCallResult.Error;
     }
-    if(!CapsuleSDL.loaded) {
-        CapsuleSDL.load();
-    }
-    if(!CapsuleSDL.initialized) {
-        CapsuleSDL.initialize(
-            cast(uint) CapsuleSDL.System.Video |
-            cast(uint) CapsuleSDL.System.Events
-        );
-        //CapsuleSDLEventQueue.addWatch(
-        //    &CapsuleSDLPixelGraphicsModule.onEvent, engine
-        //);
-    }
+    // Load init information from program memory
     const lResX = engine.mem.loadWord(arg);
     const lResY = engine.mem.loadWord(arg + 4);
     const lPitch = engine.mem.loadWord(arg + 8);
     const lMode = engine.mem.loadWord(arg + 12);
-    const lPalettePtr = engine.mem.loadWord(arg + 16);
-    const lPixelsPtr = engine.mem.loadWord(arg + 20);
-    const lFrameLimit = engine.mem.loadHalfWordUnsigned(arg + 24);
-    const lUnusedHalf = engine.mem.loadHalfWordSigned(arg + 26);
-    const lUnusedWord = engine.mem.loadWord(arg + 28);
+    const lPixelsPtr = engine.mem.loadWord(arg + 16);
+    const lPalettePtr = engine.mem.loadWord(arg + 20);
+    const lUnused0 = engine.mem.loadWord(arg + 24);
+    const lUnused1 = engine.mem.loadWord(arg + 28);
     if(
         !lResX.ok || !lResY.ok || !lPitch.ok || !lMode.ok ||
-        !lPalettePtr.ok || !lPixelsPtr.ok || !lFrameLimit.ok ||
-        !lUnusedHalf.ok || !lUnusedWord.ok
+        !lPixelsPtr.ok || !lPalettePtr.ok || !lUnused0.ok || !lUnused1.ok
     ) {
         pxgfx.addErrorMessage("pxgfx.init: Invalid settings pointer.");
         return CapsuleExtensionCallResult.Error;
     }
+    // Put together the pxgfx settings struct
     Settings settings = {
         resolutionX: lResX.value,
         resolutionY: lResY.value,
         pitch: lPitch.value,
         mode: cast(Mode) lMode.value,
-        palettePtr: lPalettePtr.value + (arg + 16),
-        pixelsPtr: lPixelsPtr.value + (arg + 20),
-        frameLimit: cast(ushort) lFrameLimit.value,
+        pixelsPtr: lPixelsPtr.value + arg,
+        palettePtr: lPalettePtr.value + arg,
+        //frameLimit: cast(ushort) lFrameLimit.value,
+        unused: [lUnused0.value, lUnused1.value],
     };
     pxgfx.settings = settings;
     if(!settings.ok) {
         pxgfx.addErrorMessage("pxgfx.init: Invalid settings data.");
         return CapsuleExtensionCallResult.Error;
     }
+    if(!pxgfxCheckProgramMemory(
+        engine.mem.length, pxgfx.settings.pixelsPtr, pxgfx.settings.pixelsLength
+    )) {
+        const ptrHex = writeHexDigits(pxgfx.settings.pixelsPtr);
+        pxgfx.addErrorMessage(
+            "pxgfx.init: Invalid pixel data pointer 0x" ~ ptrHex ~ "."
+        );
+        return CapsuleExtensionCallResult.Error;
+    }
+    // Make sure the SDL dependency is loaded and initialized
+    CapsuleSDL.ensureInitialized();
+    // Create application window via SDL
     pxgfx.window = CapsuleSDLWindow(
         pxgfx.windowTitle,
         settings.resolutionX,
@@ -257,201 +225,179 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         pxgfx.addErrorMessage("pxgfx.init: Failed to create window.");
         return CapsuleExtensionCallResult.Error;
     }
-    else if(!CapsuleSDLPixelGraphicsModule.isSupportedWindowPixelFormat(
-        cast(PixelFormat) pxgfx.window.surface.format.format
-    )) {
-        const format = pxgfx.window.surface.format.format;
-        const formatName = getEnumMemberName(cast(PixelFormat) format);
-        pxgfx.addErrorMessage(
-            "pxgfx.init: Unsupported window pixel format " ~
-            toArray(getHexString(format)) ~
-            (formatName.length ? " " ~ formatName : "")
-        );
-        return CapsuleExtensionCallResult.Error;
-    }
-    else {
-        return CapsuleExtensionCallResult.Ok(0);
-    }
+    // Initialize the window's graphics data to solid black
+    pxgfx.window.fillColor(0, 0, 0);
+    pxgfx.window.flipSurface();
+    // All done!
+    return CapsuleExtensionCallResult.Ok(0);
 }
 
-void pxgfxFlipSurfaceImpl(alias getColor, alias setColor)(
-    in int rows, in int width,
-    in int programPitch, in int surfacePitch,
-    const(ubyte)* programPtr, void* surfacePtr,
+// Helper function to make sure that the pixel data address and size
+// are entirely within the bounds of valid program memory.
+static bool pxgfxCheckProgramMemory(
+    in uint memoryLength, in int address, in int length
 ) {
-    for(int i = 0; i < rows; i++) {
-        const(ubyte*) nextProgramRow = programPtr + programPitch;
-        void* nextSurfaceRow = surfacePtr + surfacePitch;
-        for(int j = 0; j < width; j++) {
-            const uint rgb = getColor();
-            setColor(rgb);
-        }
-        programPtr = nextProgramRow;
-        surfacePtr = nextSurfaceRow;
-    }
+    return (
+        address >= 0 && length >= 0 &&
+        address <= int.max && length <= int.max &&
+        (int.max - address) >= length &&
+        (address + length) <= memoryLength
+    );
 }
 
-size_t endi = 0;
-import capsule.io.stdio;
-import capsule.string.writeint;
+// Used by the pxgfx.flip extension implementation.
+// Uses template parameters and conditional compilation to make the
+// hot inner loop as optimized as possible for the most common cases,
+// and reasonably well optimized for all others.
+private void pxgfxFlip(
+    CapsuleSDLPixelGraphicsMode ProgramGraphicsMode,
+    ubyte SurfaceBytesPerPixel, bool AnyLoss
+)(
+    in int rows, in int width,
+    in SDL_PixelFormat* surfacePixelFormat,
+    ubyte* surfacePixelsPtr, in int surfacePixelsPitch,
+    const(ubyte)* programPixelsPtr, in int programPixelsPitch,
+) {
+    alias Mode = CapsuleSDLPixelGraphicsMode;
+    alias format = surfacePixelFormat;
+    // Outer loop
+    for(int i = 0; i < rows; i++) {
+        // Initialize extra variable used to optimize 3-byte pixel formats
+        static if(SurfaceBytesPerPixel == 3) int j3 = 0;
+        // Hot inner loop
+        for(int j = 0; j < width; j++) {
+            // Get program's RGB for this pixel
+            static if(ProgramGraphicsMode is Mode.Truecolor24Bit) {
+                const uint src = (cast(const(uint)*) programPixelsPtr)[j];
+            }
+            else {
+                static assert(false, "Unsupported pxgfx display mode.");
+            }
+            // For truecolor pixel formats, transform the program RGB value
+            // into a surface RGB value
+            static if(SurfaceBytesPerPixel > 1) {
+                // Common pixel formats will not need a loss shift operation
+                // so cut out those shifts entirely if possible
+                static if(!AnyLoss) const uint dst = cast(uint) (format.Amask | (
+                    (((src >> 16) & 0xff) << format.Rshift) |
+                    (((src >> 8) & 0xff) << format.Gshift) |
+                    (((src) & 0xff) << format.Bshift)
+                ));
+                // Otherwise just do the shifts
+                static if(AnyLoss) const uint dst = cast(uint) (format.Amask | (
+                    ((((src >> 16) & 0xff) >> format.Rloss) << format.Rshift) |
+                    ((((src >> 8) & 0xff) >> format.Gloss) << format.Gshift) |
+                    ((((src) & 0xff) >> format.Bloss) << format.Bshift)
+                ));
+            }
+            // Write truecolor value for different byte lengths
+            static if(SurfaceBytesPerPixel == 4) {
+                (cast(uint*) surfacePixelsPtr)[j] = dst;
+            }
+            else static if(SurfaceBytesPerPixel == 3) {
+                surfacePixelsPtr[j3 + 0] = cast(ubyte) dst;
+                surfacePixelsPtr[j3 + 1] = cast(ubyte) (dst >> 8);
+                surfacePixelsPtr[j3 + 2] = cast(ubyte) (dst >> 16);
+                j3 += 3;
+            }
+            else static if(SurfaceBytesPerPixel == 2) {
+                (cast(ushort*) surfacePixelsPtr)[j] = cast(ushort) dst;
+            }
+            // Find and write the index of the nearest palette match
+            // for indexed pixel formats. Uses a perceptual color distance
+            // rather than absolute color distance - though if anyone is
+            // actually running Capsule on a display with indexed colors,
+            // there should probably be an option to choose from some
+            // color distance calculations.
+            // https://wiki.libsdl.org/SDL_Palette
+            else static if(SurfaceBytesPerPixel == 1) {
+                // Find the nearest palette color
+                uint nearestIndex = 0;
+                uint nearestDistance = uint.max;
+                const int sr = cast(int) ((src >> 16) & 0xff);
+                const int sg = cast(int) ((src >> 8) & 0xff);
+                const int sb = cast(int) ((src) & 0xff);
+                for(uint x = 0; x < format.palette.ncolors; x++) {
+                    const color = format.palette.colors[x];
+                    const dr = (color.r >= sr ? color.r - sr : sr - color.r);
+                    const dg = (color.g >= sg ? color.g - sg : sg - color.g);
+                    const db = (color.b >= sb ? color.b - sb : sb - color.b);
+                    // 7G + 2R + 1B is close to typical luma coefficients
+                    // https://en.wikipedia.org/wiki/Luma_(video)
+                    const distance = (dg << 3) - dg + (dr << 1) + db;
+                    if(distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestIndex = x;
+                    }
+                }
+                // Assign it to this surface pixel
+                surfacePixelsPtr[j] = cast(ubyte) nearestIndex;
+            }
+            // Shouldn't happen; SDL docs say BytesPerPixel is
+            // either 1, 2, 3, or 4.
+            // https://wiki.libsdl.org/SDL_PixelFormat
+            else {
+                static assert(false, "Invalid number of bytes per pixel.");
+            }
+        }
+        // Move pointers to the next row of pixels
+        programPixelsPtr += programPixelsPitch;
+        surfacePixelsPtr += surfacePixelsPitch;
+    }
+}
 
 CapsuleExtensionCallResult ecall_pxgfx_flip(
     void* data, CapsuleEngine* engine, in uint arg
 ) {
-    if(endi++ > 60) {
-        engine.status = CapsuleEngine.Status.Terminated;
-        //assert(false);
-    }
     assert(data);
     alias Mode = CapsuleSDLPixelGraphicsMode;
     alias PixelFormat = CapsuleSDLWindow.PixelFormat;
-    bool checkProgramMemory(in int address, in int length) {
-        return (
-            address >= 0 && length >= 0 &&
-            address <= int.max && length <= int.max &&
-            (int.max - address) >= length &&
-            (address + length) < engine.mem.length
-        );
-    }
+    // Get module context object
     auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
     if(!pxgfx.ok) {
         pxgfx.addErrorMessage("pxgfx.flip: Module not initialized.");
         return CapsuleExtensionCallResult.Error;
     }
-    const surfaceFormat = pxgfx.window.surface.format.format;
-    const width = pxgfx.window.surface.w;
-    const rows = pxgfx.window.surface.h;
+    // Define a lot of constants
+    const format = pxgfx.window.surface.format;
+    const BytesPerPixel = format.BytesPerPixel;
+    const width = pxgfx.settings.resolutionX;
+    const rows = pxgfx.settings.resolutionY;
+    const surfacePixelsPitch = pxgfx.window.surface.pitch;
     const mode = pxgfx.settings.mode;
-    uint length;
-    void* surfacePtr = pxgfx.window.surface.pixels;
-    if(pxgfx.settings.mode is Mode.Truecolor24Bit) {
-        length = cast(uint) rows * pxgfx.settings.pitch;
-    }
-    else {
-        assert(false, "TODO");
-    }
-    if(!checkProgramMemory(pxgfx.settings.pixelsPtr, length)) {
+    const anyLoss = (format.Rloss || format.Gloss || format.Bloss);
+    // Make sure the expected pixel data span is all in valid program memory
+    if(!pxgfxCheckProgramMemory(
+        engine.mem.length, pxgfx.settings.pixelsPtr, pxgfx.settings.pixelsLength
+    )) {
         pxgfx.addErrorMessage("pxgfx.flip: Invalid pixel data pointer.");
         return CapsuleExtensionCallResult.Error;
     }
-    const(ubyte)* programPtr = (
+    // Actually blit the program's pixel data buffer to the window's surface
+    pxgfx.window.lockSurface();
+    ubyte* surfacePixelsPtr = cast(ubyte*) pxgfx.window.surface.pixels;
+    const(ubyte)* programPixelsPtr = cast(const(ubyte)*) (
         engine.mem.data + pxgfx.settings.pixelsPtr
     );
-    pxgfx.window.lockSurface();
-    if(mode is Mode.Truecolor24Bit && (
-        surfaceFormat == PixelFormat.RGB888 ||
-        surfaceFormat == PixelFormat.RGBA8888
-    )) {
-        for(int i = 0; i < rows; i++) {
-            memcpy(surfacePtr, programPtr, 4 * width);
-            surfacePtr += pxgfx.window.surface.pitch;
-            programPtr += pxgfx.settings.pitch;
+    alias FlipModes = Aliases!(Mode.Truecolor24Bit);
+    foreach(FlipMode; FlipModes) {
+        foreach(FlipBPP; Aliases!(1, 2, 3, 4)) {
+            foreach(FlipAnyLoss; Aliases!(false, true)) {
+                if(mode is FlipMode &&
+                    anyLoss == FlipAnyLoss && BytesPerPixel == FlipBPP
+                ) {
+                    pxgfxFlip!(FlipMode, FlipBPP, FlipAnyLoss)(
+                        rows, width, format,
+                        surfacePixelsPtr, surfacePixelsPitch,
+                        programPixelsPtr, pxgfx.settings.pitch
+                    );
+                }
+            }
         }
-    }
-    else if(surfaceFormat == PixelFormat.RGB24 && mode is Mode.Truecolor24Bit) {
-        pxgfxFlipSurfaceImpl!(() {
-            const uint rgb = *(cast(const(uint)*) programPtr);
-            programPtr += 4;
-            return rgb;
-        },
-        (in uint rgb) {
-            *(cast(ushort*) surfacePtr) = cast(ushort) rgb;
-            *(cast(ubyte*) (surfacePtr + 2)) = cast(ubyte) (rgb >> 16);
-            surfacePtr += 3;
-        }
-            //(const(ubyte)** programPtr) {
-            //    const uint rgba = *(cast(const(uint)*) (*programPtr));
-            //    *programPtr += 4;
-            //    return rgba;
-            //},
-            //(void** surfacePtr, in uint rgba) {
-            //    *(cast(ushort*) (*surfacePtr)) = cast(ushort) rgba;
-            //    *(cast(ubyte*) (*(surfacePtr + 2))) = cast(ubyte) (rgba >> 16);
-            //    *surfacePtr += 3;
-            //}
-        )(
-            rows, width, pxgfx.settings.pitch, pxgfx.window.surface.pitch,
-            programPtr, surfacePtr,
-        );
-        
-        //for(int i = 0; i < rows; i++) {
-        //    for(int j = 0, j3 = 0; j < width; j++) {
-        //        const rgba = *(cast(const(uint)*) &programPtr[j << 2]);
-        //        *(cast(ushort*) &surfacePtr[j3]) = cast(ushort) rgba;
-        //        *(cast(ubyte*) &surfacePtr[2 + j3]) = cast(ubyte) (rgba >> 16);
-        //        j3 += 3;
-        //    }
-        //    programPtr += pxgfx.settings.pitch;
-        //    surfacePtr += pxgfx.window.surface.pitch;
-        //}
-    }
-    else if(surfaceFormat == PixelFormat.ARGB8888 && mode is Mode.Truecolor24Bit) {
-        pxgfxFlipSurfaceImpl!(() {
-            const uint rgb = *(cast(const(uint)*) programPtr);
-            programPtr += 4;
-            return rgb;
-        },
-        (in uint rgb) {
-            *(cast(ubyte*) (surfacePtr + 1)) = cast(ubyte) rgb;
-            *(cast(ushort*) (surfacePtr + 2)) = cast(ushort) (rgb >> 8);
-            surfacePtr += 4;
-        })(
-            rows, width, pxgfx.settings.pitch, pxgfx.window.surface.pitch,
-            programPtr, surfacePtr,
-        );
-    }
-    else {
-        // Shouldn't happen - Should be caught in advance by pxgfx.init
-        assert(false, "Unsupported pixel format.");
     }
     pxgfx.window.unlockSurface();
+    // Render the updated surface
     pxgfx.window.flipSurface();
-    if(pxgfx.settings.frameLimit > 0) {
-        // Expected microseconds per frame
-        const limitMicroseconds = pxgfx.settings.frameLimitMicroseconds;
-        // Microseconds since the last pxgfx.flip ecall
-        const deltaMicroseconds = (
-            (monotonicns() - pxgfx.lastFlipNanoseconds) / 1_000
-        );
-        if(deltaMicroseconds < limitMicroseconds) {
-            const waitMicroseconds = limitMicroseconds - deltaMicroseconds;
-            const waitFraction = waitMicroseconds % 1_000;
-            uint waitMilliseconds = cast(uint) (waitMicroseconds / 1_000);
-            if(waitFraction >= 875) {
-                waitMilliseconds += (pxgfx.ticks & 7 ? 1 : 0);
-            }
-            if(waitFraction >= 750) {
-                waitMilliseconds += (pxgfx.ticks & 3 ? 1 : 0);
-            }
-            if(waitFraction >= 600) {
-                // 60 fps -> 16.666 ms/f
-                // 24 fps -> 41.666 ms/f
-                waitMilliseconds += (pxgfx.ticks % 3 > 0 ? 1 : 0);
-            }
-            else if(waitFraction >= 500) {
-                waitMilliseconds += (pxgfx.ticks & 1 ? 1 : 0);
-            }
-            else if(waitFraction >= 300) {
-                // 120 fps -> 8.333 ms/f
-                // 30 fps -> 33.333 ms/f
-                waitMilliseconds += (pxgfx.ticks % 3 > 1 ? 1 : 0);
-            }
-            else if(waitFraction >= 250) {
-                waitMilliseconds += ((pxgfx.ticks & 3) == 3 ? 1 : 0);
-            }
-            else if(waitFraction >= 125) {
-                waitMilliseconds += ((pxgfx.ticks & 7) == 7 ? 1 : 0);
-            }
-            //stdio.writeln(writeInt(endi), " UNDER ms budget: ", writeInt(waitMilliseconds));
-            SDL_Delay(waitMilliseconds);
-        }
-        //else {
-        //    stdio.writeln(writeInt(endi), " OVER ms budget: ", writeInt(
-        //        cast(uint) ((limitMicroseconds - deltaMicroseconds) / 1_000)
-        //    ), " (delta microseconds: ", writeInt(deltaMicroseconds), ")");
-        //}
-    }
-    pxgfx.ticks++;
-    pxgfx.lastFlipNanoseconds = monotonicns();
+    // All done
     return CapsuleExtensionCallResult.Ok(0);
 }

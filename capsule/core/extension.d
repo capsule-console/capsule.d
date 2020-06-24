@@ -19,8 +19,10 @@ enum CapsuleExtension: uint {
     meta_exit_ok = 0x0001,
     meta_exit_error = 0x0002,
     meta_check_ext = 0x0003,
-    meta_host_uuid = 0x0004,
-    meta_host_name = 0x0005,
+    meta_defer = 0x0004,
+    meta_error = 0x0005,
+    meta_host_uuid = 0x0006,
+    meta_host_name = 0x0007,
     // Standard Input and Output Module (00 00 01 xx)
     stdio_init = 0x0100,
     stdio_quit = 0x0101,
@@ -28,6 +30,11 @@ enum CapsuleExtension: uint {
     stdio_get_byte = 0x0103,
     stdio_flush = 0x0104,
     stdio_eof = 0x0105,
+    // Time Module (00 00 02 00)
+    time_init = 0x0200,
+    time_quit = 0x0201,
+    time_sleep_ms = 0x0202,
+    time_monotonic_ms = 0x0203,
     // 2D Pixel Graphics Module (30 00 00 xx)
     pxgfx_init = 0x30000000,
     pxgfx_quit = 0x30000001,

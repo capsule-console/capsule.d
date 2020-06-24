@@ -83,7 +83,7 @@ enum CapsuleSDLWindowEventID: ubyte {
     HitTest = SDL_WINDOWEVENT_HIT_TEST,
 }
 
-struct CapsuleSDLEventQueue {
+shared struct CapsuleSDLEventQueue {
     alias Event = SDL_Event;
     alias EventType = CapsuleSDLEventType;
     
@@ -125,7 +125,7 @@ struct CapsuleSDLEventQueue {
     static SDL_Event nextEvent() {
         SDL_Event event;
         const pollStatus = SDL_PollEvent(&event);
-        assert(pollStatus != 1);
+        assert(pollStatus == 1);
         return event;
     }
     
@@ -150,7 +150,7 @@ struct CapsuleSDLEventQueue {
 
 /// Provides a range interface for enumerating events in the
 /// SDL event queue.
-struct CapsuleSDLEventQueueRange {
+shared struct CapsuleSDLEventQueueRange {
     /// https://wiki.libsdl.org/SDL_PollEvent
     bool empty() const {
         return SDL_PollEvent(null) != 1;

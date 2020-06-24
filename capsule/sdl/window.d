@@ -96,6 +96,11 @@ struct CapsuleSDLWindow {
         }
     }
     
+    void fillColor(in ubyte red, in ubyte green, in ubyte blue) {
+        const rgb = SDL_MapRGB(this.surface.format, red, green, blue);
+        SDL_FillRect(this.surface, null, rgb);
+    }
+    
     PixelFormat getPixelFormat() {
         assert(this.handle);
         return cast(PixelFormat) SDL_GetWindowPixelFormat(this.handle);

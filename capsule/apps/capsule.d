@@ -10,8 +10,6 @@ module capsule.apps.capsule;
 
 private:
 
-import core.thread.osthread : Thread;
-
 import capsule.parse.config : CapsuleConfigAttribute, CapsuleConfigStatus;
 import capsule.parse.config : loadCapsuleConfig, capsuleConfigStatusToString;
 import capsule.parse.config : getCapsuleConfigUsageString;
@@ -35,12 +33,14 @@ import capsule.extension.list : CapsuleExtensionList;
 
 import capsule.extension.meta : CapsuleMetaModule;
 import capsule.extension.stdio : CapsuleStandardIOModule;
+import capsule.extension.time : CapsuleTimeModule;
 
 import capsule.apps.lib.runprogram : runProgram, debugProgram;
 import capsule.apps.lib.status : CapsuleApplicationStatus;
 
-version(CapsuleSDL2Graphics) {
-    import derelict.sdl2.sdl : SDL_Event, SDL_PollEvent;
+version(CapsuleLibrarySDL2) {
+    import derelict.sdl2.sdl; // : SDL_Event, SDL_PollEvent;
+    import capsule.sdl.sdl : CapsuleSDL;
     import capsule.sdl.events : CapsuleSDLEventQueue;
     import capsule.extension.pxgfx : CapsuleSDLPixelGraphicsModule;
 }
@@ -141,7 +141,7 @@ struct CapsuleEngineExtensionHandler {
     alias Config = CapsuleEngineConfig;
     alias ExtensionList = CapsuleExtensionList;
     
-    version(CapsuleSDL2Graphics) {
+    version(CapsuleLibrarySDL2) {
         alias Event = CapsuleSDLEventQueue.Event;
         alias EventQueue = CapsuleSDLEventQueue;
         alias PixelGraphicsModule = CapsuleSDLPixelGraphicsModule;
@@ -154,8 +154,10 @@ struct CapsuleEngineExtensionHandler {
     CapsuleMetaModule metaModule;
     /// Context for the "stdio" extension module
     CapsuleStandardIOModule stdioModule;
+    /// Context for the "time" extension module
+    CapsuleTimeModule timeModule;
     /// Context for the "pxgfx" extension module
-    version(CapsuleSDL2Graphics) {
+    version(CapsuleLibrarySDL2) {
         PixelGraphicsModule pxgfxModule;
     }
     
@@ -184,7 +186,14 @@ struct CapsuleEngineExtensionHandler {
     void initialize(in Config config) {
         // meta
         this.metaModule = CapsuleMetaModule(&onExtensionError, &this.extList);
-        this.extList.addExtensionList(metaModule.getExtensionList());
+        this.metaModule.initializeSignalHandler();
+        this.extList.addExtensionList(this.metaModule.getExtensionList());
+        version(CapsuleLibrarySDL2) {
+            CapsuleSDL.addRequiredSubSystems(this.metaModule.RequiredSDLSubSystems);
+            this.metaModule.initializeSDLEventDispatch(
+                &(typeof(this).dispatchSDLEvent), &this
+            );
+        }
         // stdio
         this.stdioModule = CapsuleStandardIOModule(&onExtensionError);
         this.stdioModule.setOutputPath(config.stdoutPath);
@@ -194,11 +203,15 @@ struct CapsuleEngineExtensionHandler {
         else {
             this.stdioModule.setInputPath(config.stdinPath);
         }
-        this.extList.addExtensionList(stdioModule.getExtensionList());
+        this.extList.addExtensionList(this.stdioModule.getExtensionList());
+        // time
+        this.timeModule = CapsuleTimeModule(&onExtensionError);
+        this.extList.addExtensionList(this.timeModule.getExtensionList());
         // pxgfx
-        version(CapsuleSDL2Graphics) {
+        version(CapsuleLibrarySDL2) {
             this.pxgfxModule = PixelGraphicsModule(&onExtensionError);
-            this.extList.addExtensionList(pxgfxModule.getExtensionList());
+            this.extList.addExtensionList(this.pxgfxModule.getExtensionList());
+            CapsuleSDL.addRequiredSubSystems(this.pxgfxModule.RequiredSDLSubSystems);
         }
     }
     
@@ -208,16 +221,26 @@ struct CapsuleEngineExtensionHandler {
     void conclude() {
         this.metaModule.conclude();
         this.stdioModule.conclude();
-        version(CapsuleSDL2Graphics) {
+        this.timeModule.conclude();
+        version(CapsuleLibrarySDL2) {
             this.pxgfxModule.conclude();
         }
     }
     
-    version(CapsuleSDL2Graphics) void dispatchSDLEvent(
-        CapsuleEngine* engine, in Event event
+    version(CapsuleLibrarySDL2) static void dispatchSDLEvent(
+        void* data, CapsuleEngine* engine, in Event event
     ) {
+        assert(data);
         assert(engine);
-        this.pxgfxModule.handleSDLEvent(engine, event);
+        auto handler = cast(typeof(this)*) data;
+        if(event.type == SDL_QUIT || (
+            event.type == SDL_WINDOWEVENT &&
+            event.window.event == SDL_WINDOWEVENT_CLOSE
+        )) {
+            engine.status = CapsuleEngine.Status.Terminated;
+        }
+        // TODO
+        //handler.pxgfxModule.handleSDLEvent(engine, event);
     }
 }
 
@@ -309,34 +332,9 @@ CapsuleApplicationStatus execute(string[] args) {
     }
     // Run the program!
     verboseln("Executing program.");
-    void runProgramThread() {
-        assert(engine.ok);
-        verboseln("Executing program in separate thread.");
-        if(config.debugMode) debugProgram(decode.program, &engine);
-        else runProgram(&engine);
-    }
-    auto engineThread = new Thread(&runProgramThread);
-    engineThread.start();
-    version(CapsuleSDL2Graphics) {
-        alias EventQueue = CapsuleSDLEventQueue;
-        SDL_Event event;
-        while(engine.status is CapsuleEngine.Status.Running) {
-            // TODO: Figure out why this is broken
-            //if(SDL_PollEvent(&event)) {
-                //extHandler.dispatchSDLEvent(&engine, event);
-            //}
-            //const waitStatus = EventQueue.waitEvent(1_000);
-            //if(!waitStatus) {
-            //    break;
-            //}
-            //if(engine.status !is CapsuleEngine.Status.Running) {
-            //    break;
-            //}
-            //extHandler.dispatchSDLEvent(&engine, EventQueue.nextEvent());
-        }
-    }
-    engineThread.join();
-    // Wrap it up
+    if(config.debugMode) debugProgram(decode.program, &engine);
+    else runProgram(&engine);
+    // All done, now wrap it up
     if(verbose) {
         const status = getEnumMemberName(engine.status);
         writeln("Execution complete with status ", status);

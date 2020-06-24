@@ -72,7 +72,7 @@
                 "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeLinkerMain",
-                "CapsuleSDL2Graphics"
+                "CapsuleLibrarySDL2"
             ],
             "dependencies": {
                 "derelict-sdl2": "3.0.0-beta.8"
