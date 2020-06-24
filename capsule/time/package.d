@@ -9,5 +9,6 @@ module capsule.time;
 public:
 
 import capsule.time.monotonic;
+import capsule.time.sleep;
 import capsule.time.timer;
 import capsule.time.unix;
