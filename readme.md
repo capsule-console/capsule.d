@@ -74,6 +74,7 @@ With dub installed, run one of the following commands in a CLI with the reposito
 - Capsule virtual machine **capsule** (CLI only): `dub --config=capsule-cli --build=release`
 - Capsule assembler **casm**: `dub --config=casm --build=release`
 - Capsule linker **clink**: `dub --config=clink --build=release`
+- Capsule automatic builder **capable**: `dub --config=capable --build=release`
 - Capsule implementation checker **capcheck**: `dub --config=capcheck --build=release`
 
 ## Contributing
