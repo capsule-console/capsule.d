@@ -6,6 +6,11 @@ import capsule.bits.bitflags : BitFlags;
 
 public:
 
+struct CapsuleSDLSize {
+    int width;
+    int height;
+}
+
 /// Enumeration of SDL2 pixel formats.
 /// Corresponds to SDL_PixelFormatEnum.
 /// https://wiki.libsdl.org/SDL_PixelFormatEnum
@@ -53,4 +58,24 @@ static enum CapsuleSDLVSync: byte {
     Enabled = 1,
     Disabled = 0,
     LateSwapTearing = -1
+}
+
+/// Enumeration of recognized blend modes.
+/// https://wiki.libsdl.org/SDL_BlendMode
+enum CapsuleSDLBlendMode: SDL_BlendMode {
+    /// No blending
+    /// dstRGBA = srcRGBA
+    None = SDL_BLENDMODE_NONE,
+    /// Alpha blending
+    /// dstRGB = (srcRGB * srcA) + (dstRGB * (1-srcA))
+    /// dstA = srcA + (dstA * (1-srcA))
+    Blend = SDL_BLENDMODE_BLEND,
+    /// Additive blending
+    /// dstRGB = (srcRGB * srcA) + dstRGB
+    /// dstA = dstA
+    Add = SDL_BLENDMODE_ADD,
+    /// Color modulate
+    /// dstRGB = srcRGB * dstRGB
+    /// dstA = dstA
+    Modulate = SDL_BLENDMODE_MOD,
 }

@@ -29,6 +29,7 @@ import capsule.core.programstring : capsuleProgramToString;
 import capsule.core.types : CapsuleExceptionCode;
 import capsule.core.typestrings : getCapsuleExceptionDescription;
 
+import capsule.extension.common : CapsuleModuleMessageSeverity;
 import capsule.extension.list : CapsuleExtensionList;
 
 import capsule.extension.meta : CapsuleMetaModule;
@@ -140,6 +141,7 @@ struct CapsuleEngineExtensionHandler {
     alias CallResult = CapsuleExtensionCallResult;
     alias Config = CapsuleEngineConfig;
     alias ExtensionList = CapsuleExtensionList;
+    alias MessageSeverity = CapsuleModuleMessageSeverity;
     
     version(CapsuleLibrarySDL2) {
         alias Event = CapsuleSDLEventQueue.Event;
@@ -177,15 +179,28 @@ struct CapsuleEngineExtensionHandler {
     /// context objects, allowing the user to receive more specific
     /// information about extension failures than the mere presence
     /// of an extension error exception code.
-    static void onExtensionError(in char[] text) {
-        writeln("Extension error: ", text);
+    static void onExtensionMessage(
+        in MessageSeverity severity, in char[] text
+    ) {
+        if(severity is MessageSeverity.Debug && verbose) {
+            writeln("Extension debug ", text);
+        }
+        else if(severity is MessageSeverity.Info) {
+            writeln("Extension info ", text);
+        }
+        else if(severity is MessageSeverity.Warning) {
+            writeln("Extension warning ", text);
+        }
+        else if(severity is MessageSeverity.Error) {
+            writeln("Extension error ", text);
+        }
     }
     
     /// Initializes all the extension modules supported by this
     /// Capsule virtual machine implementation.
     void initialize(in Config config) {
         // meta
-        this.metaModule = CapsuleMetaModule(&onExtensionError, &this.extList);
+        this.metaModule = CapsuleMetaModule(&onExtensionMessage, &this.extList);
         this.metaModule.initializeSignalHandler();
         this.extList.addExtensionList(this.metaModule.getExtensionList());
         version(CapsuleLibrarySDL2) {
@@ -195,7 +210,7 @@ struct CapsuleEngineExtensionHandler {
             );
         }
         // stdio
-        this.stdioModule = CapsuleStandardIOModule(&onExtensionError);
+        this.stdioModule = CapsuleStandardIOModule(&onExtensionMessage);
         this.stdioModule.setOutputPath(config.stdoutPath);
         if(config.stdin) {
             this.stdioModule.setInputContent(config.stdin);
@@ -205,11 +220,11 @@ struct CapsuleEngineExtensionHandler {
         }
         this.extList.addExtensionList(this.stdioModule.getExtensionList());
         // time
-        this.timeModule = CapsuleTimeModule(&onExtensionError);
+        this.timeModule = CapsuleTimeModule(&onExtensionMessage);
         this.extList.addExtensionList(this.timeModule.getExtensionList());
         // pxgfx
         version(CapsuleLibrarySDL2) {
-            this.pxgfxModule = PixelGraphicsModule(&onExtensionError);
+            this.pxgfxModule = PixelGraphicsModule(&onExtensionMessage);
             this.extList.addExtensionList(this.pxgfxModule.getExtensionList());
             CapsuleSDL.addRequiredSubSystems(this.pxgfxModule.RequiredSDLSubSystems);
         }

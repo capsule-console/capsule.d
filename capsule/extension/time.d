@@ -22,6 +22,8 @@ public:
 struct CapsuleTimeModule {
     mixin CapsuleModuleMixin;
     
+    nothrow @safe:
+    
     alias ecall_time_init = .ecall_time_init;
     alias ecall_time_quit = .ecall_time_quit;
     alias ecall_time_sleep_ms = .ecall_time_sleep_ms;
@@ -29,8 +31,8 @@ struct CapsuleTimeModule {
     
     alias Extension = CapsuleExtension;
     
-    this(ErrorMessageCallback onErrorMessage) {
-        this.onErrorMessage = onErrorMessage;
+    this(MessageCallback onMessage) {
+        this.onMessage = onMessage;
     }
     
     void conclude() {

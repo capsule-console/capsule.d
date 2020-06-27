@@ -39,6 +39,7 @@ enum CapsuleExtension: uint {
     pxgfx_init = 0x30000000,
     pxgfx_quit = 0x30000001,
     pxgfx_check_mode = 0x30000002,
-    pxgfx_list_res = 0x30000003,
+    pxgfx_check_res = 0x30000003,
     pxgfx_flip = 0x30000004,
+    pxgfx_ask_res = 0x30000005,
 }

@@ -24,6 +24,8 @@ public:
 struct CapsuleStandardIOModule {
     mixin CapsuleModuleMixin;
     
+    nothrow @safe:
+    
     alias ecall_stdio_init = .ecall_stdio_init;
     // TODO: ecall_stdio_quit
     alias ecall_stdio_put_byte = .ecall_stdio_put_byte;
@@ -40,24 +42,24 @@ struct CapsuleStandardIOModule {
     size_t stdinIndex = 0;
     FileWriter stdoutWriter = FileWriter(null);
     
-    this(ErrorMessageCallback onErrorMessage) {
-        this.onErrorMessage = onErrorMessage;
+    this(MessageCallback onMessage) @nogc {
+        this.onMessage = onMessage;
     }
     
-    void setInputContent(in string content) {
+    void setInputContent(in string content) @nogc {
         this.stdinContent = content;
         this.stdinHasContent = true;
     }
     
-    void setInputPath(in string path) {
+    void setInputPath(in string path) @nogc {
         this.stdinPath = path;
     }
     
-    void setOutputPath(in string path) {
+    void setOutputPath(in string path) @nogc {
         this.stdoutPath = path;
     }
     
-    void conclude() {
+    void conclude() @nogc {
         if(this.stdoutWriter.isOpen) {
             this.stdoutWriter.close();
         }

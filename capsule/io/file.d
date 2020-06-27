@@ -262,6 +262,8 @@ struct FileReader {
 
 /// Utility for writing data to a file stream.
 struct FileWriter {
+    nothrow:
+    
     alias Status = FileStatus;
     
     FILE* file = null;
@@ -283,15 +285,15 @@ struct FileWriter {
         }
     }
     
-    bool ok() const {
+    bool ok() const pure nothrow @safe @nogc {
         return this.status is Status.Ok && this.file !is null;
     }
     
-    bool isOpen() const {
+    bool isOpen() const pure nothrow @safe @nogc {
         return this.file !is null;
     }
     
-    void close() @trusted {
+    void close() @trusted @nogc {
         assert(this.file);
         if(this.file !is null) {
             fclose(this.file);

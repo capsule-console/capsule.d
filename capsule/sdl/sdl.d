@@ -45,7 +45,7 @@ shared struct CapsuleSDL {
     shared static uint initializedSubSystems = 0;
     shared static uint requiredSubSystems = 0;
     
-    static void load() {
+    static void load() @trusted {
         assert(!typeof(this).loaded);
         typeof(this).loaded = true;
         // Require SDL v2.0.2 at minimum
@@ -54,11 +54,27 @@ shared struct CapsuleSDL {
         DerelictSDL2.load(SharedLibVersion(2, 0, 2));
     }
 
-    static void unload() {
+    static void unload() @trusted {
         assert(typeof(this).loaded);
         typeof(this).loaded = false;
         DerelictSDL2.unload();
     }
+    
+    static void ensureLoaded() {
+        if(!typeof(this).loaded) {
+            typeof(this).load();
+        }
+    }
+    
+    static bool ensureInitialized() {
+        typeof(this).ensureLoaded();
+        if(!typeof(this).initialized) {
+            return typeof(this).initialize();
+        }
+        return typeof(this).initialized;
+    }
+    
+    nothrow @trusted @nogc:
     
     static bool initialize(in uint systems = 0) {
         assert(typeof(this).loaded);
@@ -93,20 +109,6 @@ shared struct CapsuleSDL {
         assert(typeof(this).initialized);
         typeof(this).initialized = false;
         return SDL_Quit();
-    }
-    
-    static void ensureLoaded() {
-        if(!typeof(this).loaded) {
-            typeof(this).load();
-        }
-    }
-    
-    static bool ensureInitialized() {
-        typeof(this).ensureLoaded();
-        if(!typeof(this).initialized) {
-            return typeof(this).initialize();
-        }
-        return typeof(this).initialized;
     }
     
     static void addRequiredSubSystems(in uint systems) {

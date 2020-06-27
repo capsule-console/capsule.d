@@ -68,6 +68,10 @@ struct WriteIntRange(T) {
         this.length = writeIntToBuffer(value, this.buffer.ptr);
     }
     
+    auto getChars() const {
+        return this.buffer[0 .. this.length];
+    }
+    
     bool empty() const {
         return this.index >= this.length;
     }

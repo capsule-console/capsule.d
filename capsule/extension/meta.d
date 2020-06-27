@@ -50,7 +50,9 @@ struct CapsuleMetaModule {
         DispatchSDLEvent dispatchSDLEvent = null;
         void* dispatchSDLEventData = null;
         
-        void initializeSDLEventDispatch(DispatchSDLEvent dispatch, void* data) {
+        void initializeSDLEventDispatch(
+            DispatchSDLEvent dispatch, void* data
+        ) nothrow @safe @nogc {
             this.dispatchSDLEvent = dispatch;
             this.dispatchSDLEventData = data;
         }
@@ -65,12 +67,12 @@ struct CapsuleMetaModule {
         typeof(this).signalValue = signal;
     }
     
-    this(ErrorMessageCallback onErrorMessage, CapsuleExtensionList* extList) {
-        this.onErrorMessage = onErrorMessage;
+    this(MessageCallback onMessage, CapsuleExtensionList* extList) {
+        this.onMessage = onMessage;
         this.extList = extList;
     }
     
-    void initializeSignalHandler() const {
+    void initializeSignalHandler() nothrow @trusted @nogc const {
         signal(SIGTERM, &typeof(this).handleSignal);
     }
     

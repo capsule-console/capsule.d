@@ -1,9 +1,19 @@
+/**
+
+This module defines a type wrapping an SDL_Window handle with
+helpful methods and enumerations.
+
+*/
+
 module capsule.sdl.window;
+
+private:
 
 import derelict.sdl2.sdl;
 
 import capsule.sdl.displaymode : CapsuleSDLDisplayMode;
-import capsule.sdl.types : CapsuleSDLPixelFormat;
+import capsule.sdl.surface : CapsuleSDLSurface;
+import capsule.sdl.types : CapsuleSDLPixelFormat, CapsuleSDLSize;
 
 import capsule.bits.bitflags : BitFlags;
 import capsule.string.stringz : stringz;
@@ -62,15 +72,18 @@ static enum CapsuleSDLWindowFlag: SDL_WindowFlags {
 }
 
 struct CapsuleSDLWindow {
+    nothrow @trusted:
+    
     alias DisplayMode = CapsuleSDLDisplayMode;
     alias FlagsType = SDL_WindowFlags;
     alias Flag = CapsuleSDLWindowFlag;
     alias Flags = CapsuleSDLWindowFlags;
     alias PixelFormat = CapsuleSDLPixelFormat;
+    alias Size = CapsuleSDLSize;
+    alias Surface = CapsuleSDLSurface;
     //alias VSync = CapsuleSDLVSync; // TODO: Support this maybe?
     
     SDL_Window* handle;
-    SDL_Surface* surface;
     
     this(
         in string title, in int width, in int height, in FlagsType flags
@@ -80,53 +93,60 @@ struct CapsuleSDLWindow {
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
             width, height, flags
         );
-        if(this.handle) {
-            this.surface = SDL_GetWindowSurface(this.handle);
-        }
     }
     
-    bool ok() const {
-        return this.handle !is null && this.surface !is null;
+    SDL_Window* opCast(T: SDL_Window*)() @nogc {
+        return this.handle;
     }
     
-    void free() {
+    bool ok() pure const @nogc {
+        return this.handle !is null;
+    }
+    
+    void free() @nogc {
         if(this.handle !is null){
             SDL_DestroyWindow(this.handle);
             this.handle = null;
         }
     }
     
-    void fillColor(in ubyte red, in ubyte green, in ubyte blue) {
-        const rgb = SDL_MapRGB(this.surface.format, red, green, blue);
-        SDL_FillRect(this.surface, null, rgb);
+    Size getSize() @nogc {
+        assert(this.handle);
+        Size size;
+        SDL_GetWindowSize(this.handle, &size.width, &size.height);
+        return size;
     }
     
-    PixelFormat getPixelFormat() {
+    /// May be different from getSize on retina displays
+    /// if the window was created with high DPI enabled.
+    auto getDrawableSize() @nogc {
+        assert(this.handle);
+        Size size;
+        SDL_GL_GetDrawableSize(this.handle, &size.width, &size.height);
+        return size;
+    }
+    
+    Surface getSurface() @nogc {
+        SDL_Surface* surface = SDL_GetWindowSurface(this.handle);
+        return Surface(surface);
+    }
+    
+    PixelFormat getPixelFormat() @nogc {
         assert(this.handle);
         return cast(PixelFormat) SDL_GetWindowPixelFormat(this.handle);
     }
     
-    void flipSurface() {
+    void flipSurface() @nogc {
         assert(this.handle);
         SDL_UpdateWindowSurface(this.handle);
     }
     
-    void lockSurface() {
-        assert(this.surface);
-        SDL_LockSurface(this.surface);
-    }
-    
-    void unlockSurface() {
-        assert(this.surface);
-        SDL_UnlockSurface(this.surface);
-    }
-    
-    bool setDisplayMode(in DisplayMode mode) {
+    bool setDisplayMode(in DisplayMode mode) @nogc {
         const sdlMode = cast(SDL_DisplayMode) mode;
         return this.setDisplayMode(&sdlMode);
     }
     
-    bool setDisplayMode(in SDL_DisplayMode* mode) {
+    bool setDisplayMode(in SDL_DisplayMode* mode) @nogc {
         const status = SDL_SetWindowDisplayMode(this.handle, mode);
         return status == 0;
     }
