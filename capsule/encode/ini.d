@@ -231,6 +231,10 @@ struct IniGroup {
     /// by properties in latter files in the list.
     Ini[] iniList;
     
+    void addIni(Ini ini) {
+        this.iniList ~= ini;
+    }
+    
     /// Get the first value defined in the global section for
     /// the given key by the last file that defines a key.
     string get(in string key) const @nogc {

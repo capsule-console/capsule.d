@@ -13,11 +13,15 @@ private:
 import capsule.encode.config : CapsuleConfigAttribute, CapsuleConfigStatus;
 import capsule.encode.config : loadCapsuleConfig, capsuleConfigStatusToString;
 import capsule.encode.config : getCapsuleConfigUsageString;
+import capsule.encode.config : getBooleanValue;
 
+import capsule.algorithm.indexof : indexOf;
+import capsule.encode.ini : Ini;
 import capsule.io.file : File;
 import capsule.io.stdio : stdio;
 import capsule.meta.enums : getEnumMemberName;
 import capsule.string.hex : getHexString;
+import capsule.string.parseint : parseUnsignedInt;
 import capsule.string.writeint : writeInt;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
@@ -83,6 +87,17 @@ struct CapsuleEngineConfig {
     )
     string stdin;
     
+    @(CapsuleConfigAttribute!(string[])("settings", "s")
+        .setOptional(null)
+        .setHelpText([
+            "A list of paths to read settings files from.",
+            "Settings properties given in files later in the list",
+            "will take precedence of properties in files that were",
+            "earlier in the list.",
+        ])
+    )
+    string[] settingsPaths;
+    
     @(CapsuleConfigAttribute!bool("debug", "db")
         .setOptional(false)
         .setHelpText([
@@ -100,11 +115,21 @@ struct CapsuleEngineConfig {
     )
     bool verbose;
     
+    @(CapsuleConfigAttribute!bool("print-program")
+        .setOptional(false)
+        .setHelpText([
+            "When set, a string representation of the loaded program",
+            "will be logged to standard output before it is executed.",
+        ])
+    )
+    bool printProgram;
+    
     @(CapsuleConfigAttribute!bool("show-exit-status", "exs")
         .setOptional(false)
         .setHelpText([
             "When set, information about the final exit status of",
-            "the program will be written to stdout after completion."
+            "the program will be written to standard output after",
+            "completion."
         ])
     )
     bool showExitStatus;
@@ -230,6 +255,81 @@ struct CapsuleEngineExtensionHandler {
         }
     }
     
+    static auto parseResolutionSetting(in string text) {
+        struct Result {
+            int width;
+            int height;
+        }
+        const sep = indexOf(text, 'x');
+        if(sep < 0) {
+            return Result.init;
+        }
+        assert(sep < text.length);
+        const width = parseUnsignedInt!int(text[0 .. sep]);
+        const height = parseUnsignedInt!int(text[1 + sep .. $]);
+        if(width.ok && height.ok) {
+            return Result(width.value, height.value);
+        }
+        else {
+            return Result.init;
+        }
+    }
+    
+    void applySettings(in Ini.Group settings) {
+        version(CapsuleLibrarySDL2) {
+            this.pxgfxApplySettings(settings);
+        }
+    }
+    
+    version(CapsuleLibrarySDL2) void pxgfxApplySettings(in Ini.Group settings) {
+        PixelGraphicsModule.ScalingMode scalingMode = {
+            allowScalingUp: 0 < getBooleanValue(
+                settings.get("pxgfx", "allow-scaling-up")
+            ),
+            allowScalingDown: 0 < getBooleanValue(
+                settings.get("pxgfx", "allow-scaling-down")
+            ),
+            allowScalingFractional: 0 < getBooleanValue(
+                settings.get("pxgfx", "allow-scaling-fractional")
+            ),
+            allowScalingStreched: 0 < getBooleanValue(
+                settings.get("pxgfx", "allow-scaling-stretched")
+            ),
+        };
+        this.pxgfxModule.scalingMode = scalingMode;
+        this.pxgfxModule.scaleQuality = (
+            settings.get("pxgfx", "scale-quality") == "linear" ?
+            PixelGraphicsModule.ScaleQuality.Linear :
+            PixelGraphicsModule.ScaleQuality.Nearest
+        );
+        const windowTitle = settings.get("pxgfx", "window-title");
+        if(windowTitle.length) {
+            this.pxgfxModule.windowTitle = windowTitle;
+        }
+        const preferredResolution = typeof(this).parseResolutionSetting(
+            settings.get("pxgfx", "preferred-resolution")
+        );
+        writeln(settings.get("pxgfx", "preferred-resolution"));
+        if(preferredResolution.width > 0 && preferredResolution.height > 0) {
+            this.pxgfxModule.resolutionList ~= PixelGraphicsModule.Resolution(
+                preferredResolution.width, preferredResolution.height
+            );
+        }
+        const supportedResolutions = (
+            settings.aggregate("pxgfx", "supported-resolution")
+        );
+        foreach(supportedResolutionText; supportedResolutions) {
+            const supportedResolution = typeof(this).parseResolutionSetting(
+                supportedResolutionText
+            );
+            if(supportedResolution.width > 0 && supportedResolution.height > 0) {
+                this.pxgfxModule.resolutionList ~= PixelGraphicsModule.Resolution(
+                    supportedResolution.width, supportedResolution.height
+                );
+            }
+        }
+    }
+    
     /// Free resources or otherwise conclude all the extension
     /// modules that might have been previously initialized for this
     /// extension call handler.
@@ -300,6 +400,30 @@ CapsuleApplicationStatus execute(string[] args) {
                 return Status.ConfigOptionError;
         }
     }
+    // Set up a logger for use during INI settings file loading
+    void onLogMessage(in Ini.Parser.Log.Message message) {
+        if(verbose || message.severity > Ini.Parser.Log.Severity.Debug) {
+            writeln(message.toString());
+        }
+    }
+    auto log = Ini.Parser.Log(&onLogMessage);
+    // Read settings file or files
+    Ini.Group settings;
+    foreach(settingsPath; config.settingsPaths) {
+        verboseln("Reading settings from path ", settingsPath);
+        auto settingsFile = File.read(settingsPath);
+        if(!settingsFile.ok) {
+            writeln("Failed to read settings from path ", settingsPath);
+            continue;
+        }
+        auto settingsParser = Ini.Parser(&log, settingsFile);
+        settingsParser.parse();
+        if(!settingsParser.ok) {
+            writeln("Error parsing settings INI at path ", settingsPath);
+            continue;
+        }
+        settings.addIni(settingsParser.ini);
+    }
     // Read the input program file 
     verboseln("Reading from program file path.");
     const inputPath = args.length > 1 ? args[1] : null;
@@ -328,7 +452,7 @@ CapsuleApplicationStatus execute(string[] args) {
     }
     // If the verbose flag was set, write a stringification of the
     // program file to stdout
-    if(verbose) {
+    if(config.printProgram) {
         writeln("String representation of loaded program file:");
         writeln(capsuleProgramToString(decode.program));
     }
@@ -336,6 +460,9 @@ CapsuleApplicationStatus execute(string[] args) {
     verboseln("Initializing extension modules.");
     CapsuleEngineExtensionHandler extHandler;
     extHandler.initialize(config);
+    // Recognized settings loaded from INI files
+    verboseln("Applying settings.");
+    extHandler.applySettings(settings);
     // Initialize a CapsuleEngine instance to run the program with
     CapsuleEngine engine = initializeCapsuleEngine(
         decode.program, &CapsuleEngineExtensionHandler.ecall, &extHandler

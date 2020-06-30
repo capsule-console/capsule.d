@@ -52,7 +52,6 @@ enum CapsuleSDLPixelGraphicsDisplayMode: uint {
     Truecolor24Bit = 0x80,
 }
 
-
 /// https://wiki.libsdl.org/SDL_HINT_RENDER_SCALE_QUALITY
 enum CapsuleSDLRenderScaleQuality: char {
     Nearest = '0',
@@ -126,8 +125,9 @@ struct CapsuleSDLPixelGraphicsModule {
         CapsuleSDL.System.Video
     );
     
-    /// TODO: A list of resolutions that the host will permit the
-    /// application to run at
+    /// A list of supported resolutions.
+    /// The first resolution in the list is treated as a preferred
+    /// or ideal resolution.
     Resolution[] resolutionList;
     /// The settings that were indicated in a pxgfx.init ecall
     Settings settings;
@@ -150,7 +150,6 @@ struct CapsuleSDLPixelGraphicsModule {
     
     this(MessageCallback onMessage) {
         this.onMessage = onMessage;
-        this.resolutionList = [Resolution(256, 256)]; // TODO: Don't hardcode
     }
     
     bool ok() pure const {
