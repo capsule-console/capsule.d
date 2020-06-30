@@ -13,12 +13,12 @@
         "capsule/bits",
         "capsule/casm",
         "capsule/core",
+        "capsule/encode",
         "capsule/extension",
         "capsule/digest",
         "capsule/io",
         "capsule/math",
         "capsule/meta",
-        "capsule/parse",
         "capsule/range",
         "capsule/string",
         "capsule/system",
@@ -45,7 +45,7 @@
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain",
                 "CapsuleExcludeLinkerMain"
-            ],
+            ]
         },
         {
             "name": "capsule-cli",
@@ -57,7 +57,7 @@
                 "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeLinkerMain"
-            ],
+            ]
         },
         {
             "name": "capsule-sdl",
@@ -88,7 +88,7 @@
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain",
                 "CapsuleExcludeLinkerMain"
-            ],
+            ]
         },
         {
             "name": "clink",
@@ -100,7 +100,7 @@
                 "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain"
-            ],
+            ]
         },
         {
             "name": "capcheck",
@@ -112,7 +112,7 @@
                 "CapsuleExcludeBuilderMain",
                 "CapsuleExcludeExecutionMain",
                 "CapsuleExcludeLinkerMain"
-            ],
+            ]
         },
         {
             "name": "capable",
@@ -124,7 +124,7 @@
                 "CapsuleExcludeCheckerMain",
                 "CapsuleExcludeExecutionMain",
                 "CapsuleExcludeLinkerMain"
-            ],
+            ]
         },
     ],
 }

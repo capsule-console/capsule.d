@@ -14,16 +14,16 @@ module capsule.apps.capcheck;
 
 private:
 
-import capsule.parse.config : CapsuleConfigAttribute, CapsuleConfigStatus;
-import capsule.parse.config : loadCapsuleConfig, capsuleConfigStatusToString;
-import capsule.parse.config : getCapsuleConfigUsageString;
+import capsule.encode.config : CapsuleConfigAttribute, CapsuleConfigStatus;
+import capsule.encode.config : loadCapsuleConfig, capsuleConfigStatusToString;
+import capsule.encode.config : getCapsuleConfigUsageString;
 
 import capsule.algorithm.indexof : lastIndexOf;
 import capsule.io.file : File;
 import capsule.io.path : Path;
 import capsule.io.stdio : stdio;
 import capsule.meta.enums : getEnumMemberName, getEnumMemberByName;
-import capsule.parse.ini : Ini;
+import capsule.encode.ini : Ini;
 import capsule.string.hex : getByteHexString;
 import capsule.string.writeint : writeInt;
 import capsule.system.process : runProcess, getRunProcessString;

@@ -17,9 +17,9 @@ module capsule.apps.casm;
 
 private:
 
-import capsule.parse.config : CapsuleConfigAttribute, CapsuleConfigStatus;
-import capsule.parse.config : loadCapsuleConfig, capsuleConfigStatusToString;
-import capsule.parse.config : getCapsuleConfigUsageString;
+import capsule.encode.config : CapsuleConfigAttribute, CapsuleConfigStatus;
+import capsule.encode.config : loadCapsuleConfig, capsuleConfigStatusToString;
+import capsule.encode.config : getCapsuleConfigUsageString;
 
 import capsule.algorithm.indexof : lastIndexOf;
 import capsule.io.file : File;

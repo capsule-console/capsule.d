@@ -6,13 +6,13 @@ configuration file.
 
 */
 
-module capsule.parse.config;
+module capsule.encode.config;
 
 private:
 
 import capsule.meta.enums : isEnumType;
 import capsule.meta.templates : isTemplateOf;
-import capsule.parse.ini : Ini;
+import capsule.encode.ini : Ini;
 import capsule.range.range : isArray;
 import capsule.string.parseint : parseSignedInt, parseUnsignedInt;
 

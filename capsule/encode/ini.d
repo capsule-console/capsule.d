@@ -4,7 +4,7 @@ This module provides functions for parsing and handling INI files.
 
 */
 
-module capsule.parse.ini;
+module capsule.encode.ini;
 
 private:
 

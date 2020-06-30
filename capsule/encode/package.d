@@ -5,9 +5,9 @@ represented as text.
 
 */
 
-module capsule.parse;
+module capsule.encode;
 
 public:
 
-import capsule.parse.config;
-import capsule.parse.ini;
+import capsule.encode.config;
+import capsule.encode.ini;
