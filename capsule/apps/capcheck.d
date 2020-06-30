@@ -19,11 +19,11 @@ import capsule.encode.config : loadCapsuleConfig, capsuleConfigStatusToString;
 import capsule.encode.config : getCapsuleConfigUsageString;
 
 import capsule.algorithm.indexof : lastIndexOf;
+import capsule.encode.ini : Ini;
 import capsule.io.file : File;
 import capsule.io.path : Path;
 import capsule.io.stdio : stdio;
 import capsule.meta.enums : getEnumMemberName, getEnumMemberByName;
-import capsule.encode.ini : Ini;
 import capsule.string.hex : getByteHexString;
 import capsule.string.writeint : writeInt;
 import capsule.system.process : runProcess, getRunProcessString;

@@ -184,6 +184,25 @@ struct CapsuleAssemblerConfig {
         ])
     )
     bool silent;
+    
+    @(CapsuleConfigAttribute!bool("print-object")
+        .setOptional(false)
+        .setHelpText([
+            "When set, a string representation of the compiled object",
+            "will be logged to standard output before it is written",
+            "to an object file.",
+        ])
+    )
+    bool printObject;
+    
+    @(CapsuleConfigAttribute!bool("print-syntax-nodes")
+        .setOptional(false)
+        .setHelpText([
+            "When set, a string representation of the parsed assembly",
+            "source code files will be logged to standard output.",
+        ])
+    )
+    bool printSyntaxNodes;
 }
 
 bool verbose = false;
@@ -284,7 +303,7 @@ CapsuleApplicationStatus compile(string[] args) {
         writeln("Compilation error.");
         return Status.CompileError;
     }
-    if(verbose) {
+    if(config.printSyntaxNodes) {
         writeln("Listing of parsed syntax nodes:");
         foreach(node; compiler.nodes) {
             writeln(capsuleAsmNodeToString(node));
@@ -338,7 +357,7 @@ CapsuleApplicationStatus compile(string[] args) {
     }
     // If the verbose flag was set, write a stringification of the
     // object file to stdout
-    if(verbose) {
+    if(config.printObject) {
         writeln("String representation of written object file:");
         writeln(capsuleObjectToString(compiler.object));
     }

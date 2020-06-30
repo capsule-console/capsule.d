@@ -309,7 +309,6 @@ struct CapsuleEngineExtensionHandler {
         const preferredResolution = typeof(this).parseResolutionSetting(
             settings.get("pxgfx", "preferred-resolution")
         );
-        writeln(settings.get("pxgfx", "preferred-resolution"));
         if(preferredResolution.width > 0 && preferredResolution.height > 0) {
             this.pxgfxModule.resolutionList ~= PixelGraphicsModule.Resolution(
                 preferredResolution.width, preferredResolution.height

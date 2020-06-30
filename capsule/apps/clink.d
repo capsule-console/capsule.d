@@ -140,6 +140,16 @@ struct CapsuleLinkerConfig {
         ])
     )
     bool silent;
+    
+    @(CapsuleConfigAttribute!bool("print-program")
+        .setOptional(false)
+        .setHelpText([
+            "When set, a string representation of the linked program",
+            "will be logged to standard output before it is written",
+            "to an output program file.",
+        ])
+    )
+    bool printProgram;
 }
 
 bool verbose = false;
@@ -315,7 +325,7 @@ CapsuleApplicationStatus link(string[] args) {
     }
     // If the verbose flag was set, write a stringification of the
     // program file to stdout
-    if(verbose) {
+    if(config.printProgram) {
         writeln("String representation of written program file:");
         writeln(capsuleProgramToString(linker.program));
     }
