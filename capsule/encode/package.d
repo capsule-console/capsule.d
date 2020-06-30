@@ -11,3 +11,4 @@ public:
 
 import capsule.encode.config;
 import capsule.encode.ini;
+import capsule.encode.lz77;

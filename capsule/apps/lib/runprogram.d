@@ -10,8 +10,8 @@ module capsule.apps.lib.runprogram;
 
 private:
 
-import capsule.algorithm.lz77 : lz77Inflate;
 import capsule.digest.crc : CRC32;
+import capsule.encode.lz77 : lz77Inflate;
 import capsule.io.stdio : stdio;
 import capsule.meta.enums : getEnumMemberAttribute, getEnumMemberName;
 import capsule.string.ascii : isDigit, toLower;

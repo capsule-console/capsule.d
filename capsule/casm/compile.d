@@ -9,8 +9,8 @@ https://en.wikipedia.org/wiki/Assembly_language
 
 module capsule.casm.compile;
 
-import capsule.algorithm.lz77 : lz77Deflate;
 import capsule.digest.crc : CRC32, CRC64ISO;
+import capsule.encode.lz77 : lz77Deflate;
 import capsule.io.file : File, FileLocation;
 import capsule.io.path : Path;
 import capsule.math.gcd : lcm;

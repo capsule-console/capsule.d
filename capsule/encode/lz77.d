@@ -11,7 +11,7 @@ providing an acceptable level of compression.
 
 */
 
-module capsule.algorithm.lz77;
+module capsule.encode.lz77;
 
 public:
 

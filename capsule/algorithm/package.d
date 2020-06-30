@@ -11,5 +11,4 @@ public:
 
 import capsule.algorithm.heap;
 import capsule.algorithm.indexof;
-import capsule.algorithm.lz77;
 import capsule.algorithm.sort;
