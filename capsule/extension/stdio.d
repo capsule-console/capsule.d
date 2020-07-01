@@ -27,7 +27,7 @@ struct CapsuleStandardIOModule {
     nothrow @safe:
     
     alias ecall_stdio_init = .ecall_stdio_init;
-    // TODO: ecall_stdio_quit
+    alias ecall_stdio_quit = .ecall_stdio_quit;
     alias ecall_stdio_put_byte = .ecall_stdio_put_byte;
     alias ecall_stdio_get_byte = .ecall_stdio_get_byte;
     // TODO: ecall_stdio_flush
@@ -69,6 +69,7 @@ struct CapsuleStandardIOModule {
         alias Entry = CapsuleExtensionListEntry;
         return [
             Entry(Extension.stdio_init, &ecall_stdio_init, &this),
+            Entry(Extension.stdio_quit, &ecall_stdio_quit, &this),
             Entry(Extension.stdio_put_byte, &ecall_stdio_put_byte, &this),
             Entry(Extension.stdio_get_byte, &ecall_stdio_get_byte, &this),
         ];
@@ -108,6 +109,17 @@ CapsuleExtensionCallResult ecall_stdio_init(
     else {
         return CapsuleExtensionCallResult.Ok(0);
     }
+}
+
+CapsuleExtensionCallResult ecall_stdio_quit(
+    void* data, CapsuleEngine* engine, in uint arg
+) {
+    assert(data);
+    auto io = cast(CapsuleStandardIOModule*) data;
+    if(io.stdoutWriter.isOpen) {
+        io.stdoutWriter.close();
+    }
+    return CapsuleExtensionCallResult.Ok(0);
 }
 
 CapsuleExtensionCallResult ecall_stdio_put_byte(
