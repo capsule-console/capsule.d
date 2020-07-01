@@ -30,6 +30,9 @@ program files (*.capsule) that it loads and runs.
 [debugger.md](https://github.com/capsule-console/capsule.d/blob/master/docs/debugger.md):
 **Capsule Debugger Documentation**
 
+[extensions.md](https://github.com/capsule-console/capsule.d/blob/master/docs/extensions.md):
+**Capsule Extensions Documentation**
+
 ## Capsule Implementation Check (capcheck)
 
 Here are links to documentation explaining the usage and functioning
