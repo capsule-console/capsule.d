@@ -295,7 +295,7 @@ struct CapsuleEngine {
                 const divisor = ri(i.rs2);
                 // Inputs that cause D to crash
                 if(divisor == 0) rset(i.rd, 0);
-                else if(divisor == -1 && dividend == int.min) rset(i.rd, int.max);
+                else if(divisor == -1 && dividend == int.min) rset(i.rd, int.min);
                 // Everything else
                 else rset(i.rd, dividend / divisor);
                 pc += 4;

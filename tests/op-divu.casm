@@ -1,0 +1,116 @@
+; Test divu (unsigned division) with a range of values
+; Store the result of rs1 / rs2 to rd
+
+.extern write_uint
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.bss
+    ; Reserve memory needed by write_uint
+    write_uint.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_uint.target
+    li B, ' '
+    ; 0 (division by zero produces zero)
+    li X, 0
+    li Y, 0
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0 (division by zero produces zero)
+    li X, 0x7fffffff
+    li Y, 0
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0 (division by zero produces zero)
+    li X, 0x80000000
+    li Y, 0
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 1
+    li Y, 2
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 5
+    li Y, 20
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 400
+    li Y, 400
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 3
+    li X, 9
+    li Y, 3
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 5
+    li X, 10
+    li Y, 2
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 12
+    li X, 144
+    li Y, 12
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 16
+    li X, 256
+    li Y, 16
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 256
+    li X, 65536
+    li Y, 256
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 5000000
+    li X, 5000000
+    li Y, 1
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 5000000
+    li Y, 0xffffffff
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 32767
+    li X, 2147483647
+    li Y, 65536
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 65535
+    li X, 4294967295
+    li Y, 65536
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 102261126
+    li X, 2147483647
+    li Y, 21
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 2147483647
+    li X, 2147483647
+    li Y, 1
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 613566756
+    li X, 4294967295
+    li Y, 7
+    divu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 4294967295
+    li X, 4294967295
+    li Y, 1
+    divu A, X, Y
+    call R, write_uint
+    ; All done
+    ecalli Z, Z, meta.exit_ok
