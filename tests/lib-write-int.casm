@@ -1,0 +1,68 @@
+; Test the write_int library helper function.
+
+.extern write_int
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    li B, ' '
+    ; 0
+    li A, 0
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li A, 1
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li A, -1
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 2
+    li A, 2
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2
+    li A, -2
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 8
+    li A, 8
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -11
+    li A, -11
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 16
+    li A, 16
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 81
+    li A, 81
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -255
+    li A, -255
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 2048
+    li A, 2048
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 65536
+    li A, 65536
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 800200
+    li A, 800200
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -12345678
+    li A, -12345678
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 2147483647
+    li A, 2147483647
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li A, -2147483648
+    call R, write_int
+    ; All done
+    ecalli Z, Z, meta.exit_ok

@@ -3,6 +3,7 @@
 .const stdio.put_byte, 0x0102
 
 .export write_int
+.export write_uint
 
 ; Write the value of register A to stdout as a signed decimal value
 ; Make sure to ecall stdio.init before calling this function
@@ -24,20 +25,20 @@ write_int:
     neg A, A
 ; Enumerate until finding the first nonzero digit
 0.find_first_nonzero:
-    div X, A, Y
+    divu X, A, Y
     bnez X, 0.write_loop.f
     li X, 10
-    div Y, Y, X
+    divu Y, Y, X
     j 0.find_first_nonzero.b
 ; Write each digit
 0.write_loop:
     addi X, X, '0'
     ecalli Z, X, stdio.put_byte
     li X, 10
-    div Y, Y, X
+    divu Y, Y, X
     beqz Y, 0.end.f
     sw Y, S
-    div Y, A, Y
+    divu Y, A, Y
     rem X, Y, X
     lw Y, S
     j 0.write_loop.b
@@ -62,3 +63,42 @@ write_int:
 0.end:
     ret R 
 .endproc write_int
+
+
+; Write the value of register A to stdout as an unsigned decimal value
+; Make sure to ecall stdio.init before calling this function
+; Modifies the registers A, X, and Y.
+; Modifies the word at the address indicated by register S.
+.text .procedure
+write_uint:
+    ; Handle the special case where A = 0
+    beqz A, 0.zero.f
+    ; Y register is used to represent the current digit position in
+    ; writing out the input value.
+    li Y, 1_000_000_000
+; Enumerate until finding the first nonzero digit
+0.find_first_nonzero:
+    divu X, A, Y
+    bnez X, 0.write_loop.f
+    li X, 10
+    divu Y, Y, X
+    j 0.find_first_nonzero.b
+; Write each digit
+0.write_loop:
+    addi X, X, '0'
+    ecalli Z, X, stdio.put_byte
+    li X, 10
+    divu Y, Y, X
+    beqz Y, 0.end.f
+    sw Y, S
+    divu Y, A, Y
+    remu X, Y, X
+    lw Y, S
+    j 0.write_loop.b
+; Write out 0
+0.zero:
+    li X, '0' ecalli Z, X, stdio.put_byte
+; All done
+0.end:
+    ret R 
+.endproc write_uint

@@ -1,3 +1,5 @@
+; Test the read_int library helper function.
+
 .extern read_int
 .extern write_int
 .extern write_stringz

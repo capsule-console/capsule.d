@@ -1,3 +1,5 @@
+; Test the write_hex library helper function.
+
 .extern write_hex
 
 .const meta.exit_ok, 0x0001
