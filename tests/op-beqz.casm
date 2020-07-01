@@ -1,0 +1,57 @@
+; Test beqz (Branch if equal to zero)
+; Add imm to PC if rs1 == 0
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    li A, 'N'
+    li B, 'Y'
+    ; Positive == 0? (N)
+    li X, 1
+    beqz X, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Positive == 0? (N)
+    li X, 5678900
+    beqz X, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Positive == 0? (N)
+    li X, 0x7fffffff
+    beqz X, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Zero == 0? (Y)
+    li X, 0
+    beqz X, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Negative == 0? (N)
+    li X, -1
+    beqz X, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Negative == 0? (N)
+    li X, -800000
+    beqz X, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; Negative == 0? (N)
+    li X, 0x80000000
+    beqz X, 1f
+    ecalli Z, A, stdio.put_byte j 0f
+1:  ecalli Z, B, stdio.put_byte
+0:
+    ; All done
+    ecalli Z, Z, meta.exit_ok
