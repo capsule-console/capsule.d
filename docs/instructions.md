@@ -25,66 +25,64 @@ Note the following abbreviations:
 | 0x02 | \-                     | _Reserved_                                | \- |
 | 0x03 | \-                     | _Reserved_                                | \- |
 | 0x04 | and rd,rs1,rs2         | Bitwise AND                               | rd = rs1 AND rs2 |
-| 0x05 | andi rd,rs1,imm        | Bitwise AND immediate                     | rd = rs1 AND i32 |
-| 0x06 | or rd,rs1,rs2          | Bitwise OR                                | rd = rs1 OR rs2 |
-| 0x07 | ori rd,rs1,imm         | Bitwise OR immediate                      | rd = rs1 OR i32 |
-| 0x08 | xor rd,rs1,rs2         | Bitwise XOR                               | rd = rs1 XOR rs2 |
-| 0x09 | xori rd,rs1,imm        | Bitwise XOR immediate                     | rd = rs1 XOR i32 |
-| 0x0a | \-                     | _Reserved_                                | \- |
-| 0x0b | \-                     | _Reserved_                                | \- |
-| 0x0c | \-                     | _Reserved_                                | \- |
-| 0x0d | sll rd,rs1,rs2,imm     | Shift logical left                        | rd = (rs1 << (i32 & 0x1F)) << (rs2 & 0x1F) |
-| 0x0e | srl rd,rs1,rs2,imm     | Shift logical right                       | rd = (rs1 >>> (i32 & 0x1F)) >>> (rs2 & 0x1F) |
-| 0x0f | sra rd,rs1,rs2,imm     | Shift arithmetic right                    | rd = (rs1 >> (i32 & 0x1F)) >> (rs2 & 0x1F) |
-| 0x10 | min rd,rs1,rs2         | Set to minimum                            | rd = rs1 < rs2 ? rs1 : rs2 |
-| 0x11 | minu rd,rs1,rs2        | Set to minimum unsigned                   | rd = rs1 < rs2 ? rs1 : rs2 |
-| 0x12 | max rd,rs1,rs2         | Set to maximum                            | rd = rs1 >= rs2 ? rs1 : rs2 |
-| 0x13 | maxu rd,rs1,rs2        | Set to maximum unsigned                   | rd = rs1 >= rs2 ? rs1 : rs2 |
-| 0x14 | slt rd,rs1,rs2         | Set if less than                          | rd = rs1 < rs2 ? 1 : 0 |
-| 0x15 | sltu rd,rs1,rs2        | Set if less than unsigned                 | rd = rs1 < rs2 ? 1 : 0 |
-| 0x16 | slti rd,rs1,imm        | Set if less than immediate                | rd = rs1 < i32 ? 1 : 0 |
-| 0x17 | sltiu rd,rs1,imm       | Set if less than immediate unsigned       | rd = rs1 < i32 ? 1 : 0 |
-| 0x18 | add rd,rs1,rs2,imm     | Add                                       | rd = rs1 + rs2 + i32 |
-| 0x19 | sub rd,rs1,rs2         | Subtract                                  | rd = rs1 - rs2 |
-| 0x1a | lui rd,imm             | Load upper immediate                      | rd = i32 << 16 |
-| 0x1b | auipc rd,imm           | Add upper immediate to program counter    | rd = PC + (i32 << 16) |
-| 0x1c | mul rd,rs1,rs2         | Multiply and truncate                     | rd = (rs1 * rs2) & 0x00000000FFFFFFFF |
-| 0x1d | mulh rd,rs1,rs2        | Multiply signed and shift                 | rd = (rs1 * rs2) >> 32 |
-| 0x1e | mulhu rd,rs1,rs2       | Multiply unsigned and shift               | rd = (rs1 * rs2) >> 32 |
-| 0x1f | mulhsu rd,rs1,rs2      | Multiply signed by unsigned and shift     | rd = (rs1 * rs2) >> 32 |
-| 0x20 | div rd,rs1,rs2         | Divide                                    | rd = rs2 == 0 ? 0 : rs1 / rs2 |
-| 0x21 | divu rd,rs1,rs2        | Divide unsigned                           | rd = rs2 == 0 ? 0 : rs1 / rs2 |
-| 0x22 | rem rd,rs1,rs2         | Remainder                                 | rd = rs2 == 0 ? 0 : rs1 % rs2 |
-| 0x23 | remu rd,rs1,rs2        | Remainder unsigned                        | rd = rs2 == 0 ? 0 : rs1 % rs2 |
-| 0x24 | revb rd,rs1            | Reverse byte order                        | rd = revb(rs1) |
-| 0x25 | revh rd,rs1            | Reverse half word order                   | rd = revh(rs1) |
-| 0x26 | \-                     | _Reserved_                                | \- |
-| 0x27 | \-                     | _Reserved_                                | \- |
-| 0x28 | \-                     | _Reserved_                                | \- |
-| 0x29 | clz rd,rs1             | Count leading zeros                       | rd = clz(rs1) |
-| 0x2a | ctz rd,rs1             | Count trailing zeros                      | rd = ctz(rs1) |
-| 0x2b | pcnt rd,rs1            | Count set bits                            | rd = pcnt(rs1) |
-| 0x2c | lb rd,rs1,imm          | Load sign-extended byte                   | rd = m8[rs1 + i32] |
-| 0x2d | lbu rd,rs1,imm         | Load zero-extended byte                   | rd = mu8[rs1 + i32] |
-| 0x2e | lh rd,rs1,imm          | Load sign-extended half word              | rd = m16[(rs1 + i32)] |
-| 0x2f | lhu rd,rs1,imm         | Load zero-extended half word              | rd = mu16[(rs1 + i32)] |
-| 0x30 | lw rd,rs1,imm          | Load word                                 | rd = m32[(rs1 + i32)] |
-| 0x31 | sb rs1,rs2,imm         | Store byte                                | m8[rs2 + i32] = rs1 |
-| 0x32 | sh rs1,rs2,imm         | Store half word                           | m16[(rs2 + i32)] = rs1 |
-| 0x33 | sw rs1,rs2,imm         | Store word                                | m32[(rs2 + i32)] = rs1 |
-| 0x34 | jal rd,imm             | Jump and link                             | rd = PC + 4, PC = (PC + i32) |
-| 0x35 | jalr rd,rs1,imm        | Jump and link register                    | rd = PC + 4, PC = (rs1 + i32) |
-| 0x36 | beq rs1,rs2,imm        | Branch if equal                           | if rs1 == rs2: PC = PC + (i32) |
-| 0x37 | bne rs1,rs2,imm        | Branch if not equal                       | if rs1 != rs2: PC = PC + (i32) |
-| 0x38 | blt rs1,rs2,imm        | Branch if less than signed                | if rs1 < rs2: PC = PC + (i32) |
-| 0x39 | bltu rs1,rs2,imm       | Branch if less than unsigned              | if rs1 < rs2: PC = PC + (i32) |
-| 0x3a | bge rs1,rs2,imm        | Branch if greater or equal signed         | if rs1 >= rs2: PC = PC + (i32) |
-| 0x3b | bgeu rs1,rs2,imm       | Branch if greater or equal unsigned       | if rs1 >= rs2: PC = PC + (i32) |
-| 0x3c | ecall rd,rs1,rs2,imm   | Call extension                            | rd = ecall(extid: rs2 + i32, input: rs1) |
-| 0x3d | ebreak                 | Breakpoint                                | Reserved for debugging tools to represent a breakpoint |
-| 0x3e | \-                     | _Reserved_                                | \- |
-| 0x3f | \-                     | _Reserved_                                | \- |
-| 0x40 | \-                     | _Reserved_, and so on through 0x7F.       | \- |
+| 0x05 | or rd,rs1,rs2          | Bitwise OR                                | rd = rs1 OR rs2 |
+| 0x06 | xor rd,rs1,rs2         | Bitwise XOR                               | rd = rs1 XOR rs2 |
+| 0x07 | sub rd,rs1,rs2         | Subtract                                  | rd = rs1 - rs2 |
+| 0x08 | min rd,rs1,rs2         | Set to minimum                            | rd = rs1 < rs2 ? rs1 : rs2 |
+| 0x09 | minu rd,rs1,rs2        | Set to minimum unsigned                   | rd = rs1 < rs2 ? rs1 : rs2 |
+| 0x0a | max rd,rs1,rs2         | Set to maximum                            | rd = rs1 >= rs2 ? rs1 : rs2 |
+| 0x0b | maxu rd,rs1,rs2        | Set to maximum unsigned                   | rd = rs1 >= rs2 ? rs1 : rs2 |
+| 0x0c | slt rd,rs1,rs2         | Set if less than                          | rd = rs1 < rs2 ? 1 : 0 |
+| 0x0d | sltu rd,rs1,rs2        | Set if less than unsigned                 | rd = rs1 < rs2 ? 1 : 0 |
+| 0x10 | mul rd,rs1,rs2         | Multiply and truncate                     | rd = (rs1 * rs2) & 0x00000000FFFFFFFF |
+| 0x11 | mulh rd,rs1,rs2        | Multiply signed and shift                 | rd = (rs1 * rs2) >> 32 |
+| 0x12 | mulhu rd,rs1,rs2       | Multiply unsigned and shift               | rd = (rs1 * rs2) >> 32 |
+| 0x13 | mulhsu rd,rs1,rs2      | Multiply signed by unsigned and shift     | rd = (rs1 * rs2) >> 32 |
+| 0x14 | div rd,rs1,rs2         | Divide                                    | rd = rs2 == 0 ? 0 : rs1 / rs2 |
+| 0x15 | divu rd,rs1,rs2        | Divide unsigned                           | rd = rs2 == 0 ? 0 : rs1 / rs2 |
+| 0x16 | rem rd,rs1,rs2         | Remainder                                 | rd = rs2 == 0 ? 0 : rs1 % rs2 |
+| 0x17 | remu rd,rs1,rs2        | Remainder unsigned                        | rd = rs2 == 0 ? 0 : rs1 % rs2 |
+| 0x18 | revb rd,rs1            | Reverse byte order                        | rd = revb(rs1) |
+| 0x19 | revh rd,rs1            | Reverse half word order                   | rd = revh(rs1) |
+| 0x1a | clz rd,rs1             | Count leading zeros                       | rd = clz(rs1) |
+| 0x1b | ctz rd,rs1             | Count trailing zeros                      | rd = ctz(rs1) |
+| 0x1c | pcnt rd,rs1            | Count set bits                            | rd = pcnt(rs1) |
+| 0x1d | \-                     | _Reserved, through to 0x3e_               | \- |
+| 0x3f | ebreak                 | Breakpoint                                | Breakpoint for debuggers |
+| 0x40 | \-                     | _Reserved_                                | \- |
+| 0x41 | \-                     | _Reserved_                                | \- |
+| 0x42 | \-                     | _Reserved_                                | \- |
+| 0x43 | \-                     | _Reserved_                                | \- |
+| 0x44 | andi rd,rs1,imm        | Bitwise AND immediate                     | rd = rs1 AND i32 |
+| 0x45 | ori rd,rs1,imm         | Bitwise OR immediate                      | rd = rs1 OR i32 |
+| 0x46 | xori rd,rs1,imm        | Bitwise XOR immediate                     | rd = rs1 XOR i32 |
+| 0x47 | \-                     | _Reserved_                                | \- |
+| 0x48 | sll rd,rs1,rs2,imm     | Shift logical left                        | rd = (rs1 << (i32 & 0x1F)) << (rs2 & 0x1F) |
+| 0x49 | srl rd,rs1,rs2,imm     | Shift logical right                       | rd = (rs1 >>> (i32 & 0x1F)) >>> (rs2 & 0x1F) |
+| 0x4a | sra rd,rs1,rs2,imm     | Shift arithmetic right                    | rd = (rs1 >> (i32 & 0x1F)) >> (rs2 & 0x1F) |
+| 0x4b | add rd,rs1,rs2,imm     | Add                                       | rd = rs1 + rs2 + i32 |
+| 0x4c | slti rd,rs1,imm        | Set if less than immediate                | rd = rs1 < i32 ? 1 : 0 |
+| 0x4d | sltiu rd,rs1,imm       | Set if less than immediate unsigned       | rd = rs1 < i32 ? 1 : 0 |
+| 0x4e | lui rd,imm             | Load upper immediate                      | rd = i32 << 16 |
+| 0x4f | auipc rd,imm           | Add upper immediate to program counter    | rd = PC + (i32 << 16) |
+| 0x50 | lb rd,rs1,imm          | Load sign-extended byte                   | rd = m8[rs1 + i32] |
+| 0x51 | lbu rd,rs1,imm         | Load zero-extended byte                   | rd = mu8[rs1 + i32] |
+| 0x52 | lh rd,rs1,imm          | Load sign-extended half word              | rd = m16[(rs1 + i32)] |
+| 0x53 | lhu rd,rs1,imm         | Load zero-extended half word              | rd = mu16[(rs1 + i32)] |
+| 0x54 | lw rd,rs1,imm          | Load word                                 | rd = m32[(rs1 + i32)] |
+| 0x55 | sb rs1,rs2,imm         | Store byte                                | m8[rs2 + i32] = rs1 |
+| 0x56 | sh rs1,rs2,imm         | Store half word                           | m16[(rs2 + i32)] = rs1 |
+| 0x57 | sw rs1,rs2,imm         | Store word                                | m32[(rs2 + i32)] = rs1 |
+| 0x58 | jal rd,imm             | Jump and link                             | rd = PC + 4, PC = (PC + i32) |
+| 0x59 | jalr rd,rs1,imm        | Jump and link register                    | rd = PC + 4, PC = (rs1 + i32) |
+| 0x5a | beq rs1,rs2,imm        | Branch if equal                           | if rs1 == rs2: PC = PC + (i32) |
+| 0x5b | bne rs1,rs2,imm        | Branch if not equal                       | if rs1 != rs2: PC = PC + (i32) |
+| 0x5c | blt rs1,rs2,imm        | Branch if less than signed                | if rs1 < rs2: PC = PC + (i32) |
+| 0x5d | bltu rs1,rs2,imm       | Branch if less than unsigned              | if rs1 < rs2: PC = PC + (i32) |
+| 0x5e | bge rs1,rs2,imm        | Branch if greater or equal signed         | if rs1 >= rs2: PC = PC + (i32) |
+| 0x5f | bgeu rs1,rs2,imm       | Branch if greater or equal unsigned       | if rs1 >= rs2: PC = PC + (i32) |
+| 0x60 | \-                     | _Reserved, through to 0x7e_               | \- |
+| 0x7f | ecall rd,rs1,rs2,imm   | Call extension                            | rd = ecall(extid: rs2 + i32, input: rs1) |
 
 ## Pseudo-instructions
 
