@@ -76,8 +76,14 @@ CapsuleExtensionCallResult ecall_time_sleep_ms(
 CapsuleExtensionCallResult ecall_time_monotonic_ms(
     void* data, CapsuleEngine* engine, in uint arg
 ) {
-    const uint monotonicMilliseconds = cast(uint) (
-        monotonicns() / 1_000_000L
-    );
-    return CapsuleExtensionCallResult.Ok(monotonicMilliseconds);
+    const monotonicms = (monotonicns() / 1_000_000L);
+    if(arg == 0) {
+        return CapsuleExtensionCallResult.Ok(cast(uint) monotonicms);
+    }
+    else if(arg == 1) {
+        return CapsuleExtensionCallResult.Ok(cast(uint) (monotonicms >> 32));
+    }
+    else {
+        return CapsuleExtensionCallResult.Ok(monotonicms >= 0 ? 0 : -1);
+    }
 }
