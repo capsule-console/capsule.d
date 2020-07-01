@@ -315,6 +315,43 @@ and those values can be either literals or references.
     my_words: .half 1, 2, 3, 100_000, my_constant
 ```
 
+## .incbin
+
+_.incbin [path]_
+
+The **incbin** directive loads the content of an external file and inserts
+it into the current section as binary data.
+
+The Capsule assembler's `-I` or `--include-dirs` option can be used to
+tell the program where to look when including a file with a relative
+path.
+The first location the assembler looks will always be one where a
+relative path is treated as being relative to the directory containing
+the file with the _.incbin_ directive.
+
+``` casm
+.rodata
+    my_data: .incbin "./my_data.dat"
+```
+
+## .include
+
+_.include [path]_
+
+The **include** directive loads the content of an external file and inserts
+it into the current section as assembly source code.
+
+The Capsule assembler's `-I` or `--include-dirs` option can be used to
+tell the program where to look when including a file with a relative
+path.
+The first location the assembler looks will always be one where a
+relative path is treated as being relative to the directory containing
+the file with the _.include directive.
+
+``` casm
+.include "lib/constants.casm"
+```
+
 ## .padb
 
 _.padb [count]_
