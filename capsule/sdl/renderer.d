@@ -85,6 +85,11 @@ struct CapsuleSDLRenderer {
         return Texture.Create(this.handle, format, access, width, height);
     }
     
+    Texture createTextureFromSurface(SDL_Surface* surface) {
+        assert(this.handle);
+        return Texture.CreateFromSurface(this.handle, surface);
+    }
+    
     void present() {
         assert(this.handle);
         SDL_RenderPresent(this.handle);
@@ -128,5 +133,15 @@ struct CapsuleSDLRenderer {
             this.handle, texture, srcRect, dstRect
         );
         return status == 0;
+    }
+    
+    bool drawRect(in SDL_Rect* rect) {
+        assert(this.handle);
+        return SDL_RenderDrawRect(this.handle, rect) == 0;
+    }
+    
+    bool fillRect(in SDL_Rect* rect) {
+        assert(this.handle);
+        return SDL_RenderFillRect(this.handle, rect) == 0;
     }
 }

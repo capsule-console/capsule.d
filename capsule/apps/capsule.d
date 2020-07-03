@@ -302,6 +302,9 @@ struct CapsuleEngineExtensionHandler {
             PixelGraphicsModule.ScaleQuality.Linear :
             PixelGraphicsModule.ScaleQuality.Nearest
         );
+        this.pxgfxModule.showFpsCounter = 0 < getBooleanValue(
+            settings.get("pxgfx", "show-fps-counter")
+        );
         const windowTitle = settings.get("pxgfx", "window-title");
         if(windowTitle.length) {
             this.pxgfxModule.windowTitle = windowTitle;

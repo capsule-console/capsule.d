@@ -30,12 +30,14 @@ import capsule.time.monotonic : monotonicns;
 import capsule.core.extension : CapsuleExtension;
 
 import capsule.extension.common : CapsuleModuleMixin;
+import capsule.extension.graphics : CapsuleGraphicsAsciiBitmaps;
 import capsule.extension.list : CapsuleExtensionListEntry;
 
 import capsule.sdl.events : CapsuleSDLEventQueue, CapsuleSDLEventType;
 import capsule.sdl.events : CapsuleSDLWindowEventID;
 import capsule.sdl.renderer : CapsuleSDLRenderer;
 import capsule.sdl.sdl : CapsuleSDL;
+import capsule.sdl.surface : CapsuleSDLSurface;
 import capsule.sdl.texture : CapsuleSDLTexture;
 import capsule.sdl.types : CapsuleSDLPixelFormat;
 import capsule.sdl.window : CapsuleSDLWindow;
@@ -118,6 +120,7 @@ struct CapsuleSDLPixelGraphicsModule {
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
     alias ScaleQuality = CapsuleSDLRenderScaleQuality;
     alias ScalingMode = CapsuleSDLPixelGraphicsScalingMode;
+    alias Surface = CapsuleSDLSurface;
     alias Texture = CapsuleSDLTexture;
     alias Window = CapsuleSDLWindow;
     
@@ -133,12 +136,22 @@ struct CapsuleSDLPixelGraphicsModule {
     Settings settings;
     /// Title to use for the application window
     string windowTitle = "Capsule";
+    /// Keep track of pxgfx display milliseconds per frame
+    uint perFrameMs = 0;
+    /// Monotonic milliseconds of last frame flip
+    uint lastFlipMs = 0;
+    /// Whether to display an FPS counter
+    bool showFpsCounter;
     /// Reference to an SDL_Window containing the application image data
     Window window;
     /// Rendered used when rendering program data.
     Renderer renderer;
     /// Texture used when rendering program image data.
     Texture texture;
+    /// Surface containing ASCII characters.
+    Surface asciiSurface;
+    /// Texture containing ASCII characters.
+    Texture asciiTexture;
     /// Will hold a pointer to an SDL_PixelFormat struct describing the
     /// texture's format, when a texture was created.
     SDL_PixelFormat* texturePixelFormat = null;
@@ -156,12 +169,21 @@ struct CapsuleSDLPixelGraphicsModule {
         return this.window.ok && this.settings.ok;
     }
     
+    void initialize() {
+        assert(this.texturePixelFormat is null);
+        assert(this.asciiTexture.handle is null);
+        this.texturePixelFormat = this.allocTextureFormat();
+        this.initializeAsciiGraphics();
+    }
+    
     void conclude() {
         if(this.texturePixelFormat !is null) {
             SDL_FreeFormat(this.texturePixelFormat);
             this.texturePixelFormat = null;
         }
         this.texture.free();
+        this.asciiTexture.free();
+        this.asciiSurface.free();
         this.renderer.free();
         this.window.free();
         if(CapsuleSDL.initialized) {
@@ -200,6 +222,51 @@ struct CapsuleSDLPixelGraphicsModule {
             }
         }
         return Result(bestCompatibility, bestResolution);
+    }
+    
+    SDL_Rect getAsciiTextureRect(in int ch) const {
+        return SDL_Rect(((ch % 8) * 8), ((ch / 8) * 8), 8, 8);
+    }
+    
+    void initializeAsciiGraphics() {
+        this.addDebugMessage(
+            "pxgfx.init: Initializing ASCII character graphics."
+        );
+        this.asciiSurface = CapsuleSDLSurface.Create(
+            128, 128, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000
+        );
+        if(!this.asciiSurface.ok) {
+            this.addErrorMessage(
+                "pxgfx.init: Failed to create surface for ASCII " ~
+                "character graphics."
+            );
+            return;
+        }
+        for(uint i = 0; i < CapsuleGraphicsAsciiBitmaps.length; i++) {
+            const chx = (i % 8) * 8;
+            const chy = (i / 8) * 8;
+            const bitmap = CapsuleGraphicsAsciiBitmaps[i];
+            for(uint x = 0; x < 8; x++) {
+                for(uint y = 0; y < 8; y++) {
+                    const bit = (bitmap >> (x + ((7 - y) * 8))) & 1;
+                    const rect = SDL_Rect(chx + x, chy + y, 1, 1);
+                    this.asciiSurface.fillRect(&rect, bit ? 0xffffffff : 0);
+                }
+            }
+        }
+        if(this.renderer.ok) {
+            const char[2] scaleQuality = [ScaleQuality.Nearest, 0];
+            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scaleQuality.ptr);
+            this.asciiTexture = this.renderer.createTextureFromSurface(
+                this.asciiSurface.handle
+            );
+            if(!this.asciiTexture.ok) {
+                this.addErrorMessage(
+                    "pxgfx.init: Failed to create texture for ASCII " ~
+                    "character graphics."
+                );
+            }
+        }
     }
     
     CapsuleExtensionListEntry[] getExtensionList() {
@@ -606,6 +673,7 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     // Make sure the SDL dependency is loaded and initialized
     CapsuleSDL.ensureInitialized();
     // Create application window via SDL
+    pxgfx.addDebugMessage("pxgfx.init: Creating application window.");
     pxgfx.window = CapsuleSDLWindow(
         pxgfx.windowTitle,
         resMatch.resolution.width, resMatch.resolution.height,
@@ -625,6 +693,9 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     );
     // If successful, also initialize the renderer and create a texture
     if(pxgfx.renderer.ok) {
+        pxgfx.addDebugMessage(
+            "pxgfx.init: Attempting to initialize with hardware acceleration."
+        );
         // Set renderer properties
         pxgfx.renderer.setBlendMode(Texture.BlendMode.None);
         // Try with RGB888
@@ -639,9 +710,7 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         );
         // Set texture properties
         if(pxgfx.texture.ok) {
-            assert(pxgfx.texturePixelFormat is null);
             pxgfx.texture.setBlendMode(Texture.BlendMode.None);
-            pxgfx.texturePixelFormat = pxgfx.allocTextureFormat();
         }
         // If none of that worked, give up on using a renderer
         else {
@@ -650,15 +719,21 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     }
     // Initialize the window's graphics data to solid black (renderer)
     if(pxgfx.renderer.ok && pxgfx.texture.ok) {
+        pxgfx.addDebugMessage(
+            "pxgfx.init: Initialized with hardware acceleration."
+        );
         pxgfx.renderer.setColor(0, 0, 0);
         pxgfx.renderer.clear();
         pxgfx.renderer.present();
     }
     // Initialize the window's graphics data to solid black (no renderer)
     else {
+        pxgfx.addDebugMessage(
+            "pxgfx.init: Initialized without hardware acceleration."
+        );
         auto surface = pxgfx.window.getSurface();
         if(surface.ok) {
-            surface.fillColor(0, 0, 0);
+            surface.fillColor(0, 0, 0, 0xff);
             pxgfx.window.flipSurface();
         }
     }
@@ -678,6 +753,8 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         writeInt(pxgfx.settings.imageWidth).getChars() ~ " x " ~
         writeInt(pxgfx.settings.imageHeight).getChars() ~ "."
     );
+    // Initialize general context related things
+    pxgfx.initialize();
     // All done!
     return CapsuleExtensionCallResult.Ok(0);
 }
@@ -705,6 +782,7 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
     // draw directly to the window surface.
     // TODO: Implement scaling and offset when drawing to the window surface
     if(pxgfx.renderer.ok && pxgfx.texture.ok) {
+        assert(pxgfx.texturePixelFormat);
         auto textureLock = pxgfx.texture.lock();
         if(!textureLock.ok) {
             pxgfx.addErrorMessage("pxgfx.flip: Failed to lock texture.");
@@ -732,9 +810,37 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
         const SDL_Rect dstRect = SDL_Rect(
             dstX, dstY, pxgfx.settings.imageWidth, pxgfx.settings.imageHeight
         );
-        pxgfx.renderer.setColor(0, 0, 0);
+        pxgfx.renderer.setColor(0, 0, 0, 0xff);
         pxgfx.renderer.clear();
         pxgfx.renderer.copyTexture(pxgfx.texture.handle, null, &dstRect);
+        // Draw an FPS counter
+        if(pxgfx.showFpsCounter && pxgfx.renderer.ok && pxgfx.asciiTexture.ok) {
+            const nowms = cast(uint) (monotonicns() / 1_000_000L);
+            const framems = nowms - pxgfx.lastFlipMs;
+            if(pxgfx.lastFlipMs == 0) {
+                pxgfx.perFrameMs = framems;
+            }
+            else {
+                pxgfx.perFrameMs = (framems + 3 * pxgfx.perFrameMs) / 4;
+            }
+            const fps = 1_000 / pxgfx.perFrameMs;
+            const fpsChars = writeInt(fps).getChars();
+            SDL_Rect charDstRect = SDL_Rect(2, 2, 16, 16);
+            SDL_Rect charBgRect = SDL_Rect(
+                charDstRect.x - 2, charDstRect.y - 2,
+                4 + charDstRect.w * cast(int) fpsChars.length, 4 + charDstRect.h
+            );
+            pxgfx.renderer.setColor(0, 0, 0, 0xff);
+            pxgfx.renderer.fillRect(&charBgRect);
+            for(uint i = 0; i < fpsChars.length; i++) {
+                const charSrcRect = pxgfx.getAsciiTextureRect(fpsChars[i]);
+                pxgfx.renderer.copyTexture(
+                    pxgfx.asciiTexture.handle, &charSrcRect, &charDstRect
+                );
+                charDstRect.x += 16;
+            }
+        }
+        // Flip buffers
         pxgfx.renderer.present();
     }
     else {
@@ -765,5 +871,6 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
         pxgfx.window.flipSurface();
     }
     // All done
+    pxgfx.lastFlipMs = cast(uint) (monotonicns() / 1_000_000L);
     return CapsuleExtensionCallResult.Ok(0);
 }
