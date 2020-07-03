@@ -28,8 +28,9 @@
 
 .const time.init, 0x0200
 .const time.quit, 0x0201
-.const time.sleep_ms, 0x0202
-.const time.monotonic_ms, 0x0203
+.const time.sleep_rough_ms, 0x0202
+.const time.sleep_precise_ms, 0x0203
+.const time.monotonic_ms, 0x0204
 
 .const pxgfx.init, 0x30000000
 .const pxgfx.quit, 0x30000001
