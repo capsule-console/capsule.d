@@ -12,15 +12,8 @@ private:
 
 version(OSX) {
     import core.sys.darwin.mach.kern_return : kern_return_t, KERN_SUCCESS;
-    extern(C) nothrow @nogc {
-        struct mach_timebase_info_data_t {
-            uint numer;
-            uint denom;
-        }
-        alias mach_timebase_info_data_t* mach_timebase_info_t;
-        kern_return_t mach_timebase_info(mach_timebase_info_t);
-        ulong mach_absolute_time();
-    }
+    import capsule.time.mach : mach_absolute_time;
+    import capsule.time.mach : mach_timebase_info, mach_timebase_info_data_t;
 }
 else version(Posix) {
     import core.sys.posix.time : timespec, clock_gettime, CLOCK_MONOTONIC;

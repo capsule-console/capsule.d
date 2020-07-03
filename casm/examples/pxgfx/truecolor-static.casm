@@ -69,6 +69,6 @@ main_loop:
     ecalli A, Z, meta.defer
     ; Sleep 100ms - keep the program alive and looping without hogging CPU
     li X, 100
-    ecalli A, X, time.sleep_ms
+    ecalli A, X, time.sleep_rough_ms
     ; Repeat
     j main_loop

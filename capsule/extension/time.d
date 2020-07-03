@@ -9,7 +9,7 @@ module capsule.extension.time;
 private:
 
 import capsule.time.monotonic : monotonicns;
-import capsule.time.sleep : sleepMilliseconds;
+import capsule.time.sleep : sleepMilliseconds, sleepPreciseMilliseconds;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.core.extension : CapsuleExtension;
@@ -26,10 +26,14 @@ struct CapsuleTimeModule {
     
     alias ecall_time_init = .ecall_time_init;
     alias ecall_time_quit = .ecall_time_quit;
-    alias ecall_time_sleep_ms = .ecall_time_sleep_ms;
+    alias ecall_time_sleep_rough_ms = .ecall_time_sleep_rough_ms;
+    alias ecall_time_sleep_precise_ms = .ecall_time_sleep_precise_ms;
     alias ecall_time_monotonic_ms = .ecall_time_monotonic_ms;
     
     alias Extension = CapsuleExtension;
+    
+    long metronomeLastNs;
+    long metronomeErrorNs;
     
     this(MessageCallback onMessage) {
         this.onMessage = onMessage;
@@ -44,7 +48,8 @@ struct CapsuleTimeModule {
         return [
             Entry(Extension.time_init, &ecall_time_init, &this),
             Entry(Extension.time_quit, &ecall_time_quit, &this),
-            Entry(Extension.time_sleep_ms, &ecall_time_sleep_ms, &this),
+            Entry(Extension.time_sleep_rough_ms, &ecall_time_sleep_rough_ms, &this),
+            Entry(Extension.time_sleep_precise_ms, &ecall_time_sleep_precise_ms, &this),
             Entry(Extension.time_monotonic_ms, &ecall_time_monotonic_ms, &this),
         ];
     }
@@ -65,10 +70,18 @@ CapsuleExtensionCallResult ecall_time_quit(
 }
 
 /// Sleep for an approximate number of milliseconds.
-CapsuleExtensionCallResult ecall_time_sleep_ms(
+CapsuleExtensionCallResult ecall_time_sleep_rough_ms(
     void* data, CapsuleEngine* engine, in uint arg
 ) {
     sleepMilliseconds(arg);
+    return CapsuleExtensionCallResult.Ok(0);
+}
+
+/// Sleep for a precise number of milliseconds.
+CapsuleExtensionCallResult ecall_time_sleep_precise_ms(
+    void* data, CapsuleEngine* engine, in uint arg
+) {
+    sleepPreciseMilliseconds(arg);
     return CapsuleExtensionCallResult.Ok(0);
 }
 

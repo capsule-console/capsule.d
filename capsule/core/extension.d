@@ -33,8 +33,9 @@ enum CapsuleExtension: uint {
     // Time Module (00 00 02 00)
     time_init = 0x0200,
     time_quit = 0x0201,
-    time_sleep_ms = 0x0202,
-    time_monotonic_ms = 0x0203,
+    time_sleep_rough_ms = 0x0202,
+    time_sleep_precise_ms = 0x0203,
+    time_monotonic_ms = 0x0204,
     // 2D Pixel Graphics Module (30 00 00 xx)
     pxgfx_init = 0x30000000,
     pxgfx_quit = 0x30000001,

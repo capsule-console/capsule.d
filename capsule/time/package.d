@@ -8,6 +8,7 @@ module capsule.time;
 
 public:
 
+import capsule.time.mach;
 import capsule.time.monotonic;
 import capsule.time.sleep;
 import capsule.time.timer;
