@@ -10,6 +10,7 @@ module capsule.string;
 public:
 
 import capsule.string.ascii;
+import capsule.string.boolean;
 import capsule.string.escape;
 import capsule.string.hex;
 import capsule.string.pad;

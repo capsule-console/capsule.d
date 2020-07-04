@@ -11,9 +11,9 @@ module capsule.encode.config;
 private:
 
 import capsule.meta.enums : isEnumType;
-import capsule.meta.templates : isTemplateOf;
 import capsule.encode.ini : Ini;
 import capsule.range.range : isArray;
+import capsule.string.boolean : parseBooleanValue;
 import capsule.string.parseint : parseSignedInt, parseUnsignedInt;
 
 public:
@@ -35,18 +35,6 @@ static const string[] CapsuleConfigStatusStrings = [
 ];
 
 enum string CapsuleConfigStatusUnknownString = "Unknown config status";
-
-int getBooleanValue(in string text) {
-    if(text == "0" || text == "f" || text == "false") {
-        return false;
-    }
-    else if(text == "1" || text == "t" || text == "true") {
-        return true;
-    }
-    else {
-        return -1;
-    }
-}
 
 string capsuleConfigStatusToString(
     in CapsuleConfigStatus status, in string context = null
@@ -173,7 +161,7 @@ auto parseCapsuleConfigAttribute(T: bool, Config)(
 ) {
     alias Result = ParseCapsuleConfigAttributeResult!T;
     if(args.length > argIndex) {
-        const value = getBooleanValue(args[argIndex]);
+        const value = parseBooleanValue(args[argIndex]);
         if(value >= 0) {
             return Result(true, cast(bool) value, 1);
         }
