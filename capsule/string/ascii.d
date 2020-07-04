@@ -20,6 +20,21 @@ bool isWhitespace(in char ch) {
     );
 }
 
+auto trimWhitespace(in char[] text) {
+    if(!text.length) {
+        return text;
+    }
+    size_t start = 0;
+    size_t end = text.length;
+    while(start < text.length && isWhitespace(text[start])) {
+        start++;
+    }
+    while(end > start && isWhitespace(text[end - 1])) {
+        end--;
+    }
+    return text[start .. end];
+}
+
 bool isInlineWhitespace(in char ch) {
     return ch == ' ' || ch == '\t';
 }
@@ -65,4 +80,20 @@ bool eitherCaseStringEquals(T)(in T[] eitherCase, in T[] lowerCase) {
         }
     }
     return lower || upper;
+}
+
+/// Test coverage for trimWhitespace
+unittest {
+    assert(trimWhitespace(null) == null);
+    assert(trimWhitespace("") == "");
+    assert(trimWhitespace(" ") == "");
+    assert(trimWhitespace(" \t  ") == "");
+    assert(trimWhitespace(" \r  \n \r \f \v \t ") == "");
+    assert(trimWhitespace("a") == "a");
+    assert(trimWhitespace("  a  ") == "a");
+    assert(trimWhitespace("hello") == "hello");
+    assert(trimWhitespace("hello ") == "hello");
+    assert(trimWhitespace(" hello") == "hello");
+    assert(trimWhitespace(" hello ") == "hello");
+    assert(trimWhitespace("hello   \n") == "hello");
 }
