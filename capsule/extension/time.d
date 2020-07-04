@@ -32,9 +32,6 @@ struct CapsuleTimeModule {
     
     alias Extension = CapsuleExtension;
     
-    long metronomeLastNs;
-    long metronomeErrorNs;
-    
     this(MessageCallback onMessage) {
         this.onMessage = onMessage;
     }
