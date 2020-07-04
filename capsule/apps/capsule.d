@@ -36,6 +36,7 @@ import capsule.core.typestrings : getCapsuleExceptionDescription;
 import capsule.extension.common : CapsuleModuleMessageSeverity;
 import capsule.extension.list : CapsuleExtensionList;
 
+import capsule.extension.memory : CapsuleMemoryModule;
 import capsule.extension.meta : CapsuleMetaModule;
 import capsule.extension.stdio : CapsuleStandardIOModule;
 import capsule.extension.time : CapsuleTimeModule;
@@ -184,6 +185,8 @@ struct CapsuleEngineExtensionHandler {
     CapsuleStandardIOModule stdioModule;
     /// Context for the "time" extension module
     CapsuleTimeModule timeModule;
+    /// Context for the "memory" extension module
+    CapsuleMemoryModule memoryModule;
     /// Context for the "pxgfx" extension module
     version(CapsuleLibrarySDL2) {
         PixelGraphicsModule pxgfxModule;
@@ -248,6 +251,9 @@ struct CapsuleEngineExtensionHandler {
         // time
         this.timeModule = CapsuleTimeModule(&onExtensionMessage);
         this.extList.addExtensionList(this.timeModule.getExtensionList());
+        // memory
+        this.memoryModule = CapsuleMemoryModule(&onExtensionMessage);
+        this.extList.addExtensionList(this.memoryModule.getExtensionList());
         // pxgfx
         version(CapsuleLibrarySDL2) {
             this.pxgfxModule = PixelGraphicsModule(&onExtensionMessage);
@@ -320,6 +326,7 @@ struct CapsuleEngineExtensionHandler {
         this.metaModule.conclude();
         this.stdioModule.conclude();
         this.timeModule.conclude();
+        this.memoryModule.conclude();
         version(CapsuleLibrarySDL2) {
             this.pxgfxModule.conclude();
         }

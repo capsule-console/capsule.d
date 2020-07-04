@@ -14,7 +14,7 @@ public nothrow @safe @nogc:
 
 /// Enumeration of Capsule extension IDs.
 enum CapsuleExtension: uint {
-    // Meta Module (00 00 00 xx)
+    // Meta module (00 00 00 xx)
     meta_noop = 0x0000,
     meta_exit_ok = 0x0001,
     meta_exit_error = 0x0002,
@@ -23,20 +23,22 @@ enum CapsuleExtension: uint {
     meta_error = 0x0005,
     meta_host_uuid = 0x0006,
     meta_host_name = 0x0007,
-    // Standard Input and Output Module (00 00 01 xx)
+    // Standard input and output module (00 00 01 xx)
     stdio_init = 0x0100,
     stdio_quit = 0x0101,
     stdio_put_byte = 0x0102,
     stdio_get_byte = 0x0103,
     stdio_flush = 0x0104,
     stdio_eof = 0x0105,
-    // Time Module (00 00 02 00)
+    // Time module (00 00 02 00)
     time_init = 0x0200,
     time_quit = 0x0201,
     time_sleep_rough_ms = 0x0202,
     time_sleep_precise_ms = 0x0203,
     time_monotonic_ms = 0x0204,
-    // 2D Pixel Graphics Module (30 00 00 xx)
+    // Memory management module (00 00 03 00)
+    memory_brk = 0x0301,
+    // 2D pixel graphics module (30 00 00 xx)
     pxgfx_init = 0x30000000,
     pxgfx_quit = 0x30000001,
     pxgfx_check_mode = 0x30000002,

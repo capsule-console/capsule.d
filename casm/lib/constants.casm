@@ -32,6 +32,8 @@
 .const time.sleep_precise_ms, 0x0203
 .const time.monotonic_ms, 0x0204
 
+.const memory.brk, 0x0301
+
 .const pxgfx.init, 0x30000000
 .const pxgfx.quit, 0x30000001
 .const pxgfx.check_mode, 0x30000002

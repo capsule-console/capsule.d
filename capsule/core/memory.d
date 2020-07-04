@@ -9,7 +9,7 @@ module capsule.core.memory;
 
 private:
 
-import core.stdc.stdlib : free, calloc;
+import core.stdc.stdlib : free, calloc, realloc;
 
 public:
 
@@ -77,11 +77,27 @@ struct CapsuleMemoryLoad(T) {
     uint execStart = 0;
     /// Ending address of executable memory.
     uint execEnd = 0;
+    /// Starting address of the BSS segment.
+    uint bssStart = 0;
     
-    void allocate(in uint length) {
+    bool alloc(in uint length) {
         assert(length <= int.max);
         this.length = length;
         this.data = cast(ubyte*) calloc(length, 1);
+        return this.data !is null;
+    }
+    
+    bool realloc(in uint length) {
+        assert(length <= int.max);
+        this.length = length;
+        auto newData = cast(ubyte*) .realloc(this.data, length);
+        if(newData !is null) {
+            this.data = newData;
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     
     bool write(in uint offset, in ubyte[] bytes) {

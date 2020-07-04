@@ -37,11 +37,12 @@ auto initializeCapsuleMemory(in CapsuleProgram program) {
     if(!program.ok) {
         return memory;
     }
-    memory.allocate(program.length);
+    memory.alloc(program.length);
     memory.romStart = program.textSegment.offset;
     memory.romEnd = program.readOnlyDataSegment.end;
     memory.execStart = program.textSegment.offset;
     memory.execEnd = program.textSegment.end;
+    memory.bssStart = program.bssSegment.offset;
     const textOk = memory.write(
         program.textSegment.offset, program.textSegment.bytes
     );
