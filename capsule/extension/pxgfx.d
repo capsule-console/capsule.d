@@ -110,7 +110,11 @@ struct CapsuleSDLPixelGraphicsModule {
     mixin CapsuleModuleMixin;
     
     alias ecall_pxgfx_init = .ecall_pxgfx_init;
+    alias ecall_pxgfx_quit = .ecall_pxgfx_quit;
+    alias ecall_pxgfx_check_display_mode = .ecall_pxgfx_check_display_mode;
+    alias ecall_pxgfx_check_res = .ecall_pxgfx_check_res;
     alias ecall_pxgfx_flip = .ecall_pxgfx_flip;
+    alias ecall_pxgfx_ask_res = .ecall_pxgfx_ask_res;
     
     alias Extension = CapsuleExtension;
     alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
@@ -190,12 +194,6 @@ struct CapsuleSDLPixelGraphicsModule {
         this.asciiSurface.free();
         this.renderer.free();
         this.window.free();
-        if(CapsuleSDL.initialized) {
-            CapsuleSDL.quit();
-        }
-        if(CapsuleSDL.loaded) {
-            CapsuleSDL.unload();
-        }
     }
     
     SDL_PixelFormat* allocTextureFormat() {
@@ -293,7 +291,11 @@ struct CapsuleSDLPixelGraphicsModule {
         alias Entry = CapsuleExtensionListEntry;
         return [
             Entry(Extension.pxgfx_init, &ecall_pxgfx_init, &this),
+            Entry(Extension.pxgfx_quit, &ecall_pxgfx_quit, &this),
+            Entry(Extension.pxgfx_check_display_mode, &ecall_pxgfx_check_display_mode, &this),
+            Entry(Extension.pxgfx_check_res, &ecall_pxgfx_check_res, &this),
             Entry(Extension.pxgfx_flip, &ecall_pxgfx_flip, &this),
+            Entry(Extension.pxgfx_ask_res, &ecall_pxgfx_ask_res, &this),
         ];
     }
 }
@@ -621,6 +623,7 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
     alias Texture = CapsuleSDLTexture;
     auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
+    pxgfx.addDebugMessage("pxgfx.init: Initializing pixel graphics module.");
     // Fail if the module was already initialized
     if(pxgfx.window.ok) {
         pxgfx.addErrorMessage("pxgfx.init: Already initialized.");
@@ -774,6 +777,84 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     return CapsuleExtensionCallResult.Ok(0);
 }
 
+CapsuleExtensionCallResult ecall_pxgfx_quit(
+    void* data, CapsuleEngine* engine, in uint arg
+) {
+    assert(data);
+    auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
+    pxgfx.addDebugMessage("pxgfx.quit: Quitting pixel graphics module.");
+    // Fail if the module isn't initialized
+    if(pxgfx.window.ok) {
+        pxgfx.addErrorMessage("pxgfx.quit: Module isn't initialized.");
+        return CapsuleExtensionCallResult.Error;
+    }
+    // Otherwise proceed
+    pxgfx.conclude();
+    assert(!pxgfx.window.ok);
+    return CapsuleExtensionCallResult.Ok(0);
+}
+
+/// Check if a given display mode is supported by the console implementation.
+/// Sets the destination register to 1 if the display mode is supported.
+/// Sets it to zero if not.
+CapsuleExtensionCallResult ecall_pxgfx_check_display_mode(
+    void* data, CapsuleEngine* engine, in uint arg
+) {
+    assert(data);
+    alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
+    auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
+    const displayMode = cast(DisplayMode) arg;
+    const mode = writeHexDigits(displayMode);
+    if(pxgfx.isSupportedDisplayMode(displayMode)) {
+        pxgfx.addErrorMessage(
+            "pxgfx.check_display_mode: Display mode 0x" ~ mode ~ " is supported."
+        );
+        return CapsuleExtensionCallResult.Ok(1);
+    }
+    else {
+        pxgfx.addErrorMessage(
+            "pxgfx.check_display_mode: Display mode 0x" ~ mode ~ " is not supported."
+        );
+        return CapsuleExtensionCallResult.Ok(0);
+    }
+}
+
+/// Query the console implementation's support for a given resolution.
+/// A signed width and height (each 32 bits) are loaded from the memory
+/// address indicated by the source register, which must be word-aligned.
+/// Returns 1 for support without issues.
+/// Returns 0 for poor or partial support.
+/// Returns -1 for no support. (Means trying to initialize graphics with this
+/// resolution is likely to result in an extension error exception.)
+/// This implementation reports -1 for zero values or negative values or
+/// dimensions exceeding SDL's maximum window size.
+/// It reports 0 for a resolution that exceeds the window size.
+/// It reports +1 for everything else.
+/// https://wiki.libsdl.org/SDL_CreateWindow
+CapsuleExtensionCallResult ecall_pxgfx_check_res(
+    void* data, CapsuleEngine* engine, in uint arg
+) {
+    assert(data);
+    auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
+    const lResX = engine.mem.loadWord(arg);
+    const lResY = engine.mem.loadWord(arg + 4);
+    if(!lResX.ok || !lResY.ok) {
+        pxgfx.addErrorMessage("pxgfx.check_res: Invalid resolution data pointer.");
+        return CapsuleExtensionCallResult.Error;
+    }
+    const width = cast(int) lResX.value;
+    const height = cast(int) lResY.value;
+    if(width <= 0 || height <= 0 || width > 16384 || height > 16384) {
+        return CapsuleExtensionCallResult.Ok(-1);
+    }
+    else if(width > pxgfx.windowSize.width || height > pxgfx.windowSize.height) {
+        return CapsuleExtensionCallResult.Ok(0);
+    }
+    else {
+        return CapsuleExtensionCallResult.Ok(+1);
+    }
+}
+
 CapsuleExtensionCallResult ecall_pxgfx_flip(
     void* data, CapsuleEngine* engine, in uint arg
 ) {
@@ -887,5 +968,22 @@ CapsuleExtensionCallResult ecall_pxgfx_flip(
     }
     // All done
     pxgfx.lastFlipMs = cast(uint) (monotonicns() / 1_000_000L);
+    return CapsuleExtensionCallResult.Ok(0);
+}
+
+/// Query the console implementation's preferred display resolution.
+/// Stores a signed 32-bit width and height to the memory address given
+/// in the source register.
+CapsuleExtensionCallResult ecall_pxgfx_ask_res(
+    void* data, CapsuleEngine* engine, in uint arg
+) {
+    assert(data);
+    auto pxgfx = cast(CapsuleSDLPixelGraphicsModule*) data;
+    const width = engine.mem.storeWord(arg, pxgfx.preferredResolution.width);
+    const height = engine.mem.storeWord(arg + 4, pxgfx.preferredResolution.height);
+    if(width !is CapsuleEngine.Memory.Status.Ok || height !is CapsuleEngine.Memory.Status.Ok) {
+        pxgfx.addErrorMessage("pxgfx.ask_res: Invalid resolution data pointer.");
+        return CapsuleExtensionCallResult.Error;
+    }
     return CapsuleExtensionCallResult.Ok(0);
 }

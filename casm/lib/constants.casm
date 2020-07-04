@@ -36,9 +36,10 @@
 
 .const pxgfx.init, 0x30000000
 .const pxgfx.quit, 0x30000001
-.const pxgfx.check_mode, 0x30000002
-.const pxgfx.list_res, 0x30000003
+.const pxgfx.check_display_mode, 0x30000002
+.const pxgfx.check_res, 0x30000003
 .const pxgfx.flip, 0x30000004
+.const pxgfx.ask_res, 0x30000005
 
 .const pxgfx_mode.indexed_1_bit, 0x01
 .const pxgfx_mode.indexed_2_bit, 0x02

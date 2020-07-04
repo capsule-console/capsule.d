@@ -329,6 +329,12 @@ struct CapsuleEngineExtensionHandler {
         this.memoryModule.conclude();
         version(CapsuleLibrarySDL2) {
             this.pxgfxModule.conclude();
+            if(CapsuleSDL.initialized) {
+                CapsuleSDL.quit();
+            }
+            if(CapsuleSDL.loaded) {
+                CapsuleSDL.unload();
+            }
         }
     }
     
