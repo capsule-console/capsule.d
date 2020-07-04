@@ -18,10 +18,10 @@ import core.stdc.string : memcpy;
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.meta.enums : getEnumMemberName;
 import capsule.io.file : File, FileWriter;
-import capsule.string.hex : getHexString;
+import capsule.string.hex : getHexString, writeHexDigits;
+import capsule.meta.aliases : Aliases;
 import capsule.math.divceil : divceil;
 import capsule.math.ispow2 : isPow2;
-import capsule.meta.templates : Aliases;
 import capsule.range.range : toArray;
 import capsule.string.hex : writeHexDigits;
 import capsule.string.writeint : writeInt;
@@ -77,10 +77,10 @@ struct CapsuleSDLPixelGraphicsScalingMode {
     bool allowScalingFractional = false;
     /// Whether to allow scaling by different amounts on the X and Y
     /// axes, versus only ever scaling both axes by the same amount.
-    bool allowScalingStreched = false;
+    bool allowScalingStretched = false;
     
-    bool allowScalingStrechedFractional() pure const {
-        return this.allowScalingFractional && this.allowScalingStreched;
+    bool allowScalingStretchedFractional() pure const {
+        return this.allowScalingFractional && this.allowScalingStretched;
     }
 }
 
@@ -128,10 +128,14 @@ struct CapsuleSDLPixelGraphicsModule {
         CapsuleSDL.System.Video
     );
     
-    /// A list of supported resolutions.
-    /// The first resolution in the list is treated as a preferred
-    /// or ideal resolution.
-    Resolution[] resolutionList;
+    /// Default window size to fall back on when no other was specified.
+    static enum DefaultWindowSize = Resolution(512, 288);
+    
+    /// Size in pixels to use when creating a window.
+    Resolution windowSize;
+    /// Ideal resolution - if the program asks, tell it this is what
+    /// is preferred for image resolution.
+    Resolution preferredResolution;
     /// The settings that were indicated in a pxgfx.init ecall
     Settings settings;
     /// Title to use for the application window
@@ -200,28 +204,44 @@ struct CapsuleSDLPixelGraphicsModule {
         );
     }
     
-    auto getMostCompatibleResolution(
-        in int resolutionX, in int resolutionY
-    ) pure const {
-        struct Result {
-            int compatibility;
-            Resolution resolution;
+    /// Get the size in pixels that the settings said the window should
+    /// be made at. If this wasn't set, fall back on the preferred resolution
+    /// setting. If that wasn't set, fall back on a default value.
+    Resolution getWindowSize() const {
+        assert(typeof(this).DefaultWindowSize);
+        if(this.windowSize) {
+            return this.windowSize;
         }
-        auto bestResolution = Resolution.init;
-        int bestCompatibility = int.min;
-        foreach(resolution; this.resolutionList) {
-            const int compat = resolution.getCompatibility(
-                resolutionX, resolutionY
-            );
-            const isImprovement = (bestCompatibility >= 0 ?
-                compat < bestCompatibility : compat > bestCompatibility
-            );
-            if(isImprovement) {
-                bestResolution = resolution;
-                bestCompatibility = compat;
-            }
+        else if(this.preferredResolution) {
+            return this.preferredResolution;
         }
-        return Result(bestCompatibility, bestResolution);
+        else {
+            return typeof(this).DefaultWindowSize;
+        }
+    }
+    
+    Resolution getPreferredResolution() const {
+        assert(typeof(this).DefaultWindowSize);
+        if(this.preferredResolution) {
+            return this.preferredResolution;
+        }
+        else if(this.windowSize) {
+            return this.windowSize;
+        }
+        else {
+            return typeof(this).DefaultWindowSize;
+        }
+    }
+    
+    bool isSupportedDisplayMode(in DisplayMode displayMode) const {
+        switch(displayMode) {
+            case DisplayMode.Indexed1Bit: return false;
+            case DisplayMode.Indexed2Bit: return false;
+            case DisplayMode.Indexed4Bit: return false;
+            case DisplayMode.Indexed8Bit: return false;
+            case DisplayMode.Truecolor24Bit: return true;
+            default: return false;
+        }
     }
     
     SDL_Rect getAsciiTextureRect(in int ch) const {
@@ -372,7 +392,7 @@ auto getCapsulePixelGraphicsImageSize(
         return Result(resolutionX, resolutionY);
     }
     // Easiest case: stretch to fit
-    if(scalingMode.allowScalingStrechedFractional) {
+    if(scalingMode.allowScalingStretchedFractional) {
         return Result(displayWidth, displayHeight);
     }
     // Otherwise the aspect ratio will be maintained
@@ -589,11 +609,12 @@ private void pxgfxFlipImpl(
 
 /// Implement pxgfx.init extension.
 /// The data pointer must refer to a CapsuleSDLPixelGraphicsModule instance.
+/// Sets destination register to 0 on success, otherwise sets an error code.
 CapsuleExtensionCallResult ecall_pxgfx_init(
     void* data, CapsuleEngine* engine, in uint arg
 ) {
     assert(data);
-    // TODO: Return a status flag instead of always producing an exception
+    // TODO: Return a status flag instead of always producing an exception?
     alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
     alias PixelFormat = CapsuleSDLPixelFormat;
     alias Renderer = CapsuleSDLRenderer;
@@ -621,21 +642,6 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         pxgfx.addErrorMessage("pxgfx.init: Invalid settings pointer.");
         return CapsuleExtensionCallResult.Error;
     }
-    // Make sure the requested resolution is compatible with console settings
-    auto resMatch = pxgfx.getMostCompatibleResolution(
-        lResX.value, lResY.value
-    );
-    if(!resMatch.resolution) {
-        pxgfx.addErrorMessage("pxgfx.init: No compatible display resolution.");
-        return CapsuleExtensionCallResult.Error;
-    }
-    else {
-        pxgfx.addDebugMessage(
-            "pxgfx.init: Selected display resolution " ~
-            writeInt(resMatch.resolution.width).getChars() ~ " x " ~
-            writeInt(resMatch.resolution.height).getChars() ~ "."
-        );
-    }
     // Put together the pxgfx settings struct
     Settings settings = {
         resolutionX: lResX.value,
@@ -658,7 +664,12 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         writeInt(pxgfx.settings.pitch).getChars()
     );
     if(!pxgfx.settings.ok) {
-        pxgfx.addErrorMessage("pxgfx.init: Invalid or incompatible settings.");
+        pxgfx.addErrorMessage("pxgfx.init: Invalid or incompatible init settings.");
+        return CapsuleExtensionCallResult.Error;
+    }
+    if(!pxgfx.isSupportedDisplayMode(settings.displayMode)) {
+        const mode = writeHexDigits(settings.displayMode);
+        pxgfx.addErrorMessage("pxgfx.init: Unsupported display mode 0x" ~ mode ~ ".");
         return CapsuleExtensionCallResult.Error;
     }
     if(!pxgfxCheckProgramMemory(
@@ -674,9 +685,13 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     CapsuleSDL.ensureInitialized();
     // Create application window via SDL
     pxgfx.addDebugMessage("pxgfx.init: Creating application window.");
+    const windowSize = pxgfx.getWindowSize();
+    if(!windowSize) {
+        pxgfx.addErrorMessage("pxgfx.init: Window size configuration error.");
+        return CapsuleExtensionCallResult.Error;
+    }
     pxgfx.window = CapsuleSDLWindow(
-        pxgfx.windowTitle,
-        resMatch.resolution.width, resMatch.resolution.height,
+        pxgfx.windowTitle, windowSize.width, windowSize.height,
         CapsuleSDLWindow.Flag.Shown
     );
     if(!pxgfx.window.ok) {
@@ -738,12 +753,12 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         }
     }
     // Determine program image scaling
-    const windowSize = (
+    const windowOutputSize = (
         pxgfx.renderer.ok && pxgfx.texture.ok ?
         pxgfx.renderer.getOutputSize() : pxgfx.window.getSize()
     );
     const imageSize = getCapsulePixelGraphicsImageSize(
-        pxgfx.scalingMode, windowSize.width, windowSize.height,
+        pxgfx.scalingMode, windowOutputSize.width, windowOutputSize.height,
         lResX.value, lResY.value
     );
     pxgfx.settings.imageWidth = imageSize.width;

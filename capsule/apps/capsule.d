@@ -13,12 +13,12 @@ private:
 import capsule.encode.config : CapsuleConfigAttribute, CapsuleConfigStatus;
 import capsule.encode.config : loadCapsuleConfig, capsuleConfigStatusToString;
 import capsule.encode.config : getCapsuleConfigUsageString;
-import capsule.encode.config : getBooleanValue;
 
 import capsule.algorithm.indexof : indexOf;
 import capsule.encode.ini : Ini;
 import capsule.io.file : File;
 import capsule.io.stdio : stdio;
+import capsule.math.vector : Vector;
 import capsule.meta.enums : getEnumMemberName;
 import capsule.string.hex : getHexString;
 import capsule.string.parseint : parseUnsignedInt;
@@ -40,6 +40,7 @@ import capsule.extension.meta : CapsuleMetaModule;
 import capsule.extension.stdio : CapsuleStandardIOModule;
 import capsule.extension.time : CapsuleTimeModule;
 
+import capsule.apps.lib.modulesettings : CapsuleModulePropertySettings;
 import capsule.apps.lib.runprogram : runProgram, debugProgram;
 import capsule.apps.lib.status : CapsuleApplicationStatus;
 
@@ -275,61 +276,41 @@ struct CapsuleEngineExtensionHandler {
         }
     }
     
-    void applySettings(in Ini.Group settings) {
+    void applySettings(Ini.Group settings) {
         version(CapsuleLibrarySDL2) {
             this.pxgfxApplySettings(settings);
         }
     }
     
-    version(CapsuleLibrarySDL2) void pxgfxApplySettings(in Ini.Group settings) {
-        PixelGraphicsModule.ScalingMode scalingMode = {
-            allowScalingUp: 0 < getBooleanValue(
-                settings.get("pxgfx", "allow-scaling-up")
-            ),
-            allowScalingDown: 0 < getBooleanValue(
-                settings.get("pxgfx", "allow-scaling-down")
-            ),
-            allowScalingFractional: 0 < getBooleanValue(
-                settings.get("pxgfx", "allow-scaling-fractional")
-            ),
-            allowScalingStreched: 0 < getBooleanValue(
-                settings.get("pxgfx", "allow-scaling-stretched")
-            ),
-        };
-        this.pxgfxModule.scalingMode = scalingMode;
+    version(CapsuleLibrarySDL2) void pxgfxApplySettings(Ini.Group settings) {
+        alias Resolution = PixelGraphicsModule.Resolution;
+        const properties = CapsuleModulePropertySettings("pxgfx", settings);
+        this.pxgfxModule.scalingMode.allowScalingUp = (
+            properties.get!bool("allow-scaling-up")
+        );
+        this.pxgfxModule.scalingMode.allowScalingDown = (
+            properties.get!bool("allow-scaling-down")
+        );
+        this.pxgfxModule.scalingMode.allowScalingFractional = (
+            properties.get!bool("allow-scaling-fractional")
+        );
+        this.pxgfxModule.scalingMode.allowScalingStretched = (
+            properties.get!bool("allow-scaling-stretched")
+        );
+        this.pxgfxModule.showFpsCounter = (
+            properties.get!bool("show-fps-counter")
+        );
         this.pxgfxModule.scaleQuality = (
-            settings.get("pxgfx", "scale-quality") == "linear" ?
+            properties.get!string("scale-quality") == "linear" ?
             PixelGraphicsModule.ScaleQuality.Linear :
             PixelGraphicsModule.ScaleQuality.Nearest
         );
-        this.pxgfxModule.showFpsCounter = 0 < getBooleanValue(
-            settings.get("pxgfx", "show-fps-counter")
+        this.pxgfxModule.windowSize = Resolution(
+            properties.get!(Vector!(2, uint))("window-size").values
         );
-        const windowTitle = settings.get("pxgfx", "window-title");
-        if(windowTitle.length) {
-            this.pxgfxModule.windowTitle = windowTitle;
-        }
-        const preferredResolution = typeof(this).parseResolutionSetting(
-            settings.get("pxgfx", "preferred-resolution")
+        this.pxgfxModule.preferredResolution = Resolution(
+            properties.get!(Vector!(2, uint))("preferred-resolution").values
         );
-        if(preferredResolution.width > 0 && preferredResolution.height > 0) {
-            this.pxgfxModule.resolutionList ~= PixelGraphicsModule.Resolution(
-                preferredResolution.width, preferredResolution.height
-            );
-        }
-        const supportedResolutions = (
-            settings.aggregate("pxgfx", "supported-resolution")
-        );
-        foreach(supportedResolutionText; supportedResolutions) {
-            const supportedResolution = typeof(this).parseResolutionSetting(
-                supportedResolutionText
-            );
-            if(supportedResolution.width > 0 && supportedResolution.height > 0) {
-                this.pxgfxModule.resolutionList ~= PixelGraphicsModule.Resolution(
-                    supportedResolution.width, supportedResolution.height
-                );
-            }
-        }
     }
     
     /// Free resources or otherwise conclude all the extension
