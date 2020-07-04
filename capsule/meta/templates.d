@@ -2,10 +2,6 @@ module capsule.meta.templates;
 
 public:
 
-template Aliases(T...){
-    alias Aliases = T;
-}
-
 template Unconst(T) {
     static if(is(T R == const R)) {
         alias Unconst = R;
