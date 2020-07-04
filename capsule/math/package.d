@@ -12,3 +12,4 @@ import capsule.math.divceil;
 import capsule.math.gcd;
 import capsule.math.ispow2;
 import capsule.math.minmax;
+import capsule.math.vector;
