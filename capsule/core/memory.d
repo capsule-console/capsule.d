@@ -71,11 +71,11 @@ struct CapsuleMemoryLoad(T) {
     uint length = 0;
     /// Starting address of read-only memory.
     uint romStart = 0;
-    /// Endingtarting address of read-only memory.
+    /// Ending address of read-only memory.
     uint romEnd = 0;
     /// Starting address of executable memory.
     uint execStart = 0;
-    /// Endingtarting address of executable memory.
+    /// Ending address of executable memory.
     uint execEnd = 0;
     
     void allocate(in uint length) {
