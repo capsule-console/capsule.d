@@ -49,7 +49,7 @@ CapsuleExtensionCallResult ecall_memory_brk(
 ) {
     assert(engine);
     const brk = cast(int) arg;
-    if(brk < engine.mem.bssStart) {
+    if(brk < engine.mem.bssStart || ((brk & 3) != 0)) {
         return CapsuleExtensionCallResult.Ok(1);
     }
     const status = engine.mem.realloc(cast(uint) brk);
