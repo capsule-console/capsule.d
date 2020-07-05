@@ -42,7 +42,7 @@ an instruction always occupies the same span of bits for every opcode.
 
 The opcode always occupies the lowest 7 bits, the destination register
 the next 3 bits, the first source register the 3 bits after that,
-the second source register a subsequent bits, and an immediate value
+the second source register a subsequent 3 bits, and an immediate value
 occupies the highest 16 bits.
 
 ``` text
