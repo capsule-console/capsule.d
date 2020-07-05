@@ -10,8 +10,9 @@ module capsule.time.sleep;
 private:
 
 version(Windows) {
+    pragma(lib, "winmm");
     import core.sys.windows.winbase : Sleep;
-    import core.sys.windows.winbase : timeBeginPeriod, timeEndPeriod;
+    import core.sys.windows.mmsystem : timeBeginPeriod, timeEndPeriod;
 }
 
 version(Posix) {
