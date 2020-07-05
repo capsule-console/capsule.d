@@ -466,8 +466,11 @@ struct CapsuleAsmCompiler {
         auto section = this.requireDeclaredSection(location);
         if(!section.isInitialized) {
             this.addStatus(location, Status.DataInUninitializedSection);
+            return null;
         }
-        return section;
+        else {
+            return section;
+        }
     }
     
     auto addSection(in FileLocation location, in SectionType type) {
@@ -1965,6 +1968,7 @@ struct CapsuleAsmCompiler {
         static if(T.sizeof == 4) assert(node.directiveType is DirectiveType.Word);
         auto section = this.requireInitializedSection(node.location);
         if(!section) return;
+        assert(section.isInitialized);
         if(section.type is Section.Type.Text) this.addStatus(
             node.location,
             Status.DataInExecutableSection,
