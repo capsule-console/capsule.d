@@ -306,8 +306,13 @@ struct CapsuleEngine {
                 pc += 4;
                 break;
             case Opcode.RemainderSigned:
+                const dividend = ri(i.rs1);
                 const divisor = ri(i.rs2);
-                rset(i.rd, divisor == 0 ? 0 : ri(i.rs1) % divisor);
+                // Inputs that cause D to crash
+                if(divisor == 0) rset(i.rd, 0);
+                else if(divisor == -1) rset(i.rd, 0); // int.min % -1 crashes
+                // Everything else
+                else rset(i.rd, dividend % divisor);
                 pc += 4;
                 break;
             case Opcode.RemainderUnsigned:
