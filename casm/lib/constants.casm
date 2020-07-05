@@ -45,4 +45,4 @@
 .const pxgfx_mode.indexed_2_bit, 0x02
 .const pxgfx_mode.indexed_4_bit, 0x03
 .const pxgfx_mode.indexed_8_bit, 0x04
-.const pxgfx_mode.truecolor_24_bit, 0x80
+.const pxgfx_mode.truecolor_24_bit, 0x40

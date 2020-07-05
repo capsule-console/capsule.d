@@ -51,7 +51,32 @@ enum CapsuleSDLPixelGraphicsDisplayMode: uint {
     Indexed2Bit = 0x02,
     Indexed4Bit = 0x03,
     Indexed8Bit = 0x04,
-    Truecolor24Bit = 0x80,
+    Truecolor24Bit = 0x40,
+}
+
+struct CapsuleSDLPixelGraphicsDisplayModeInfo {
+    alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
+    
+    static enum Indexed1Bit = typeof(this)(DisplayMode.Indexed1Bit, 1, 2);
+    static enum Indexed2Bit = typeof(this)(DisplayMode.Indexed2Bit, 2, 4);
+    static enum Indexed4Bit = typeof(this)(DisplayMode.Indexed4Bit, 4, 16);
+    static enum Indexed8Bit = typeof(this)(DisplayMode.Indexed8Bit, 8, 256);
+    static enum Truecolor24Bit = typeof(this)(DisplayMode.Truecolor24Bit, 32, 0);
+    
+    DisplayMode displayMode;
+    uint bitsPerPixel;
+    uint paletteLength;
+    
+    static typeof(this) getInfo(in DisplayMode displayMode) {
+        switch(displayMode) {
+            case DisplayMode.Indexed1Bit: return typeof(this).Indexed1Bit;
+            case DisplayMode.Indexed2Bit: return typeof(this).Indexed2Bit;
+            case DisplayMode.Indexed4Bit: return typeof(this).Indexed4Bit;
+            case DisplayMode.Indexed8Bit: return typeof(this).Indexed8Bit;
+            case DisplayMode.Truecolor24Bit: return typeof(this).Truecolor24Bit;
+            default: return typeof(this)(displayMode);
+        }
+    }
 }
 
 /// https://wiki.libsdl.org/SDL_HINT_RENDER_SCALE_QUALITY
@@ -118,6 +143,7 @@ struct CapsuleSDLPixelGraphicsModule {
     
     alias Extension = CapsuleExtension;
     alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
+    alias DisplayModeInfo = CapsuleSDLPixelGraphicsDisplayModeInfo;
     alias PixelFormat = CapsuleSDLPixelFormat;
     alias Renderer = CapsuleSDLRenderer;
     alias Resolution = CapsuleSDLPixelGraphicsResolution;
@@ -248,7 +274,7 @@ struct CapsuleSDLPixelGraphicsModule {
     
     void initializeAsciiGraphics() {
         this.addDebugMessage(
-            "pxgfx.init: Initializing ASCII character graphics."
+            "pxgfx.init: Initializing ASCII character bitmaps."
         );
         this.asciiSurface = CapsuleSDLSurface.Create(
             128, 128, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000
@@ -256,7 +282,7 @@ struct CapsuleSDLPixelGraphicsModule {
         if(!this.asciiSurface.ok) {
             this.addErrorMessage(
                 "pxgfx.init: Failed to create surface for ASCII " ~
-                "character graphics."
+                "character bitmaps."
             );
             return;
         }
@@ -281,7 +307,7 @@ struct CapsuleSDLPixelGraphicsModule {
             if(!this.asciiTexture.ok) {
                 this.addErrorMessage(
                     "pxgfx.init: Failed to create texture for ASCII " ~
-                    "character graphics."
+                    "character bitmaps."
                 );
             }
         }
@@ -304,6 +330,7 @@ struct CapsuleSDLPixelGraphicsInitSettings {
     nothrow @safe @nogc:
     
     alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
+    alias DisplayModeInfo = CapsuleSDLPixelGraphicsDisplayModeInfo;
     alias ScalingMode = CapsuleSDLPixelGraphicsScalingMode;
     
     /// Program's horizontal display resolution.
@@ -314,6 +341,8 @@ struct CapsuleSDLPixelGraphicsInitSettings {
     int pitch;
     /// Program pixel data display mode.
     DisplayMode displayMode;
+    /// Information about the chosen display mode
+    DisplayModeInfo displayModeInfo;
     /// Pointer to pixel data in program memory.
     int pixelsPtr;
     /// Pointer to palette data in program memory, when applicable.
@@ -338,19 +367,6 @@ struct CapsuleSDLPixelGraphicsInitSettings {
     
     int pixelsLength() pure const {
         return this.resolutionY * this.pitch;
-    }
-}
-
-uint capsuleSDLPixelGraphicsDisplayModeBitsPerPixel(
-    in CapsuleSDLPixelGraphicsDisplayMode displayMode
-) nothrow pure @safe @nogc {
-    alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
-    final switch(displayMode) {
-        case DisplayMode.Indexed1Bit: return 1;
-        case DisplayMode.Indexed2Bit: return 2;
-        case DisplayMode.Indexed4Bit: return 4;
-        case DisplayMode.Indexed8Bit: return 8;
-        case DisplayMode.Truecolor24Bit: return 32;
     }
 }
 
@@ -618,6 +634,7 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
     assert(data);
     // TODO: Return a status flag instead of always producing an exception?
     alias DisplayMode = CapsuleSDLPixelGraphicsDisplayMode;
+    alias DisplayModeInfo = CapsuleSDLPixelGraphicsDisplayModeInfo;
     alias PixelFormat = CapsuleSDLPixelFormat;
     alias Renderer = CapsuleSDLRenderer;
     alias Settings = CapsuleSDLPixelGraphicsInitSettings;
@@ -646,11 +663,13 @@ CapsuleExtensionCallResult ecall_pxgfx_init(
         return CapsuleExtensionCallResult.Error;
     }
     // Put together the pxgfx settings struct
+    const DisplayMode displayMode = cast(DisplayMode) lDisplayMode.value;
     Settings settings = {
         resolutionX: lResX.value,
         resolutionY: lResY.value,
         pitch: lPitch.value,
-        displayMode: cast(DisplayMode) lDisplayMode.value,
+        displayMode: displayMode,
+        displayModeInfo: DisplayModeInfo.getInfo(displayMode),
         pixelsPtr: lPixelsPtr.value + arg,
         palettePtr: lPalettePtr.value + arg,
         unused: [lUnused0.value, lUnused1.value],
