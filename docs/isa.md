@@ -67,6 +67,79 @@ imposes no conventions or restrictions upon their usage.
 
 The register names are, in order: Z, A, B, C, R, S, X, Y.
 
+## Exceptions
+
+Some instructions may produce an exception under certain circumstances.
+
+As of writing, exceptions are always and immediately fatal to a Capsule program.
+There is no way to recover from an exception.
+In the future, there may be some facility to handle and recover from exceptions.
+
+There are 127 possible exception codes, not counting the exception code used to
+represent an absent or missing exception (0x00).
+Currently, only fifteen of these codes have been assigned a meaning.
+Only eleven of these codes are currently possible to trigger.
+
+- **triple (0x01)** - Not currently used. This exception is reserved to
+represent a triple fault, to be triggered if an exception occurs while
+handling a double fault exception.
+
+- **double (0x02)** - Not currently used. This exception is reserved to
+represent a double fault, to be triggered if an exception occurs while
+handling another exception.
+
+- **instr (0x03)** - This exception is triggered when the virtual machine
+encounters an unrecognized or invalid instruction.
+
+- **pcexec (0x04)** - This exception is triggered when the program counter is
+found to be in non-executable memory, i.e. outside the _text_ segment.
+
+- **lalign (0x05)** - This exception is triggered upon attempting to load
+a half word from an address not aligned on a 16 bit boundary,
+or upon attempting to load a word from an address that is not aligned
+on a 32 bit boundary.
+
+- **salign (0x06)** - This exception is triggered upon attempting to store
+a half word to an address not aligned on a 16 bit boundary,
+or upon attempting to store a word to an address that is not aligned
+on a 32 bit boundary.
+
+- **pcalign (0x07)** - This exception is triggered when the program counter
+is found to not be aligned on a 32-bit word boundary.
+
+- **lbounds (0x08)** - This exception is triggered when attempting to load
+from an address that is not within valid addressable memory, e.g. because
+the signed address is less than zero or because it exceeds the length of
+the program's memory.
+
+- **sbounds (0x09)** - This exception is triggered when attempting to store
+to an address that is not within valid addressable memory, e.g. because
+the signed address is less than zero or because it exceeds the length of
+the program's memory.
+
+- **pcbounds (0x0a)** - This exception is triggered when the program counter
+is found to not be within valid addressable memory, e.g. because
+the signed address is less than zero or because it exceeds the length of
+the program's memory.
+
+- **sro (0x0b)** - This exception is triggered when attempting to store
+to a read-only location in memory, such as to an address within the
+program's _text_ or _rodata_ segment.
+
+- **ovf (0x0c)** - Not currently used. This exception is reserved to
+represent arithmetic overflow.
+
+- **divz (0x0d)** - Not currently used. This exception is reserved to
+represent an integer divison by zero.
+
+- **extmiss (0x0e)** - This exception is triggered by the _ecall_ instruction
+when the given extension ID value is unknown or unsupported by the VM
+implementation.
+
+- **exterr (0x0f)** - This exception may be triggered by the _ecall_
+instruction, depending on the extension, to signal some kind of error or
+invalid state detected while calling that extension.
+
 ## Opcode Listing
 
 ### Missing or invalid instruction (0x00)
