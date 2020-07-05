@@ -59,21 +59,21 @@ Though extension IDs 0x70000000 and up are reserved to be used by
 custom extension call handlers, there is not currently any way for
 a program to register such a handler. This may change in the future.
 
-## Meta Module (00 00 00 xx)
+## Meta Module (0x000000**)
 
-### meta.noop (00 00 00 00)
+### meta.noop (0x00000000)
 
 No operation. Does nothing.
 
-### meta.exit_ok (00 00 00 01)
+### meta.exit_ok (0x00000001)
 
 Exit the program immediately with a success/normal status.
 
-### meta.exit_error (00 00 00 02)
+### meta.exit_error (0x00000002)
 
 Exit the program immediately with an error/abnormal status.
 
-### meta.check_ext (00 00 00 03)
+### meta.check_ext (0x00000003)
 
 If the virtual console recognizes and supports an extension identified
 by the ID value in the source register, a nonzero value will be written
@@ -81,37 +81,37 @@ to the destination register.
 
 Otherwise, a zero value will be written to the destination register.
 
-### meta.defer (00 00 00 04)
+### meta.defer (0x00000004)
 
 Defers execution to the virtual console for a very short time, allowing
 it to do essential bookkeeping, such as monitoring for a SIGTERM or
 other signal to stop the program.
 
-### meta.host_uuid (00 00 00 05)
+### meta.host_uuid (0x00000005)
 
 _Not yet implemented._
 
-### meta.host_name (00 00 00 06)
+### meta.host_name (0x00000006)
 
 _Not yet implemented._
 
-## Standard Input and Output Module (00 00 01 xx)
+## Standard Input and Output Module (0x000001**)
 
-### stdio.init (00 00 01 00)
+### stdio.init (0x00000100)
 
 Initialize the _stdio_ module.
 
 Atempting to invoke any other _stdio_ extension before initializating
 the module may result in an error.
 
-### stdio.quit (00 00 01 01)
+### stdio.quit (0x00000101)
 
 Quit the _stdio_ module.
 
 Atempting to invoke any other _stdio_ extension after terminating
 the module and without reinitializing it may result in an error.
 
-### stdio.put_byte (00 00 01 02)
+### stdio.put_byte (0x00000102)
 
 Write the value of the first source register to standard output as
 a single byte.
@@ -119,7 +119,7 @@ a single byte.
 Typically, output will be written to the console application's standard
 output stream.
 
-### stdio.get_byte (00 00 01 03)
+### stdio.get_byte (0x00000103)
 
 Read one byte from standard input and store its value in the destination
 register. A negative value will be stored if there were no bytes available
@@ -128,40 +128,57 @@ to read.
 Typically, input will be read from the console application's standard
 input stream.
 
-### stdio.flush (00 00 01 04)
+### stdio.flush (0x00000104)
 
 _Not yet implemented._
 
-### stdio.eof (00 00 01 05)
+### stdio.eof (0x00000105)
 
 _Not yet implemented._
 
-## Time Module (00 00 02 xx)
+## Time Module (0x000002**)
 
-### time.init (00 00 02 00)
+### time.init (0x00000200)
 
 Initialize the _time_ module.
 
 Atempting to invoke any other _time_ extension before initializating
 the module may result in an error.
 
-### time.quit (00 00 02 01)
+### time.quit (0x00000201)
 
 Quit the _time_ module.
 
 Atempting to invoke any other _time_ extension after terminating
 the module and without reinitializing it may result in an error.
 
-### time.sleep_ms (00 00 02 02)
+### time.sleep_rough_ms (0x00000202)
 
 Suspend program execution for an approximate number of milliseconds,
 as indicated by the value in the source register.
+
+On some platforms, the precision of the sleep interval may be as
+low as fifteen milliseconds, or external factors may cause the sleep
+to be interrupted before it is complete.
 
 Sleeping can be relied upon to be less demanding on a host's processor
 and/or battery charge than simply looping until some desired amount of
 time has elapsed.
 
-### time.monotonic_ms (00 00 02 03)
+### time.sleep_precise_ms (0x00000203)
+
+Suspend program execution for a precise number of milliseconds,
+as indicated by the value in the source register.
+
+Absolute precision cannot be universally guaranteed, but in general this
+sleep function should be expected to have a precision of close to one
+millisecond, and should not be subject to interruptions.
+
+Sleeping can be relied upon to be less demanding on a host's processor
+and/or battery charge than simply looping until some desired amount of
+time has elapsed.
+
+### time.monotonic_ms (0x00000204)
 
 Get the number of milliseconds on a
 [monotonic clock](https://itnext.io/as-a-software-developer-why-should-you-care-about-the-monotonic-clock-7d9c8533595c),
@@ -177,9 +194,27 @@ of a monotonic clock value. It is possible that _time.monotonic_ns_ calls
 with a nonzero source register will always and unconditionally produce
 a zero value in the destination register on some platforms.
 
-## 2D Pixel Graphics Module (30 00 00 xx)
+## Memory Management Module (0x000003**)
 
-### pxgfx.init
+### memory.brk (0x00000301)
+
+Change the location of the program break, using the value of the
+source register as a new exclusive high boundary on program memory.
+It behaves similarly to Unix's
+[brk system call](https://man7.org/linux/man-pages/man2/brk.2.html).
+
+This extension can, in effect, be used to expand or to shrink
+the BSS segment.
+
+Sets the destination register to 0 on success and to a nonzero value
+when the program break was not moved, e.g. because the requested size
+was unacceptably large, because the new break location would have
+truncated a segment other than the program's BSS segment, or because
+the new program break was not aligned on a word boundary.
+
+## 2D Pixel Graphics Module (0x300000**)
+
+### pxgfx.init (0x30000000)
 
 Initializes displaying graphics using the pxgfx module.
 
@@ -221,21 +256,46 @@ Here is the list of recognized display modes:
 | Indexed 2-bit (RGB) | 2 | 0x01 |
 | Indexed 4-bit (RGB) | 4 | 0x02 |
 | Indexed 8-bit (RGB) | 8 | 0x03 |
-| Truecolor 24-bit (RGB) | 32 | 0x80 |
+| Truecolor 24-bit (RGB) | 32 | 0x40 |
 
 _As of writing, only the Truecolor 24-bit mode is actually supported._
 
-### pxgfx.quit
+### pxgfx.quit (0x30000001)
 
-_Not yet implemented._
+Quits the pxgfx module, if previously initialized.
 
-### pxgfx.check_mode
+### pxgfx.check_display_mode
 
-_Not yet implemented._
+Check whether the host console supports a given pixel graphics display mode,
+as represented by the value of the source register.
+
+Sets the destination register to 1 if the display mode is supported and
+sets the destination register to 0 if it is not supported.
+
+Refer to the _pxgfx.init_ documentation for a list and description of
+recognized display modes.
 
 ### pxgfx.check_res
 
-_Not yet implemented._
+Query the host console for information about its support for a given
+display resolution.
+
+The source register supplies an address to a resolution to query,
+represented as two signed 32-bit integers, width first and height second.
+
+If the supplied address is not valid, e.g. if it is out of bounds or not
+word-aligned, then an exception will occur.
+
+If the resolution is fully supported and can be displayed without any
+issues, then the destination register is set to 1.
+
+If the resolution has poor or partial support, e.g. because it exceeds
+the maximum display size and so must be cropped or scaled down, then
+the destination register is set to 0.
+
+If the resolution is completely unsupported and is likely or certain to
+result in an error when given to _pxgfx.init_ as a resolution setting, then
+the destination register is set to -1.
 
 ### pxgfx.flip
 
@@ -246,3 +306,18 @@ Without a _pxgfx.flip_ extension call, writing pixel data to the memory
 area indicated with the _pxgfx.init_ extension call will not actually
 result in any visual updates. The _pxgfx.flip_ extension _must_ be called
 in order to update the image that is actually being displayed.
+
+### pxgfx.ask_res
+
+Query the host console and get a preferred display resolution.
+
+The preferred resolution is stored as two signed 32-bit words at the
+memory address indicated by the source register, first width and then
+height.
+
+If the supplied address is not valid, e.g. if it is out of bounds or not
+word-aligned, then an exception will occur.
+
+For the best cross-platform support, programs should ideally either
+display at the preferred resolution or display at a smaller resolution that
+can be scaled up by an integer amount to fill the preferred resolution.
