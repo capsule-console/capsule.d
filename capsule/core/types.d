@@ -81,12 +81,12 @@ enum CapsuleExceptionCode: ubyte {
     @("pcalign") PCMisaligned = 0x07, /// Misaligned program counter
     @("lbounds") LoadOutOfBounds = 0x08, /// Out-of-bounds load
     @("sbounds") StoreOutOfBounds = 0x09, /// Out-of-bounds store
-    @("pcbounds") PCOutOfBounds = 0x0A, /// Out-of-bounds program counter
-    @("sro") StoreToReadOnly = 0x0B, /// Store to read-only memory address
-    @("ovf") ArithmeticOverflow = 0x0C, /// Arithmetic overflow or underflow
-    @("divz") DivideByZero = 0x0D, /// Arithmetic divide by zero
-    @("extmiss") ExtensionMissing = 0x0E, /// Unknown or unsupported extension
-    @("exterr") ExtensionError = 0x0F, /// Error occured during extension call
+    @("pcbounds") PCOutOfBounds = 0x0a, /// Out-of-bounds program counter
+    @("sro") StoreToReadOnly = 0x0b, /// Store to read-only memory address
+    @("ovf") ArithmeticOverflow = 0x0c, /// Arithmetic overflow or underflow
+    @("divz") DivideByZero = 0x0d, /// Arithmetic divide by zero
+    @("extmiss") ExtensionMissing = 0x0e, /// Unknown or unsupported extension
+    @("exterr") ExtensionError = 0x0f, /// Error occured during extension call
 }
 
 /// Enumeration of Capsule registers

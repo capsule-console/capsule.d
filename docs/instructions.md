@@ -10,11 +10,6 @@ Note the following abbreviations:
 - rs2, meaning the second source register.
 - imm, meaning an immediate value.
 - i32 meaning the immediate value, sign-extended to 32 bits.
-- m8[x], meaning a signed-extended byte in memory at address x.
-- mu8[x], meaning a zero-extended byte in memory at address x.
-- m16[x], meaning a signed-extended half word in memory in memory at address x.
-- mu16[x], meaning a zero-extended half word in memory in memory at address x.
-- m32[x], meaning a word in memory in memory at address x.
 
 ## Instructions
 
@@ -24,23 +19,23 @@ Note the following abbreviations:
 | 0x01 | \-                     | _Reserved_                                | \- |
 | 0x02 | \-                     | _Reserved_                                | \- |
 | 0x03 | \-                     | _Reserved_                                | \- |
-| 0x04 | and rd,rs1,rs2         | Bitwise AND                               | rd = rs1 AND rs2 |
-| 0x05 | or rd,rs1,rs2          | Bitwise OR                                | rd = rs1 OR rs2 |
-| 0x06 | xor rd,rs1,rs2         | Bitwise XOR                               | rd = rs1 XOR rs2 |
+| 0x04 | and rd,rs1,rs2         | Bitwise AND                               | rd = rs1 & rs2 |
+| 0x05 | or rd,rs1,rs2          | Bitwise OR                                | rd = rs1 | rs2 |
+| 0x06 | xor rd,rs1,rs2         | Bitwise XOR                               | rd = rs1 ^ rs2 |
 | 0x07 | sub rd,rs1,rs2         | Subtract                                  | rd = rs1 - rs2 |
-| 0x08 | min rd,rs1,rs2         | Set to minimum                            | rd = rs1 < rs2 ? rs1 : rs2 |
+| 0x08 | min rd,rs1,rs2         | Set to minimum signed                     | rd = rs1 < rs2 ? rs1 : rs2 |
 | 0x09 | minu rd,rs1,rs2        | Set to minimum unsigned                   | rd = rs1 < rs2 ? rs1 : rs2 |
-| 0x0a | max rd,rs1,rs2         | Set to maximum                            | rd = rs1 >= rs2 ? rs1 : rs2 |
+| 0x0a | max rd,rs1,rs2         | Set to maximum signed                     | rd = rs1 >= rs2 ? rs1 : rs2 |
 | 0x0b | maxu rd,rs1,rs2        | Set to maximum unsigned                   | rd = rs1 >= rs2 ? rs1 : rs2 |
-| 0x0c | slt rd,rs1,rs2         | Set if less than                          | rd = rs1 < rs2 ? 1 : 0 |
+| 0x0c | slt rd,rs1,rs2         | Set if less than signed                   | rd = rs1 < rs2 ? 1 : 0 |
 | 0x0d | sltu rd,rs1,rs2        | Set if less than unsigned                 | rd = rs1 < rs2 ? 1 : 0 |
-| 0x10 | mul rd,rs1,rs2         | Multiply and truncate                     | rd = (rs1 * rs2) & 0x00000000FFFFFFFF |
+| 0x10 | mul rd,rs1,rs2         | Multiply and truncate                     | rd = (rs1 * rs2) & 0x00000000ffffffff |
 | 0x11 | mulh rd,rs1,rs2        | Multiply signed and shift                 | rd = (rs1 * rs2) >> 32 |
 | 0x12 | mulhu rd,rs1,rs2       | Multiply unsigned and shift               | rd = (rs1 * rs2) >> 32 |
 | 0x13 | mulhsu rd,rs1,rs2      | Multiply signed by unsigned and shift     | rd = (rs1 * rs2) >> 32 |
-| 0x14 | div rd,rs1,rs2         | Divide                                    | rd = rs2 == 0 ? 0 : rs1 / rs2 |
+| 0x14 | div rd,rs1,rs2         | Divide signed                             | rd = rs2 == 0 ? 0 : rs1 / rs2 |
 | 0x15 | divu rd,rs1,rs2        | Divide unsigned                           | rd = rs2 == 0 ? 0 : rs1 / rs2 |
-| 0x16 | rem rd,rs1,rs2         | Remainder                                 | rd = rs2 == 0 ? 0 : rs1 % rs2 |
+| 0x16 | rem rd,rs1,rs2         | Remainder signed                          | rd = rs2 == 0 ? 0 : rs1 % rs2 |
 | 0x17 | remu rd,rs1,rs2        | Remainder unsigned                        | rd = rs2 == 0 ? 0 : rs1 % rs2 |
 | 0x18 | revb rd,rs1            | Reverse byte order                        | rd = revb(rs1) |
 | 0x19 | revh rd,rs1            | Reverse half word order                   | rd = revh(rs1) |
@@ -61,26 +56,26 @@ Note the following abbreviations:
 | 0x49 | srl rd,rs1,rs2,imm     | Shift logical right                       | rd = (rs1 >>> (i32 & 0x1F)) >>> (rs2 & 0x1F) |
 | 0x4a | sra rd,rs1,rs2,imm     | Shift arithmetic right                    | rd = (rs1 >> (i32 & 0x1F)) >> (rs2 & 0x1F) |
 | 0x4b | add rd,rs1,rs2,imm     | Add                                       | rd = rs1 + rs2 + i32 |
-| 0x4c | slti rd,rs1,imm        | Set if less than immediate                | rd = rs1 < i32 ? 1 : 0 |
+| 0x4c | slti rd,rs1,imm        | Set if less than immediate signed         | rd = rs1 < i32 ? 1 : 0 |
 | 0x4d | sltiu rd,rs1,imm       | Set if less than immediate unsigned       | rd = rs1 < i32 ? 1 : 0 |
 | 0x4e | lui rd,imm             | Load upper immediate                      | rd = i32 << 16 |
-| 0x4f | auipc rd,imm           | Add upper immediate to program counter    | rd = PC + (i32 << 16) |
-| 0x50 | lb rd,rs1,imm          | Load sign-extended byte                   | rd = m8[rs1 + i32] |
-| 0x51 | lbu rd,rs1,imm         | Load zero-extended byte                   | rd = mu8[rs1 + i32] |
-| 0x52 | lh rd,rs1,imm          | Load sign-extended half word              | rd = m16[(rs1 + i32)] |
-| 0x53 | lhu rd,rs1,imm         | Load zero-extended half word              | rd = mu16[(rs1 + i32)] |
-| 0x54 | lw rd,rs1,imm          | Load word                                 | rd = m32[(rs1 + i32)] |
-| 0x55 | sb rs1,rs2,imm         | Store byte                                | m8[rs2 + i32] = rs1 |
-| 0x56 | sh rs1,rs2,imm         | Store half word                           | m16[(rs2 + i32)] = rs1 |
-| 0x57 | sw rs1,rs2,imm         | Store word                                | m32[(rs2 + i32)] = rs1 |
-| 0x58 | jal rd,imm             | Jump and link                             | rd = PC + 4, PC = (PC + i32) |
-| 0x59 | jalr rd,rs1,imm        | Jump and link register                    | rd = PC + 4, PC = (rs1 + i32) |
-| 0x5a | beq rs1,rs2,imm        | Branch if equal                           | if rs1 == rs2: PC = PC + (i32) |
-| 0x5b | bne rs1,rs2,imm        | Branch if not equal                       | if rs1 != rs2: PC = PC + (i32) |
-| 0x5c | blt rs1,rs2,imm        | Branch if less than signed                | if rs1 < rs2: PC = PC + (i32) |
-| 0x5d | bltu rs1,rs2,imm       | Branch if less than unsigned              | if rs1 < rs2: PC = PC + (i32) |
-| 0x5e | bge rs1,rs2,imm        | Branch if greater or equal signed         | if rs1 >= rs2: PC = PC + (i32) |
-| 0x5f | bgeu rs1,rs2,imm       | Branch if greater or equal unsigned       | if rs1 >= rs2: PC = PC + (i32) |
+| 0x4f | auipc rd,imm           | Add upper immediate to program counter    | rd = pc + (i32 << 16) |
+| 0x50 | lb rd,rs1,imm          | Load sign-extended byte                   | rd = memory.byte[rs2 + i32] |
+| 0x51 | lbu rd,rs1,imm         | Load zero-extended byte                   | rd = memory.ubyte[rs2 + i32] |
+| 0x52 | lh rd,rs1,imm          | Load sign-extended half word              | rd = memory.half[(rs2 + i32)] |
+| 0x53 | lhu rd,rs1,imm         | Load zero-extended half word              | rd = memory.uhalf[(rs2 + i32)] |
+| 0x54 | lw rd,rs1,imm          | Load word                                 | rd = memory.word[(rs2 + i32)] |
+| 0x55 | sb rs1,rs2,imm         | Store byte                                | memory.byte[rs2 + i32] = rs1 |
+| 0x56 | sh rs1,rs2,imm         | Store half word                           | memory.half[(rs2 + i32)] = rs1 |
+| 0x57 | sw rs1,rs2,imm         | Store word                                | memory.word[(rs2 + i32)] = rs1 |
+| 0x58 | jal rd,imm             | Jump and link                             | rd = pc + 4, pc = (pc + i32) |
+| 0x59 | jalr rd,rs1,imm        | Jump and link register                    | rd = pc + 4, pc = (rs1 + i32) |
+| 0x5a | beq rs1,rs2,imm        | Branch if equal                           | if rs1 == rs2: pc = pc + (i32) |
+| 0x5b | bne rs1,rs2,imm        | Branch if not equal                       | if rs1 != rs2: pc = pc + (i32) |
+| 0x5c | blt rs1,rs2,imm        | Branch if less than signed                | if rs1 < rs2: pc = pc + (i32) |
+| 0x5d | bltu rs1,rs2,imm       | Branch if less than unsigned              | if rs1 < rs2: pc = pc + (i32) |
+| 0x5e | bge rs1,rs2,imm        | Branch if greater or equal signed         | if rs1 >= rs2: pc = pc + (i32) |
+| 0x5f | bgeu rs1,rs2,imm       | Branch if greater or equal unsigned       | if rs1 >= rs2: pc = pc + (i32) |
 | 0x60 | \-                     | _Reserved, through to 0x7e_               | \- |
 | 0x7f | ecall rd,rs1,rs2,imm   | Call extension                            | rd = ecall(extid: rs2 + i32, input: rs1) |
 
