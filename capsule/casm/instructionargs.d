@@ -222,8 +222,13 @@ struct CapsuleInstructionArgs {
         Registers.DestinationSource, Immediate.Always,
         ReferenceType.AbsoluteWord,
     );
+    /// Examples: lba, lbua, lha, lhua, lwa (pseudo-instructions)
+    static enum LoadFromAddress = typeof(this)(
+        Registers.Destination, Immediate.Always,
+        ReferenceType.PCRelativeAddressWord,
+    );
     /// Examples: sba, sha, swa (pseudo-instructions)
-    static enum StoreAddress = typeof(this)(
+    static enum StoreToAddress = typeof(this)(
         Registers.DestinationSource, Immediate.Always,
         ReferenceType.PCRelativeAddressWord,
     );
