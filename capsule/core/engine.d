@@ -339,7 +339,7 @@ struct CapsuleEngine {
                 pc += 4;
                 break;
             case Opcode.LoadByteSignExt:
-                const load = this.mem.loadByteSigned(ri(i.rs1) + i.i32);
+                const load = this.mem.loadByteSigned(ri(i.rs2) + i.i32);
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(int) load.value);
@@ -358,7 +358,7 @@ struct CapsuleEngine {
                 }
                 break;
             case Opcode.LoadByteZeroExt:
-                const load = this.mem.loadByteUnsigned(ri(i.rs1) + i.i32);
+                const load = this.mem.loadByteUnsigned(ri(i.rs2) + i.i32);
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(uint) load.value);
@@ -377,7 +377,7 @@ struct CapsuleEngine {
                 }
                 break;
             case Opcode.LoadHalfWordSignExt:
-                const load = this.mem.loadHalfWordSigned((ri(i.rs1) + i.i32));
+                const load = this.mem.loadHalfWordSigned((ri(i.rs2) + i.i32));
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(int) load.value);
@@ -396,7 +396,7 @@ struct CapsuleEngine {
                 }
                 break;
             case Opcode.LoadHalfWordZeroExt:
-                const load = this.mem.loadHalfWordUnsigned((ri(i.rs1) + i.i32));
+                const load = this.mem.loadHalfWordUnsigned((ri(i.rs2) + i.i32));
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, cast(uint) load.value);
@@ -415,7 +415,7 @@ struct CapsuleEngine {
                 }
                 break;
             case Opcode.LoadWord:
-                const load = this.mem.loadWord((ri(i.rs1) + i.i32));
+                const load = this.mem.loadWord((ri(i.rs2) + i.i32));
                 final switch(load.status) {
                     case Memory.Status.Ok:
                         rset(i.rd, load.value);

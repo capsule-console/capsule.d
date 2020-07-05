@@ -36,7 +36,7 @@ enum CapsuleInstructionArgsRegisters: uint {
     SecondSource = 0x4,
     /// The instruction uses only the destination (rd)
     /// and second source register (rs2).
-    /// Not currently used by any recognized instruction.
+    /// Examples: lb, lbu, lh, lhu, lw
     DestinationSecondSource = 0x5,
     /// The instruction uses both source registers (rs1, rs2),
     /// but does not use the destination register (rd).
@@ -153,8 +153,8 @@ struct CapsuleInstructionArgs {
         Registers.DestinationSource, Immediate.Never
     );
     /// Examples: lb, lbu, lh, lhu, lw
-    static enum RegDestSrcImmMaybe = typeof(this)(
-        Registers.DestinationSource, Immediate.Maybe
+    static enum Load = typeof(this)(
+        Registers.DestinationSecondSource, Immediate.Maybe
     );
     /// Examples: andi, ori, xori, slti, sltiu
     static enum RegDestSrcImmAlways = typeof(this)(

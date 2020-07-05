@@ -203,11 +203,11 @@ auto getCapsuleInstructionArgs(
         case Opcode.CountLeadingZeroes: return Args.RegDestSrcImmNever;
         case Opcode.CountTrailingZeroes: return Args.RegDestSrcImmNever;
         case Opcode.CountSetBits: return Args.RegDestSrcImmNever;
-        case Opcode.LoadByteSignExt: return Args.RegDestSrcImmMaybe;
-        case Opcode.LoadByteZeroExt: return Args.RegDestSrcImmMaybe;
-        case Opcode.LoadHalfWordSignExt: return Args.RegDestSrcImmMaybe;
-        case Opcode.LoadHalfWordZeroExt: return Args.RegDestSrcImmMaybe;
-        case Opcode.LoadWord: return Args.RegDestSrcImmMaybe;
+        case Opcode.LoadByteSignExt: return Args.Load;
+        case Opcode.LoadByteZeroExt: return Args.Load;
+        case Opcode.LoadHalfWordSignExt: return Args.Load;
+        case Opcode.LoadHalfWordZeroExt: return Args.Load;
+        case Opcode.LoadWord: return Args.Load;
         case Opcode.StoreByte: return Args.RegBothSrcImmMaybe;
         case Opcode.StoreHalfWord: return Args.RegBothSrcImmMaybe;
         case Opcode.StoreWord: return Args.RegBothSrcImmMaybe;
