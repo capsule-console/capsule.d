@@ -1391,13 +1391,13 @@ struct CapsuleAsmCompiler {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadByteSignExt, rd, rdz, 0, values.low));
+            emit(Node(loc, Opcode.LoadByteSignExt, rd, 0, rdz, values.low));
         }
         else if(pseudoType is PseudoType.LoadByteZeroExt) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadByteZeroExt, rd, rdz, 0, values.low));
+            emit(Node(loc, Opcode.LoadByteZeroExt, rd, 0, rdz, values.low));
         }
         else if(pseudoType is PseudoType.LoadHalfWordSignExt) {
             const values = this.getNumberHalves(immediate);
