@@ -1403,19 +1403,19 @@ struct CapsuleAsmCompiler {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadHalfWordSignExt, rd, rdz, 0, values.low));
+            emit(Node(loc, Opcode.LoadHalfWordSignExt, rd, 0, rdz, values.low));
         }
         else if(pseudoType is PseudoType.LoadHalfWordZeroExt) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadHalfWordZeroExt, rd, rdz, 0, values.low));
+            emit(Node(loc, Opcode.LoadHalfWordZeroExt, rd, 0, rdz, values.low));
         }
         else if(pseudoType is PseudoType.LoadWord) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadWord, rd, rdz, 0, values.low));
+            emit(Node(loc, Opcode.LoadWord, rd, 0, rdz, values.low));
         }
         else if(pseudoType is PseudoType.StoreByte) {
             if(rd == rs1) emitSameSrcDstStatus();
