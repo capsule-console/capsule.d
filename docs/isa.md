@@ -176,7 +176,7 @@ stores the result in _rd_.
 _rd = rs1 - rs2_
 
 The _sub_ instruction subtracts _rs2_ from _rs1_ and stores the
-difference in _rd_.
+integer difference in _rd_.
 
 ### Set minimum signed (min, 0x08)
 
@@ -330,8 +330,9 @@ representation of _rs1_, and stores that count to _rd_.
 
 _rd = pcnt(rs1)_
 
-The _pcnt_, or "population count" instruction, counts the number of set
-bits in the binary representation of _rs1_, and stores that count to _rd_.
+The _pcnt_, or ["population count"](https://en.wikichip.org/wiki/population_count)
+instruction, counts the number of set bits in the binary representation
+of _rs1_, and stores that count to _rd_.
 
 ### Breakpoint (ebreak, 0x3f)
 
@@ -367,9 +368,10 @@ operation on _rs1_ and _i32_ and stores the result in _rd_.
 
 _rd = (rs1 << (i32 & 0x1F)) << (rs2 & 0x1F)_
 
-The _sll_ instruction performs a bit shift left of _rs1_, first by the
-value indicated by the lowest 5 bits of _rs2_, and then also by the
-value indicated by the lowest 5 bits of _i32_.
+The _sll_ instruction performs a
+[bit shift left](https://en.wikipedia.org/wiki/Logical_shift) of _rs1_,
+first by the value indicated by the lowest 5 bits of _rs2_,
+and then also by the value indicated by the lowest 5 bits of _i32_.
 
 The shift operation moves bits from a lower order position to a higher
 order position. The lowest bits, which information was shifted out of,
@@ -379,7 +381,8 @@ are filled with zeros.
 
 _rd = (rs1 >>> (i32 & 0x1F)) >>> (rs2 & 0x1F)_
 
-The _srl_ instruction performs a logical bit shift right of _rs1_,
+The _srl_ instruction performs a
+[logical bit shift right](https://en.wikipedia.org/wiki/Logical_shift) of _rs1_,
 first by the value indicated by the lowest 5 bits of _rs2_,
 and then also by the value indicated by the lowest 5 bits of _i32_.
 
