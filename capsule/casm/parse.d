@@ -290,15 +290,12 @@ struct CapsuleAsmParser {
         // is either a newline or special punctuation, then this indicates
         // that the instruction hasn't got any arguments.
         const ch = this.reader.empty ? '\n' : this.reader.front;
-        if(ch == '\n' || ch == ';' || ch == '.' || ch == ':') {
-            node.location = this.endLocation(node.location);
-            return node;
-        }
+        const noArgs = (ch == '\n' || ch == ';' || ch == '.' || ch == ':');
         // Parse the instruction argument list
         uint numRegisters = 0;
         bool hasImmediate = false;
         const expectArgs = node.instructionArgs;
-        do {
+        if(!noArgs) do {
             // Try to parse the next instruction argument
             auto arg = this.parseInstructionArg(expectArgs.defaultReferenceType);
             // Failure parsing the argument
@@ -336,6 +333,7 @@ struct CapsuleAsmParser {
             }
         } while(this.parseArgSeparator());
         // Check if arguments were in line with expectations
+        VerifyArgs:
         if(hasImmediate && expectArgs.immediate is InstructionArgs.Immediate.Never) {
             this.addStatus(node.location, Status.InstructionArgsUnexpectedImmediate, node.getName());
         }
