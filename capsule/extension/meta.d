@@ -10,6 +10,8 @@ private:
 
 import core.stdc.signal : signal, SIGTERM;
 
+import capsule.time.monotonic : monotonicns;
+
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.core.extension : CapsuleExtension;
 
@@ -67,9 +69,15 @@ struct CapsuleMetaModule {
         typeof(this).signalValue = signal;
     }
     
+    /// Record the last time the program made a call to meta.defer.
+    /// The VM may treat a program as unresponsive if it runs for a
+    /// long time without ever deferring.
+    long lastDeferTime;
+    
     this(MessageCallback onMessage, CapsuleExtensionList* extList) {
         this.onMessage = onMessage;
         this.extList = extList;
+        this.lastDeferTime = monotonicns();
     }
     
     void initializeSignalHandler() nothrow @trusted @nogc const {
@@ -157,6 +165,8 @@ CapsuleExtensionCallResult ecall_meta_defer(
             }
         }
     }
+    // Wrap it up
+    meta.lastDeferTime = monotonicns();
     return CapsuleExtensionCallResult.Ok(0);
 }
 

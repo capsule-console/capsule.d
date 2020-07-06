@@ -150,7 +150,7 @@ uint getRegisterInput(in char[] input) {
     else if(input == "r" || input == "R" || input == "r4") return 4;
     else if(input == "s" || input == "S" || input == "r5") return 5;
     else if(input == "x" || input == "X" || input == "r6") return 6;
-    else if(input == "x" || input == "X" || input == "r7") return 7;
+    else if(input == "y" || input == "Y" || input == "r7") return 7;
     else return 0;
 }
 
@@ -171,7 +171,7 @@ auto getRegisterInputStart(in char[] input) {
     else if(input.startsWith("r5")) return Result(1, 2);
     else if(input.startsWith("x") || input.startsWith("X")) return Result(6, 1);
     else if(input.startsWith("r6")) return Result(1, 2);
-    else if(input.startsWith("x") || input.startsWith("X")) return Result(7, 1);
+    else if(input.startsWith("y") || input.startsWith("Y")) return Result(7, 1);
     else if(input.startsWith("r7")) return Result(1, 2);
     else return Result(0, 0);
 }
@@ -237,11 +237,18 @@ ptrdiff_t getLocalSymbolIndex(
     }
 }
 
-void runProgram(CapsuleEngine* engine) {
+void runProgram(CapsuleEngine* engine, in bool withMetrics) {
     assert(engine);
     assert(engine.ok);
-    while(engine.status is CapsuleEngine.Status.Running) {
-        engine.step();
+    if(withMetrics) {
+        while(engine.status is CapsuleEngine.Status.Running) {
+            engine.stepMetrics();
+        }
+    }
+    else {
+        while(engine.status is CapsuleEngine.Status.Running) {
+            engine.step();
+        }
     }
 }
 
@@ -267,7 +274,7 @@ void runProgramUntil(alias until)(CapsuleEngine* engine) {
             break;
         }
         if(engine.status is CapsuleEngine.Status.Running) {
-            engine.step();
+            engine.execMetrics();
             first = false;
         }
     }
@@ -337,7 +344,7 @@ void debugProgram(CapsuleProgram program, CapsuleEngine* engine) {
             logRegistersShort(engine.reg);
             logInstruction(engine);
             if(engine.status is CapsuleEngine.Status.Running) {
-                engine.exec();
+                engine.execMetrics();
             }
             if(engine.status !is CapsuleEngine.Status.Running) {
                 stdio.writeln("Program execution complete.");
@@ -352,7 +359,7 @@ void debugProgram(CapsuleProgram program, CapsuleEngine* engine) {
             int[8] reg;
             for(uint i = 0; i < n && engine.status is Status.Running; i++) {
                 reg = engine.reg;
-                engine.step();
+                engine.stepMetrics();
             }
             logRegistersShort(reg);
             logInstruction(engine);

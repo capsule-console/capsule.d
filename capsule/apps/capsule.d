@@ -19,10 +19,13 @@ import capsule.encode.ini : Ini;
 import capsule.io.file : File;
 import capsule.io.stdio : stdio;
 import capsule.math.vector : Vector;
-import capsule.meta.enums : getEnumMemberName;
-import capsule.string.hex : getHexString;
+import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
+import capsule.string.hex : getHexString, getByteHexString;
+import capsule.string.pad : padLeft;
 import capsule.string.parseint : parseUnsignedInt;
 import capsule.string.writeint : writeInt;
+import capsule.time.monotonic : monotonicns;
+import capsule.time.sleep : sleepPreciseMilliseconds;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.core.engineinit : initializeCapsuleEngine;
@@ -30,7 +33,7 @@ import capsule.core.extension : CapsuleExtension;
 import capsule.core.program : CapsuleProgram;
 import capsule.core.programencode : CapsuleProgramDecoder;
 import capsule.core.programstring : capsuleProgramToString;
-import capsule.core.types : CapsuleExceptionCode;
+import capsule.core.types : CapsuleExceptionCode, CapsuleOpcode;
 import capsule.core.typestrings : getCapsuleExceptionDescription;
 
 import capsule.extension.common : CapsuleModuleMessageSeverity;
@@ -117,6 +120,37 @@ struct CapsuleEngineConfig {
     )
     bool verbose;
     
+    @(CapsuleConfigAttribute!uint("defer-timeout-ms", "dtms")
+        .setOptional(0)
+        .setHelpText([
+            "If the program fails to call the \"meta.defer\" at least",
+            "once per millisecond time interval, then terminate the",
+            "program based on this setting."
+        ])
+    )
+    uint deferTimeoutMilliseconds;
+    
+    @(CapsuleConfigAttribute!uint("limit-hz", "hz")
+        .setOptional(0)
+        .setHelpText([
+            "Artificially cap program performance so that, on average,",
+            "approximately only this many instructions may be executed",
+            "per second.",
+        ])
+    )
+    uint limitInstructionsPerSecond;
+    
+    @(CapsuleConfigAttribute!bool("time")
+        .setOptional(false)
+        .setHelpText([
+            "When set, the time it took to execute the program, not",
+            "counting time spent loading, decoding, and initializing,",
+            "will be written to standard output after program execution",
+            "is complete.",
+        ])
+    )
+    bool printTime;
+    
     @(CapsuleConfigAttribute!bool("print-program")
         .setOptional(false)
         .setHelpText([
@@ -125,6 +159,16 @@ struct CapsuleEngineConfig {
         ])
     )
     bool printProgram;
+    
+    @(CapsuleConfigAttribute!bool("print-metrics")
+        .setOptional(false)
+        .setHelpText([
+            "When set, metrics regarding program execution will be",
+            "tracked during runtime and then written to standard output",
+            "after the program ends.",
+        ])
+    )
+    bool printMetrics;
     
     @(CapsuleConfigAttribute!bool("show-exit-status", "exs")
         .setOptional(false)
@@ -450,7 +494,7 @@ CapsuleApplicationStatus execute(string[] args) {
     // program file to stdout
     if(config.printProgram) {
         writeln("String representation of loaded program file:");
-        writeln(capsuleProgramToString(decode.program));
+        stdio.writeln(capsuleProgramToString(decode.program));
     }
     // Initialize extensions
     verboseln("Initializing extension modules.");
@@ -468,10 +512,75 @@ CapsuleApplicationStatus execute(string[] args) {
         writeln("Program file is invalid and cannot be executed.");
         return Status.ProgramInvalidError;
     }
+    // Assign a program execution interval callback
+    const bool programMetrics = (
+        config.printMetrics ||
+        config.deferTimeoutMilliseconds ||
+        config.limitInstructionsPerSecond
+    );
+    static struct ProgramIntervalCallbackData {
+        long lastIntervalTime;
+        ulong lastIntervalExecCount;
+        uint deferTimeoutMilliseconds;
+        uint limitInstructionsPerSecond;
+        CapsuleMetaModule* metaModule;
+    }
+    ProgramIntervalCallbackData intervalCallbackData = {
+        lastIntervalTime: 0,
+        lastIntervalExecCount: 0,
+        deferTimeoutMilliseconds: config.deferTimeoutMilliseconds,
+        limitInstructionsPerSecond: config.limitInstructionsPerSecond,
+        metaModule: &extHandler.metaModule,
+    };
+    static void programIntervalCallback(
+        void* data, CapsuleEngine* engine
+    ) {
+        auto cdata = cast(ProgramIntervalCallbackData*) data;
+        assert(cdata);
+        assert(cdata.metaModule);
+        const now = monotonicns();
+        const deferTime = now - cdata.metaModule.lastDeferTime;
+        const intervalTime = now - cdata.lastIntervalTime;
+        const intervalExec = engine.totalExecCount - cdata.lastIntervalExecCount;
+        const expectedExec = (
+            intervalTime * cdata.limitInstructionsPerSecond / 1_000_000_000L
+        );
+        if(cdata.deferTimeoutMilliseconds && (
+            (deferTime / 1_000_000L) > cdata.deferTimeoutMilliseconds
+        )) {
+            cdata.metaModule.addErrorMessage(
+                "meta.defer: Defer timeout exceeded. Terminating program."
+            );
+            engine.status = CapsuleEngine.Status.Terminated;
+        }
+        else if(cdata.limitInstructionsPerSecond && (
+            intervalExec > expectedExec
+        )) {
+            const expectedTime = cast(long) (1_000_000_000L * intervalExec) / (
+                 cdata.limitInstructionsPerSecond
+            );
+            assert(expectedTime >= intervalTime);
+            sleepPreciseMilliseconds(cast(int) (
+                (expectedTime - intervalTime) / 1_000_000L
+            ));
+        }
+        cdata.lastIntervalTime = now;
+        cdata.lastIntervalExecCount = engine.totalExecCount;
+    }
+    engine.intervalCallbackMask = 0xffff; // Run once per 65536 instructions
+    engine.intervalCallbackData = cast(void*) &intervalCallbackData;
+    engine.intervalCallback = &programIntervalCallback;
     // Run the program!
     verboseln("Executing program.");
-    if(config.debugMode) debugProgram(decode.program, &engine);
-    else runProgram(&engine);
+    const programStartTime = monotonicns();
+    if(config.debugMode) {
+        debugProgram(decode.program, &engine);
+    }
+    else {
+        runProgram(&engine, programMetrics);
+    }
+    const programEndTime = monotonicns();
+    const programDuration = programEndTime - programStartTime;
     // All done, now wrap it up
     if(verbose) {
         const status = getEnumMemberName(engine.status);
@@ -491,8 +600,47 @@ CapsuleApplicationStatus execute(string[] args) {
     engine.mem.free();
     extHandler.conclude();
     const exitStatus = getExitStatus(engine.status);
+    if(config.printTime || config.printMetrics) {
+        const long milliseconds = programDuration / 1_000_000L;
+        const msString = padLeft(writeInt(milliseconds).getChars(), '0', 4);
+        const secString = msString[0 .. $ - 3] ~ "." ~ msString[$ - 3 .. $];
+        stdio.writeln("Execution complete in ", secString, " seconds.");
+    }
+    if(config.printMetrics) {
+        if(!engine.totalExecCount) {
+            stdio.writeln("Instruction metrics were not recorded.");
+        }
+        else {
+            const programDurationSeconds = programDuration / 1_000_000_000L;
+            const hz = (programDurationSeconds == 0 ?
+                engine.totalExecCount :
+                engine.totalExecCount / programDurationSeconds
+            );
+            stdio.writeln(
+                "Total instructions executed: ", writeInt(engine.totalExecCount)
+            );
+            stdio.write(
+                "Average instructions executed per second: ", writeInt(hz)
+            );
+            if(hz >= 1_000_000) {
+                stdio.writeln(" (", writeInt(hz / 1_000_000L), " MHz)");
+            }
+            else {
+                stdio.write("\n");
+            }
+            stdio.writeln("Instructions executed per opcode:");
+            for(uint i = 0; i < engine.opExecCount.length; i++) {
+                const name = getEnumMemberAttribute!string(cast(CapsuleOpcode) i);
+                const count = engine.opExecCount[i];
+                if(count && name.length) stdio.writeln(
+                    getByteHexString(cast(ubyte) i), " ", name, ": ",
+                    writeInt(count)
+                );
+            }
+        }
+    }
     if(config.showExitStatus || verbose) {
-        writeln("Exiting with status code ", writeInt(exitStatus));
+        stdio.writeln("Exiting with status code ", writeInt(exitStatus));
     }
     return exitStatus;
 }
