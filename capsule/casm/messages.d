@@ -214,6 +214,8 @@ enum CapsuleAsmMessageStatus: uint {
     InvalidProgramSegment,
     @('E', "Invalid segment type.")
     InvalidProgramSegmentType,
+    @('E', "Invalid line continuation syntax.")
+    InvalidLineContinuationSyntax,
     @('E', "Wrong arguments for directive.")
     DirectiveWrongArgs,
     @('W', "Pad directive is padding with zero units.")

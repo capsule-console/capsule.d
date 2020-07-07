@@ -285,7 +285,10 @@ struct CapsuleAsmParser {
     /// Parse arguments for an instruction or pseudo-instruction.
     Node parseInstructionArgs(ref Node node) {
         assert(node.isInstruction || node.isPseudoInstruction);
-        this.parseInlineWhitespace();
+        const inlineOk = this.parseInlineWhitespace();
+        if(!inlineOk) {
+            return node;
+        }
         // If the next non-inline-whitespace character after the instruction
         // is either a newline or special punctuation, then this indicates
         // that the instruction hasn't got any arguments.
@@ -389,7 +392,10 @@ struct CapsuleAsmParser {
         assert(this.reader.front == '.');
         this.reader.popFront();
         const name = this.parseIdentifier();
-        this.parseInlineWhitespace();
+        const inlineOk = this.parseInlineWhitespace();
+        if(!inlineOk) {
+            return Node.init;
+        }
         this.addStatus(
             this.endLocation(location), Status.ParseDirective, name.value
         );
@@ -623,7 +629,19 @@ struct CapsuleAsmParser {
         }
     }
     
-    void parseInlineWhitespace() {
+    bool parseInlineWhitespace() {
+        this.parseInlineWhitespaceStrict();
+        if(!this.reader.empty && this.reader.front == '\\') {
+            return this.parseLineContinuation();
+        }
+        else {
+            return true;
+        }
+    }
+    
+    /// Differentiated from parseInlineWhitespace in that this function
+    /// does not permit line continuations (backslash '\').
+    void parseInlineWhitespaceStrict() {
         while(!this.reader.empty && isInlineWhitespace(this.reader.front)) {
             this.reader.popFront();
         }
@@ -633,8 +651,7 @@ struct CapsuleAsmParser {
         this.parseInlineWhitespace();
         if(!this.reader.empty && this.reader.front == ',') {
             this.reader.popFront();
-            this.parseInlineWhitespace();
-            return true;
+            return this.parseInlineWhitespace();
         }
         return false;
     }
@@ -651,6 +668,49 @@ struct CapsuleAsmParser {
         if(!this.reader.empty) {
             this.reader.popFront();
         }
+    }
+    
+    /// Consume a line continuation. Expects the immediate next character
+    /// in the source to be a backslash '\', i.e. the line continuation
+    /// character.
+    /// Returns true if the line continuation could be successfully consumed,
+    /// or false if there was invalid syntax.
+    bool parseLineContinuation() {
+        // Line continuations are indicated by a backslash '\'
+        assert(this.reader.front == '\\');
+        const location = this.reader.location;
+        this.reader.popFront();
+        // Only whitespace or comments are allowed following the backslash
+        this.parseInlineWhitespaceStrict();
+        if(this.reader.empty || (
+            this.reader.front != '\n' && this.reader.front != ';'
+        )) {
+            this.addStatusSkipLine(
+                this.endLocation(location),
+                Status.InvalidLineContinuationSyntax
+            );
+            return false;
+        }
+        // Consume whitespace or comments after the backslash
+        assert(!this.reader.empty);
+        if(this.reader.front == '\n') {
+            this.reader.popFront();
+        }
+        else {
+            assert(this.reader.front == ';');
+            this.parseComment();
+        }
+        // Consume inline whitespace and make sure this isn't EOF
+        this.parseInlineWhitespaceStrict();
+        if(this.reader.empty) {
+            this.addStatus(
+                this.endLocation(location),
+                Status.InvalidLineContinuationSyntax
+            );
+            return false;
+        }
+        // All done
+        return true;
     }
     
     auto parseIdentifier() {
@@ -1004,16 +1064,22 @@ struct CapsuleAsmParser {
             number.name = symbol.value;
         }
         FoundSymbolName:
-        this.parseInlineWhitespace();
-        if(this.reader.front != '[') {
+        bool inlineOk = this.parseInlineWhitespace();
+        if(!inlineOk) return Result.Error(
+            this.endLocation(location), Status.InvalidNumber
+        );
+        if(this.reader.empty || this.reader.front != '[') {
             return Result.Ok(this.endLocation(location), number);
         }
         // Reference type and/or addend - my_label[pcrel_lo], my_label[16]
         bool hasAddend = false;
-        while(this.reader.front == '[') {
+        while(!this.reader.empty && this.reader.front == '[') {
             const openBracketLocation = this.reader.location;
             this.reader.popFront();
-            this.parseInlineWhitespace();
+            inlineOk = this.parseInlineWhitespace();
+            if(!inlineOk) return Result.Error(
+                this.endLocation(location), Status.InvalidNumber
+            );
             // Addend - my_label[16]
             if(isDigit(this.reader.front) ||
                 this.reader.front == '-' || this.reader.front == '+'
@@ -1037,12 +1103,18 @@ struct CapsuleAsmParser {
                     identifier.value
                 );
             }
-            this.parseInlineWhitespace();
-            if(this.reader.front != ']') return Result.Error(
+            inlineOk = this.parseInlineWhitespace();
+            if(!inlineOk) return Result.Error(
+                this.endLocation(location), Status.InvalidNumber
+            );
+            if(this.reader.empty || this.reader.front != ']') return Result.Error(
                 this.endLocation(openBracketLocation), Status.UnmatchedOpenBracket
             );
             this.reader.popFront();
-            this.parseInlineWhitespace();
+            inlineOk = this.parseInlineWhitespace();
+            if(!inlineOk) return Result.Error(
+                this.endLocation(location), Status.InvalidNumber
+            );
         }
         // All done
         return Result.Ok(this.endLocation(location), number);
