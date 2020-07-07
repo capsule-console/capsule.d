@@ -1,0 +1,100 @@
+; This program tests the guarantee that for all inputs, for both
+; signed and unsigned arithmetic:
+; dividend == divisor * quotient + remainder
+
+.include "../casm/lib/constants.casm"
+
+.extern write_hex
+
+; The number of times the program loops and does a single
+; signed/unsigned check, this counter will be incremented.
+; The value is outputted at the end of the program so that
+; the number of iterations can be verified.
+.bss
+    num_values: .resw 1
+
+; With the use of a nested loop,
+; each of these 64 values will be treated as both the dividend
+; and the divisor in both signed and unsigned division
+.rodata values: .word \
+    0, 1, 2, 3, 4, 5, 6, 7, \
+    8, 9, 10, 11, 12, 16, 18, 20, \
+    24, 25, 40, 61, 64, 100, 101, 180, \
+    192, 255, 256, 300, 360, 512, 1024, 1025, \
+    4040, 10000, 16000, 35000, 555555, 65535, 65536, 99999, \
+    123456, 192512, 200000, 987654, \
+    1000000, 1234567, 2222221, 4000000, \
+    5555555, 6767676, 8999999, 9999999, \
+    10000000, 50000000, 77777777, 89012345, \
+    1000000000, 1234567860, 1500000000, 2000000000, \
+    0x7fffffff, 0x80000000, 0xcccccccc, 0xffffffff
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la C, values
+loop_values_outer:
+    ; Outer check loop (enumerate each possible dividend value)
+    la S, values
+loop_values_inner:
+    ; Inner check loop (enumerate each possible divisor value)
+    lw X, C, 0
+    lw Y, S, 0
+    ; Check with div/rem (signed division)
+    call R, test_signed
+    ; Check with divu/remu (unsigned division)
+    call R, test_unsigned
+    ; Increment the num_values loop counter
+    la A, num_values
+    lw X, A, 0
+    addi X, X, 1
+    sw X, A, 0
+    ; Go on to the next divisor value
+    addi S, S, 4
+    la A, values[end_pcrel_word]
+    bge S, A, loop_inner_end
+    j loop_values_inner
+loop_inner_end:
+    ; Go on to the next dividend value
+    addi C, C, 4
+    la A, values[end_pcrel_word]
+    bge C, A, loop_outer_end
+    j loop_values_outer
+loop_outer_end:
+    ; All done - write the number of loop iterations, and a bang
+    lwa A, num_values
+    call R, write_hex
+    li X, '!'
+    ecalli Z, X, stdio.put_byte
+    ecalli Z, Z, meta.exit_ok
+
+; Test (dividend == divisor * quotient + remainder) for div/rem
+; Terminates the program with an error if the constraint was not met
+.procedure test_signed:
+    div A, X, Y
+    rem B, X, Y
+    mul A, A, Y
+    add A, A, B
+    bne A, X, test_signed_not_equal
+test_signed_equal:
+    ret R
+test_signed_not_equal:
+    ecalli Z, A, meta.exit_error
+    ret R
+.endproc test_signed
+
+; Test (dividend == divisor * quotient + remainder) for divu/remu
+; Terminates the program with an error if the constraint was not met
+.procedure test_unsigned:
+    div A, X, Y
+    rem B, X, Y
+    mul A, A, Y
+    add A, A, B
+    bne A, X, test_unsigned_not_equal
+test_unsigned_equal:
+    ret R
+test_unsigned_not_equal:
+    ecalli Z, A, meta.exit_error
+    ret R
+.endproc test_unsigned

@@ -52,7 +52,7 @@
     li Y, 400
     remu A, X, Y
     call R, write_uint ecalli Z, B, stdio.put_byte
-    ; 3
+    ; 0
     li X, 9
     li Y, 3
     remu A, X, Y
