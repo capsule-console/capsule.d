@@ -319,7 +319,7 @@ struct CapsuleEngine {
                     const dividend = ri(i.rs1);
                     const divisor = ri(i.rs2);
                     // Inputs that cause D to crash
-                    if(divisor == 0) rset(i.rd, 0);
+                    if(divisor == 0) rset(i.rd, -1);
                     else if(divisor == -1 && dividend == int.min) rset(i.rd, int.min);
                     // Everything else
                     else rset(i.rd, dividend / divisor);
@@ -327,22 +327,23 @@ struct CapsuleEngine {
                     break;
                 case Opcode.DivideUnsigned:
                     const divisor = ru(i.rs2);
-                    rset(i.rd, divisor == 0 ? 0 : ru(i.rs1) / divisor);
+                    rset(i.rd, divisor == 0 ? uint.max : ru(i.rs1) / divisor);
                     pc += 4;
                     break;
                 case Opcode.RemainderSigned:
                     const dividend = ri(i.rs1);
                     const divisor = ri(i.rs2);
                     // Inputs that cause D to crash
-                    if(divisor == 0) rset(i.rd, 0);
+                    if(divisor == 0) rset(i.rd, dividend);
                     else if(divisor == -1) rset(i.rd, 0); // int.min % -1 crashes
                     // Everything else
                     else rset(i.rd, dividend % divisor);
                     pc += 4;
                     break;
                 case Opcode.RemainderUnsigned:
+                    const dividend = ri(i.rs1);
                     const divisor = ru(i.rs2);
-                    rset(i.rd, divisor == 0 ? 0 : ru(i.rs1) % divisor);
+                    rset(i.rd, divisor == 0 ? dividend : dividend % divisor);
                     pc += 4;
                     break;
                 case Opcode.ReverseByteOrder:
