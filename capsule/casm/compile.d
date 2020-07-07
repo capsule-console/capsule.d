@@ -1985,7 +1985,7 @@ struct CapsuleAsmCompiler {
             );
         }
         this.setLabelVariableLength(
-            cast(uint) node.byteDataDirective.values.length
+            cast(uint) (T.sizeof * node.byteDataDirective.values.length)
         );
         foreach(number; node.byteDataDirective.values) {
             const resolveValue = this.tryResolveNumberValue(number);
