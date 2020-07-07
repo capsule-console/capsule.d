@@ -251,44 +251,68 @@ of the product to _rd_.
 
 ### Divide signed (div, 0x14)
 
-_rd = rs2 == 0 ? 0 : rs1 / rs2_
+_rd = rs1 / rs2_
 
 The _div_ instruction divides _rs1_ by _rs2_, both as signed integers,
-and stores the quotient to _rd_.
+and stores the quotient to _rd_, rounded toward zero to the nearest integer.
 
-If _rs2_ was 0, 0 is stored to _rd_.
+If _rs2_ was 0, -1 is stored to _rd_.
 
 If _rs1_ was -2147483648 and _rs2_ was -1, -2147483648 is stored to _rd_,
 the same overflow behavior as if -2147483648 was subtracted from 0.
 
+For all values of X and Y,
+it holds that A is equal to X at the end of this code:
+
+``` casm
+; Compute signed quotient and remainder of X / Y
+div A, X, Y
+rem B, X, Y
+; X == divisor * quotient + remainder
+mul A, A, Y
+add A, A, B
+```
+
 ### Divide unsigned (divu, 0x15)
 
-_rd = rs2 == 0 ? 0 : rs1 / rs2_
+_rd = rs1 / rs2_
 
 The _divu_ instruction divides _rs1_ by _rs2_, both as unsigned integers,
-and stores the quotient to _rd_.
+and stores the quotient to _rd_, rounded down to the nearest integer.
 
-If _rs2_ was 0, 0 is stored to _rd_.
+If _rs2_ was 0, 0xffffffff is stored to _rd_.
+
+For all values of X and Y,
+it holds that A is equal to X at the end of this code:
+
+``` casm
+; Compute unsigned quotient and remainder of X / Y
+divu A, X, Y
+remu B, X, Y
+; X == divisor * quotient + remainder
+mul A, A, Y
+add A, A, B
+```
 
 ### Remainder (rem, 0x16)
 
-_rd = rs2 == 0 ? 0 : rs1 % rs2_
+_rd = rs1 % rs2_
 
 The _rem_ instruction divides _rs1_ by _rs2_, both as signed integers,
 and stores the remainder to _rd_.
 
 When nonzero, the remainder has the same sign as _rs1_, the dividend.
 
-If _rs2_ was 0, 0 is stored to _rd_.
+If _rs2_ was 0, the value of _rs1_ is stored to _rd_.
 
 ### Remainder unsigned (remu, 0x17)
 
-_rd = rs2 == 0 ? 0 : rs1 % rs2_
+_rd = rs1 % rs2_
 
 The _remu_ instruction divides _rs1_ by _rs2_, both as unsigned integers,
 and stores the remainder to _rd_.
 
-If _rs2_ was 0, 0 is stored to _rd_.
+If _rs2_ was 0, the value of _rs1_ is stored to _rd_.
 
 ### Reverse byte order (revb, 0x18)
 

@@ -1,0 +1,171 @@
+; Test remu (unsigned remainder) with a range of values
+; Store the result of rs1 % rs2 to rd
+
+.extern write_uint
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.bss
+    ; Reserve memory needed by write_uint
+    write_uint.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_uint.target
+    li B, ' '
+    ; 0 (remainder of division by zero is the dividend)
+    li X, 0
+    li Y, 0
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 2147483647 (remainder of division by zero is the dividend)
+    li X, 2147483647
+    li Y, 0
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 2147483648 (remainder of division by zero is the dividend)
+    li X, 2147483648
+    li Y, 0
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 4294967295 (remainder of division by zero is the dividend)
+    li X, 4294967295
+    li Y, 0
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 1
+    li Y, 2
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 5
+    li X, 5
+    li Y, 20
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 400
+    li Y, 400
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 3
+    li X, 9
+    li Y, 3
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 10
+    li Y, 2
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 144
+    li Y, 12
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 10
+    li X, 250
+    li Y, 16
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 15
+    li X, 255
+    li Y, 16
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 256
+    li Y, 16
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 255
+    li X, 65535
+    li Y, 256
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 65536
+    li Y, 256
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 5000000
+    li Y, 1
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 17
+    li X, 5000000
+    li Y, 19
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 300
+    li X, 5000000
+    li Y, 1700
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 5000000
+    li X, 5000000
+    li Y, 0xffffffff
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 65535
+    li X, 2147483647
+    li Y, 65536
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 65535
+    li X, 4294967295
+    li Y, 65536
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 2147483647
+    li Y, 1
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 2147483647
+    li Y, 2
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 2147483647
+    li Y, 21
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 946
+    li X, 2147483647
+    li Y, 10101
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 2147483646
+    li X, 2147483646
+    li Y, 2147483647
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 4294967295
+    li Y, 1
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 795
+    li X, 4294967295
+    li Y, 1980
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 246585
+    li X, 4294967295
+    li Y, 800955
+    remu A, X, Y
+    call R, write_uint ecalli Z, B, stdio.put_byte
+    ; 4294967294
+    li X, 4294967294
+    li Y, 4294967295
+    remu A, X, Y
+    call R, write_uint
+    ; All done
+    ecalli Z, Z, meta.exit_ok

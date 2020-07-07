@@ -1,5 +1,5 @@
-; Test div (signed division) with a range of values
-; Store the result of rs1 / rs2 to rd
+; Test rem (signed remainder) with a range of values
+; Store the result of rs1 % rs2 to rd
 
 .extern write_int
 
@@ -17,125 +17,140 @@
     ecalli Z, Z, stdio.init
     la S, write_int.target
     li B, ' '
-    ; -1 (division by zero produces all bits set)
+    ; 0 (remainder of division by zero is the dividend)
     li X, 0
     li Y, 0
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -1 (division by zero produces all bits set)
-    li X, 0x7fffffff
+    ; 2147483647 (remainder of division by zero is the dividend)
+    li X, 2147483647
     li Y, 0
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -1 (division by zero produces all bits set)
-    li X, 0x80000000
+    ; -2147483648 (remainder of division by zero is the dividend)
+    li X, -2147483648
     li Y, 0
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 0
+    ; 1
     li X, 1
     li Y, 2
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 0
+    ; -5
     li X, -5
     li Y, 20
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 1
+    ; 0
     li X, +400
     li Y, +400
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 1
+    ; 0
     li X, -400
     li Y, -400
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -1
+    ; 0
     li X, +400
     li Y, -400
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -1
+    ; 0
     li X, -400
     li Y, +400
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 3
+    ; 0
     li X, 9
     li Y, 3
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 5
-    li X, 10
+    ; 1
+    li X, 11
     li Y, 2
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 16
+    ; 10
+    li X, 250
+    li Y, 16
+    rem A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 15
+    li X, 255
+    li Y, 16
+    rem A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
     li X, 256
     li Y, 16
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 256
+    ; 255
+    li X, 65535
+    li Y, 256
+    rem A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
     li X, 65536
     li Y, 256
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -12
+    ; 0
     li X, +144
     li Y, -12
-    div A, X, Y
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 5000000
+    ; 5
     li X, +5000000
-    li Y, +1
-    div A, X, Y
+    li Y, +9
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -5000000
+    ; -5
     li X, -5000000
-    li Y, +1
-    div A, X, Y
+    li Y, +9
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -5000000
+    ; 5
     li X, +5000000
-    li Y, -1
-    div A, X, Y
+    li Y, -9
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 5000000
+    ; -5
     li X, -5000000
-    li Y, -1
-    div A, X, Y
+    li Y, -9
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 32767
+    ; 23647
     li X, 2147483647
-    li Y, 65536
-    div A, X, Y
+    li Y, 30000
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -32768
+    ; -23648
     li X, -2147483648
-    li Y, 65536
-    div A, X, Y
+    li Y, 30000
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; 2147483647
-    li X, 2147483647
-    li Y, 1
-    div A, X, Y
-    call R, write_int ecalli Z, B, stdio.put_byte
-    ; -2147483648
-    li X, -2147483648
-    li Y, 1
-    div A, X, Y
+    ; 2147483646
+    li X, 2147483646
+    li Y, 2147483647
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
     ; -2147483647
-    li X, 2147483647
-    li Y, -1
-    div A, X, Y
+    li X, -2147483647
+    li Y, -2147483648
+    rem A, X, Y
     call R, write_int ecalli Z, B, stdio.put_byte
-    ; -2147483648 (overflows)
+    ; -48
+    li X, -2147483648
+    li Y, -50
+    rem A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
     li X, -2147483648
     li Y, -1
-    div A, X, Y
+    rem A, X, Y
     call R, write_int
     ; All done
     ecalli Z, Z, meta.exit_ok

@@ -17,17 +17,17 @@
     ecalli Z, Z, stdio.init
     la S, write_uint.target
     li B, ' '
-    ; 0 (division by zero produces zero)
+    ; 4294967295 (division by zero produces all bits set)
     li X, 0
     li Y, 0
     divu A, X, Y
     call R, write_uint ecalli Z, B, stdio.put_byte
-    ; 0 (division by zero produces zero)
+    ; 4294967295 (division by zero produces all bits set)
     li X, 0x7fffffff
     li Y, 0
     divu A, X, Y
     call R, write_uint ecalli Z, B, stdio.put_byte
-    ; 0 (division by zero produces zero)
+    ; 4294967295 (division by zero produces all bits set)
     li X, 0x80000000
     li Y, 0
     divu A, X, Y

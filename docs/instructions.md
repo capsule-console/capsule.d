@@ -33,10 +33,10 @@ Note the following abbreviations:
 | 0x11 | mulh rd,rs1,rs2        | Multiply signed and shift                 | rd = (rs1 * rs2) >> 32 |
 | 0x12 | mulhu rd,rs1,rs2       | Multiply unsigned and shift               | rd = (rs1 * rs2) >> 32 |
 | 0x13 | mulhsu rd,rs1,rs2      | Multiply signed by unsigned and shift     | rd = (rs1 * rs2) >> 32 |
-| 0x14 | div rd,rs1,rs2         | Divide signed                             | rd = rs2 == 0 ? 0 : rs1 / rs2 |
-| 0x15 | divu rd,rs1,rs2        | Divide unsigned                           | rd = rs2 == 0 ? 0 : rs1 / rs2 |
-| 0x16 | rem rd,rs1,rs2         | Remainder signed                          | rd = rs2 == 0 ? 0 : rs1 % rs2 |
-| 0x17 | remu rd,rs1,rs2        | Remainder unsigned                        | rd = rs2 == 0 ? 0 : rs1 % rs2 |
+| 0x14 | div rd,rs1,rs2         | Divide signed                             | rd = rs2 == rs1 / rs2 |
+| 0x15 | divu rd,rs1,rs2        | Divide unsigned                           | rd = rs2 == rs1 / rs2 |
+| 0x16 | rem rd,rs1,rs2         | Remainder signed                          | rd = rs2 == rs1 % rs2 |
+| 0x17 | remu rd,rs1,rs2        | Remainder unsigned                        | rd = rs2 == rs1 % rs2 |
 | 0x18 | revb rd,rs1            | Reverse byte order                        | rd = revb(rs1) |
 | 0x19 | revh rd,rs1            | Reverse half word order                   | rd = revh(rs1) |
 | 0x1a | clz rd,rs1             | Count leading zeros                       | rd = clz(rs1) |
