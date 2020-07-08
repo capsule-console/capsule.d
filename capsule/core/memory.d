@@ -124,7 +124,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Load sign-extended byte
     Load!int loadByteSigned(in int address) const {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Load!int.OutOfBounds;
         }
         else {
@@ -135,7 +135,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Load zero-extended byte
     Load!uint loadByteUnsigned(in int address) const {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Load!uint.OutOfBounds;
         }
         else {
@@ -146,7 +146,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Load sign-extended half word
     Load!int loadHalfWordSigned(in int address) const {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Load!int.OutOfBounds;
         }
         else if(address & 0x1) {
@@ -160,7 +160,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Load zero-extended half word
     Load!uint loadHalfWordUnsigned(in int address) const {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Load!uint.OutOfBounds;
         }
         else if(address & 0x1) {
@@ -174,7 +174,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Load word
     Load!int loadWord(in int address) const {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Load!int.OutOfBounds;
         }
         else if(address & 0x3) {
@@ -188,7 +188,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Load instruction
     Load!int loadInstructionWord(in int address) const {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Load!int.OutOfBounds;
         }
         else if(address & 0x3) {
@@ -205,7 +205,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Store byte
     Status storeByte(in int address, in ubyte value) {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Status.OutOfBounds;
         }
         else if(address >= this.romStart && address < this.romEnd) {
@@ -219,7 +219,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Store half word
     Status storeHalfWord(in int address, in ushort value) {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Status.OutOfBounds;
         }
         else if(address & 0x1) {
@@ -236,7 +236,7 @@ struct CapsuleMemoryLoad(T) {
     
     /// Store word
     Status storeWord(in int address, in int value) {
-        if(address < 0 || address >= this.length) {
+        if(cast(uint) address >= this.length) {
             return Status.OutOfBounds;
         }
         else if(address & 0x3) {

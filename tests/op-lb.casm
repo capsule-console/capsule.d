@@ -1,5 +1,5 @@
 ; Test lb (load sign-extended byte) with a range of inputs
-; Store the sign-extended byte at memory address rs1 + imm to rd
+; Load the sign-extended byte at memory address rs1 + imm to rd
 
 .extern write_int
 

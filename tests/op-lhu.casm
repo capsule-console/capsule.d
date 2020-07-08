@@ -1,5 +1,5 @@
 ; Test lhu (load zero-extended half word) with a range of inputs
-; Store the zero-extended half word at memory address rs1 + imm to rd
+; Load the zero-extended half word at memory address rs1 + imm to rd
 
 .extern write_int
 

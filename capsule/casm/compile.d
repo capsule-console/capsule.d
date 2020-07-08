@@ -1391,52 +1391,52 @@ struct CapsuleAsmCompiler {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadByteSignExt, rd, 0, rdz, values.low));
+            emit(Node(loc, Opcode.LoadByteSignExt, rd, rdz, 0, values.low));
         }
         else if(pseudoType is PseudoType.LoadByteZeroExt) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadByteZeroExt, rd, 0, rdz, values.low));
+            emit(Node(loc, Opcode.LoadByteZeroExt, rd, rdz, 0, values.low));
         }
         else if(pseudoType is PseudoType.LoadHalfWordSignExt) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadHalfWordSignExt, rd, 0, rdz, values.low));
+            emit(Node(loc, Opcode.LoadHalfWordSignExt, rd, rdz, 0, values.low));
         }
         else if(pseudoType is PseudoType.LoadHalfWordZeroExt) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadHalfWordZeroExt, rd, 0, rdz, values.low));
+            emit(Node(loc, Opcode.LoadHalfWordZeroExt, rd, rdz, 0, values.low));
         }
         else if(pseudoType is PseudoType.LoadWord) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.LoadWord, rd, 0, rdz, values.low));
+            emit(Node(loc, Opcode.LoadWord, rd, rdz, 0, values.low));
         }
         else if(pseudoType is PseudoType.StoreByte) {
             if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.StoreByte, 0, rs1, rdz, values.low));
+            emit(Node(loc, Opcode.StoreByte, 0, rdz, rs2, values.low));
         }
         else if(pseudoType is PseudoType.StoreHalfWord) {
             if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.StoreHalfWord, 0, rs1, rdz, values.low));
+            emit(Node(loc, Opcode.StoreHalfWord, 0, rdz, rs2, values.low));
         }
         else if(pseudoType is PseudoType.StoreWord) {
             if(rd == rs1) emitSameSrcDstStatus();
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.StoreWord, 0, rs1, rdz, values.low));
+            emit(Node(loc, Opcode.StoreWord, 0, rdz, rs2, values.low));
         }
         else if(pseudoType is PseudoType.BranchEqualZero) {
             emit(Node(loc, Opcode.BranchEqual, 0, rs1, 0, immediate));

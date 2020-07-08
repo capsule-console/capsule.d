@@ -1,5 +1,5 @@
 ; Test lh (load sign-extended half word) with a range of inputs
-; Store the sign-extended half word at memory address rs1 + imm to rd
+; Load the sign-extended half word at memory address rs1 + imm to rd
 
 .extern write_int
 

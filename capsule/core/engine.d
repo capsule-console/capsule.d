@@ -97,6 +97,8 @@ struct CapsuleEngine {
     int[8] reg;
     /// The most recently executed instruction
     Instruction instr;
+    /// Status of the most recent attempt to load an instruction
+    Memory.Status instrStatus = Memory.Status.Ok;
     /// Exception code indicating the reason for a fatal error
     ExceptionCode exception = ExceptionCode.None;
     
@@ -187,26 +189,15 @@ struct CapsuleEngine {
     /// Decode and execute the instruction under the PC, then update metrics
     alias stepMetrics = typeof(this).operate!(true, true, true);
     
+    // before - 32998572 (32 MHz)
+    // move instr load status switch - 32653218 (32 MHz)
+    // improve address range check -  32989412 (32 MHz)
     void operate(
         bool nextInstruction, bool execInstruction, bool updateMetrics
     )() @trusted {
         static if(nextInstruction) {
             const idata = this.mem.loadInstructionWord(this.pc);
-            final switch(idata.status) {
-                case Memory.Status.Ok:
-                    break;
-                case Memory.Status.ReadOnly:
-                    assert(false);
-                case Memory.Status.NotExecutable:
-                    this.setException(ExceptionCode.PCNotExecutable);
-                    return;
-                case Memory.Status.Misaligned:
-                    this.setException(ExceptionCode.PCMisaligned);
-                    return;
-                case Memory.Status.OutOfBounds:
-                    this.setException(ExceptionCode.PCOutOfBounds);
-                    return;
-            }
+            this.instrStatus = idata.status;
             this.instr = Instruction.decode(idata.value);
         }
         static if(execInstruction) {
@@ -370,7 +361,7 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.LoadByteSignExt:
-                    const load = this.mem.loadByteSigned(ri(i.rs2) + i.i32);
+                    const load = this.mem.loadByteSigned(ri(i.rs1) + i.i32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(int) load.value);
@@ -389,7 +380,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadByteZeroExt:
-                    const load = this.mem.loadByteUnsigned(ri(i.rs2) + i.i32);
+                    const load = this.mem.loadByteUnsigned(ri(i.rs1) + i.i32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(uint) load.value);
@@ -408,7 +399,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadHalfWordSignExt:
-                    const load = this.mem.loadHalfWordSigned(ri(i.rs2) + i.i32);
+                    const load = this.mem.loadHalfWordSigned(ri(i.rs1) + i.i32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(int) load.value);
@@ -427,7 +418,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadHalfWordZeroExt:
-                    const load = this.mem.loadHalfWordUnsigned(ri(i.rs2) + i.i32);
+                    const load = this.mem.loadHalfWordUnsigned(ri(i.rs1) + i.i32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(uint) load.value);
@@ -446,7 +437,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadWord:
-                    const load = this.mem.loadWord(ri(i.rs2) + i.i32);
+                    const load = this.mem.loadWord(ri(i.rs1) + i.i32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, load.value);
@@ -466,7 +457,7 @@ struct CapsuleEngine {
                     break;
                 case Opcode.StoreByte:
                     const status = this.mem.storeByte(
-                        ri(i.rs2) + i.i32, cast(ubyte) ru(i.rs1)
+                        ri(i.rs1) + i.i32, cast(ubyte) ru(i.rs2)
                     );
                     final switch(status) {
                         case Memory.Status.Ok:
@@ -487,7 +478,7 @@ struct CapsuleEngine {
                     break;
                 case Opcode.StoreHalfWord:
                     const status = this.mem.storeHalfWord(
-                        (ri(i.rs2) + i.i32), cast(ushort) ru(i.rs1)
+                        (ri(i.rs1) + i.i32), cast(ushort) ru(i.rs2)
                     );
                     final switch(status) {
                         case Memory.Status.Ok:
@@ -508,7 +499,7 @@ struct CapsuleEngine {
                     break;
                 case Opcode.StoreWord:
                     const status = this.mem.storeWord(
-                        (ri(i.rs2) + i.i32), ru(i.rs1)
+                        (ri(i.rs1) + i.i32), ru(i.rs2)
                     );
                     final switch(status) {
                         case Memory.Status.Ok:
@@ -577,8 +568,23 @@ struct CapsuleEngine {
                 case Opcode.Breakpoint:
                     pc += 4;
                     break;
-                default: // Unknown opcode
-                    this.setException(ExceptionCode.InvalidInstruction);
+                default: // Unknown opcode, or load failure
+                    final switch(this.instrStatus) {
+                        case Memory.Status.Ok:
+                            this.setException(ExceptionCode.InvalidInstruction);
+                            return;
+                        case Memory.Status.ReadOnly:
+                            assert(false);
+                        case Memory.Status.NotExecutable:
+                            this.setException(ExceptionCode.PCNotExecutable);
+                            return;
+                        case Memory.Status.Misaligned:
+                            this.setException(ExceptionCode.PCMisaligned);
+                            return;
+                        case Memory.Status.OutOfBounds:
+                            this.setException(ExceptionCode.PCOutOfBounds);
+                            return;
+                    }
             }
         }
         static if(updateMetrics) {

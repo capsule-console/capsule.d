@@ -208,9 +208,9 @@ auto getCapsuleInstructionArgs(
         case Opcode.LoadHalfWordSignExt: return Args.Load;
         case Opcode.LoadHalfWordZeroExt: return Args.Load;
         case Opcode.LoadWord: return Args.Load;
-        case Opcode.StoreByte: return Args.RegBothSrcImmMaybe;
-        case Opcode.StoreHalfWord: return Args.RegBothSrcImmMaybe;
-        case Opcode.StoreWord: return Args.RegBothSrcImmMaybe;
+        case Opcode.StoreByte: return Args.Store;
+        case Opcode.StoreHalfWord: return Args.Store;
+        case Opcode.StoreWord: return Args.Store;
         case Opcode.JumpAndLink: return Args.JumpAndLink;
         case Opcode.JumpAndLinkRegister: return Args.JumpAndLinkRegister;
         case Opcode.BranchEqual: return Args.Branch;
@@ -296,7 +296,7 @@ auto getCapsulePseudoInstructionArgs(
         case Type.Jump: return Args.Jump;
         case Type.JumpRegister: return Args.JumpRegister;
         case Type.Call: return Args.Call;
-        case Type.Return: return Args.RegSrcImmNever;
+        case Type.Return: return Args.Return;
         case Type.ExtensionCallImmediate: return Args.ExtensionCallImmediate;
         default: return Args.None;
     }

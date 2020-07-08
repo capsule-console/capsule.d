@@ -470,7 +470,7 @@ load, or store targets in relocatable code.
 _rd = memory.byte[rs1 + i32]_
 
 The _lb_ instruction loads an 8-bit byte from the address indicated by the
-sum of _rs1_ and _i32_ and stores that byte, sign-extended, to _rd_.
+sum of _rs2_ and _i32_ and stores that byte, sign-extended, to _rd_.
 
 Attempting to load from an address that is outside of the program's
 addressable memory will trigger an _lbounds_ exception (0x08).
@@ -480,16 +480,16 @@ addressable memory will trigger an _lbounds_ exception (0x08).
 _rd = memory.ubyte[rs1 + i32]_
 
 The _lbu_ instruction loads an 8-bit byte from the address indicated by the
-sum of _rs1_ and _i32_ and stores that byte, zero-extended, to _rd_.
+sum of _rs2_ and _i32_ and stores that byte, zero-extended, to _rd_.
 
 Attempting to load from an address that is outside of the program's
 addressable memory will trigger an _lbounds_ exception (0x08).
 
 ### Load sign-extended half word (lh, 0x52)
 
-_rd = memory.half[(rs1 + i32)]_
+_rd = memory.half[rs1 + i32]_
 
-The _lh_ instruction loads a 16-bit  half word from the memory address
+The _lh_ instruction loads a 16-bit half word from the memory address
 indicated by the sum of _rs1_ and _i32_ and stores that half word,
 sign-extended, to _rd_.
 
@@ -501,7 +501,7 @@ word boundary will trigger an _lalign_ exception (0x05).
 
 ### Load zero-extended half word (lhu, 0x53)
 
-_rd = memory.uhalf[(rs1 + i32)]_
+_rd = memory.uhalf[rs1 + i32]_
 
 The _lhu_ instruction loads a 16-bit half word from the memory address
 indicated by the sum of _rs1_ and _i32_ and stores that half word,
@@ -515,7 +515,7 @@ word boundary will trigger an _lalign_ exception (0x05).
 
 ### Load word (lw, 0x54)
 
-_rd = memory.word[(rs1 + i32)]_
+_rd = memory.word[rs1 + i32]_
 
 The _lw_ instruction loads a 32-bit word from the memory address
 indicated by the sum of _rs1_ and _i32_ and stores that word to _rd_.
@@ -528,10 +528,10 @@ boundary will trigger an _lalign_ exception (0x05).
 
 ### Store byte (sb, 0x55)
 
-_memory.byte[rs2 + i32] = rs1 & 0xff_
+_memory.byte[rs1 + i32] = rs1 & 0xff_
 
-The _sb_ instruction stores the low 8-bit byte of _rs1_ to the
-memory address indicated by the sum of _rs2_ and _i32_.
+The _sb_ instruction stores the low 8 bits, or byte, of _rs2_ to the
+memory address indicated by the sum of _rs1_ and _i32_.
 
 Attempting to store to an address that is outside of the program's
 addressable memory will trigger an _sbounds_ exception (0x09).
@@ -542,10 +542,10 @@ will trigger an _sro_ exception (0x0b).
 
 ### Store half word (sh, 0x56)
 
-_memory.half[(rs2 + i32)] = rs1 & 0xffff_
+_memory.half[rs1 + i32] = rs1 & 0xffff_
 
-The _sh_ instruction stores the low 16-bit half word of _rs1_ to the
-memory address indicated by the sum of _rs2_ and _i32_.
+The _sh_ instruction stores the low 16 bits, or half word, of _rs2_ to the
+memory address indicated by the sum of _rs1_ and _i32_.
 
 Attempting to store to an address that is outside of the program's
 addressable memory will trigger an _sbounds_ exception (0x09).
@@ -559,10 +559,10 @@ will trigger an _sro_ exception (0x0b).
 
 ### Store word (sw, 0x57)
 
-_memory.word[(rs2 + i32)] = rs1_
+_memory.word[rs1 + i32] = rs1_
 
-The _sw_ instruction stores the entire word value of _rs1_ to the
-memory address indicated by the sum of _rs2_ and _i32_.
+The _sw_ instruction stores the entire word value of _rs2_ to the
+memory address indicated by the sum of _rs1_ and _i32_.
 
 Attempting to store to an address that is outside of the program's
 addressable memory will trigger an _sbounds_ exception (0x09).
@@ -600,7 +600,7 @@ The _jalr_ instruction stores computes the sum of the current _pc_ and the
 constant 4 to _rd_, which is the memory address of the subsequent instruction.
 It then stores the sum of _rs1_ and _i32_ to the _pc_.
 
-If the same register was used as both _rs1_ and _rd_, then the value of
+If the same register was used as both _rs2_ and _rd_, then the value of
 the register upon entering the instruction is summed with _i32_ to determine
 the destination of the _pc_.
 

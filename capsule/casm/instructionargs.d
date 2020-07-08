@@ -25,7 +25,7 @@ enum CapsuleInstructionArgsRegisters: uint {
     /// Examples: lui, auipc
     Destination = 0x1,
     /// The instruction uses only the first source register (rs1).
-    /// Not currently used by any recognized instruction.
+    /// Examples: jr, ret, beqz, bnez, blez, bgez, bltz, bgtz
     FirstSource = 0x2,
     /// The instruction uses only the destination (rd)
     /// and first source register (rs1).
@@ -36,7 +36,7 @@ enum CapsuleInstructionArgsRegisters: uint {
     SecondSource = 0x4,
     /// The instruction uses only the destination (rd)
     /// and second source register (rs2).
-    /// Examples: lb, lbu, lh, lhu, lw
+    /// Examples: sba, sha, swa
     DestinationSecondSource = 0x5,
     /// The instruction uses both source registers (rs1, rs2),
     /// but does not use the destination register (rd).
@@ -46,6 +46,16 @@ enum CapsuleInstructionArgsRegisters: uint {
     /// arguments (rs1, rs2, rd).
     /// Examples: and, or, xor, andn, sll, srl, sra
     All = 0x7,
+    /// The instruction uses both source registers (rs2, rs1),
+    /// but does not use the destination register (rd),
+    /// however the source registers are given in reverse order.
+    /// Examples: sw, sh, sb
+    BothSourcesSwapped = 0xe,
+    /// The instruction utilizes all three of the register
+    /// arguments, but the source register order is swapped
+    /// (rs2, rs1, rd).
+    /// Not currently used by any recognized instruction.
+    AllSourcesSwapped = 0xf,
 }
 
 /// Enumeration of options for if and how an immediate value argument is
@@ -64,7 +74,7 @@ enum CapsuleInstructionArgsImmediate: uint {
     Always,
 }
 
-uint[8] CapsuleInstructionArgsRegisterParameterCounts = [
+uint[16] CapsuleInstructionArgsRegisterParameterCounts = [
     0, // None
     1, // Destination
     1, // FirstSource
@@ -73,15 +83,25 @@ uint[8] CapsuleInstructionArgsRegisterParameterCounts = [
     2, // DestinationSecondSource
     2, // BothSources
     3, // All
+    0, // -
+    0, // -
+    0, // -
+    0, // -
+    0, // -
+    0, // -
+    2, // BothSourcesSwapped
+    3, // AllSourcesSwapped
 ];
 
-CapsuleRegisterParameter[3][8] CapsuleInstructionArgsRegisterParameterLists = [
+static const CapsuleRegisterParameter[3] CapsuleInstructionArgsRegisterParameterListNone = [
+    CapsuleRegisterParameter.None,
+    CapsuleRegisterParameter.None,
+    CapsuleRegisterParameter.None,
+];
+
+static const CapsuleRegisterParameter[3][16] CapsuleInstructionArgsRegisterParameterLists = [
     // None
-    [
-        CapsuleRegisterParameter.None,
-        CapsuleRegisterParameter.None,
-        CapsuleRegisterParameter.None,
-    ],
+    CapsuleInstructionArgsRegisterParameterListNone,
     // Destination
     [
         CapsuleRegisterParameter.Destination,
@@ -124,6 +144,30 @@ CapsuleRegisterParameter[3][8] CapsuleInstructionArgsRegisterParameterLists = [
         CapsuleRegisterParameter.FirstSource,
         CapsuleRegisterParameter.SecondSource,
     ],
+    // -
+    CapsuleInstructionArgsRegisterParameterListNone,
+    // -
+    CapsuleInstructionArgsRegisterParameterListNone,
+    // -
+    CapsuleInstructionArgsRegisterParameterListNone,
+    // -
+    CapsuleInstructionArgsRegisterParameterListNone,
+    // -
+    CapsuleInstructionArgsRegisterParameterListNone,
+    // -
+    CapsuleInstructionArgsRegisterParameterListNone,
+    // BothSourcesSwapped
+    [
+        CapsuleRegisterParameter.SecondSource,
+        CapsuleRegisterParameter.FirstSource,
+        CapsuleRegisterParameter.None,
+    ],
+    // AllSourcesSwapped
+    [
+        CapsuleRegisterParameter.Destination,
+        CapsuleRegisterParameter.SecondSource,
+        CapsuleRegisterParameter.FirstSource,
+    ],
 ];
 
 /// This type is used by the Capsule assembly parser to determine what
@@ -154,15 +198,15 @@ struct CapsuleInstructionArgs {
     );
     /// Examples: lb, lbu, lh, lhu, lw
     static enum Load = typeof(this)(
-        Registers.DestinationSecondSource, Immediate.Maybe
+        Registers.DestinationSource, Immediate.Maybe
     );
     /// Examples: andi, ori, xori, slti, sltiu
     static enum RegDestSrcImmAlways = typeof(this)(
         Registers.DestinationSource, Immediate.Always
     );
     /// Examples: sb, sh, sw
-    static enum RegBothSrcImmMaybe = typeof(this)(
-        Registers.BothSources, Immediate.Maybe
+    static enum Store = typeof(this)(
+        Registers.BothSourcesSwapped, Immediate.Maybe
     );
     /// Examples: and, or, xor, andn, min, minu, max, maxu
     static enum RegAllImmNever = typeof(this)(
@@ -217,6 +261,10 @@ struct CapsuleInstructionArgs {
         Registers.Destination, Immediate.Always,
         ReferenceType.PCRelativeAddressWord,
     );
+    /// Examples: ret (pseudo-instruction)
+    static enum Return = typeof(this)(
+        Registers.FirstSource, Immediate.Never,
+    );
     /// Examples: ecalli (pseudo-instruction)
     static enum ExtensionCallImmediate = typeof(this)(
         Registers.DestinationSource, Immediate.Always,
@@ -229,7 +277,7 @@ struct CapsuleInstructionArgs {
     );
     /// Examples: sba, sha, swa (pseudo-instructions)
     static enum StoreToAddress = typeof(this)(
-        Registers.DestinationSource, Immediate.Always,
+        Registers.DestinationSecondSource, Immediate.Always,
         ReferenceType.PCRelativeAddressWord,
     );
     /// Examples: addwi, andwi, orwi, sltwi, sltwiu (pseudo-instructions)

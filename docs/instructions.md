@@ -60,14 +60,14 @@ Note the following abbreviations:
 | 0x4d | sltiu rd,rs1,imm       | Set if less than immediate unsigned       | rd = rs1 < i32 ? 1 : 0 |
 | 0x4e | lui rd,imm             | Load upper immediate                      | rd = i32 << 16 |
 | 0x4f | auipc rd,imm           | Add upper immediate to program counter    | rd = pc + (i32 << 16) |
-| 0x50 | lb rd,rs1,imm          | Load sign-extended byte                   | rd = memory.byte[rs2 + i32] |
-| 0x51 | lbu rd,rs1,imm         | Load zero-extended byte                   | rd = memory.ubyte[rs2 + i32] |
-| 0x52 | lh rd,rs1,imm          | Load sign-extended half word              | rd = memory.half[(rs2 + i32)] |
-| 0x53 | lhu rd,rs1,imm         | Load zero-extended half word              | rd = memory.uhalf[(rs2 + i32)] |
-| 0x54 | lw rd,rs1,imm          | Load word                                 | rd = memory.word[(rs2 + i32)] |
-| 0x55 | sb rs1,rs2,imm         | Store byte                                | memory.byte[rs2 + i32] = rs1 |
-| 0x56 | sh rs1,rs2,imm         | Store half word                           | memory.half[(rs2 + i32)] = rs1 |
-| 0x57 | sw rs1,rs2,imm         | Store word                                | memory.word[(rs2 + i32)] = rs1 |
+| 0x50 | lb rd,rs1,imm          | Load sign-extended byte                   | rd = memory.byte[rs1 + i32] |
+| 0x51 | lbu rd,rs1,imm         | Load zero-extended byte                   | rd = memory.ubyte[rs1 + i32] |
+| 0x52 | lh rd,rs1,imm          | Load sign-extended half word              | rd = memory.half[rs1 + i32] |
+| 0x53 | lhu rd,rs1,imm         | Load zero-extended half word              | rd = memory.uhalf[rs1 + i32] |
+| 0x54 | lw rd,rs1,imm          | Load word                                 | rd = memory.word[rs1 + i32] |
+| 0x55 | sb rs2,rs1,imm         | Store byte                                | memory.byte[rs1 + i32] = rs1 |
+| 0x56 | sh rs2,rs1,imm         | Store half word                           | memory.half[rs1 + i32] = rs1 |
+| 0x57 | sw rs2,rs1,imm         | Store word                                | memory.word[rs1 + i32] = rs1 |
 | 0x58 | jal rd,imm             | Jump and link                             | rd = pc + 4, pc = (pc + i32) |
 | 0x59 | jalr rd,rs1,imm        | Jump and link register                    | rd = pc + 4, pc = (rs1 + i32) |
 | 0x5a | beq rs1,rs2,imm        | Branch if equal                           | if rs1 == rs2: pc = pc + (i32) |
