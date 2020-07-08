@@ -1,0 +1,93 @@
+; Test sw (store word) with a range of inputs
+; Store the word value of rs2 at memory address rs1 + imm
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.data
+    target: .resw 8
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    ; Store some words
+    la C, target
+    li X, 0x12345678
+    sw X, C, 0
+    li X, 0x2468cdef
+    sw X, C, 4
+    li X, 0x3579bdf0
+    sw X, C, 8
+    li X, 0x4321abcd
+    sw X, C, 12
+    li X, 0x00000000
+    sw X, C, 16
+    li X, 0xffffffff
+    sw X, C, 20
+    li X, 0x7fffffff
+    sw X, C, 24
+    li X, 0x80000000
+    sw X, C, 28
+    ; Load them back
+    ; 12345678
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 2468cdef
+    lw A, C, 4
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 3579bdf0
+    lw A, C, 8
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 4321abcd
+    lw A, C, 12
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 0
+    lw A, C, 16
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; ffffffff
+    lw A, C, 20
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 7fffffff
+    lw A, C, 24
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 80000000
+    lw A, C, 28
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; And again, but differently
+    ; 12345678
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 2468cdef
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 3579bdf0
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 4321abcd
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 0
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; ffffffff
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 7fffffff
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 80000000
+    lw A, C, 0
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

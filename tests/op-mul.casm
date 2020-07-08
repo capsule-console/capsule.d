@@ -1,0 +1,190 @@
+; Test mul (multiply and truncate) with a range of values
+; Store the low 32 bits of rs1 * rs2 to rd
+
+.extern write_int
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    li B, ' '
+    ; 0
+    li X, 0
+    mul A, X, Z
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0
+    mul A, Z, X
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 1
+    mul A, X, Z
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, -1
+    mul A, X, Z
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 1
+    mul A, Z, X
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, -1
+    mul A, Z, X
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 1
+    li Y, 1
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, 1
+    li Y, -1
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, -1
+    li Y, 1
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, -1
+    li Y, -1
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 8
+    li X, 1
+    li Y, 8
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -8
+    li X, -1
+    li Y, 8
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -8
+    li X, 1
+    li Y, -8
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 8
+    li X, -1
+    li Y, -8
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 6
+    li X, 2
+    li Y, 3
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 18
+    li X, 6
+    li Y, 3
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 40
+    li X, 4
+    li Y, 10
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 75
+    li X, 5
+    li Y, 15
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 256
+    li X, 16
+    li Y, 16
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -256
+    li X, -16
+    li Y, 16
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 10000
+    li X, 100
+    li Y, 100
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 9740205
+    li X, 12345
+    li Y, 789
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -63903213
+    li X, 7051
+    li Y, -9063
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1534644342
+    li X, -34011
+    li Y, -45122
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 2147483647
+    li Y, 2147483647
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2
+    li X, 2147483647
+    li Y, 2
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 2
+    li X, 2147483647
+    li Y, -2
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483647
+    li X, 2147483647
+    li Y, -1
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, -2147483648
+    li Y, -2147483648
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li X, -2147483648
+    li Y, 1
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li X, -2147483648
+    li Y, -1
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, -2147483648
+    li Y, 2
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, -2147483648
+    li Y, -2
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li X, 2147483647
+    li Y, -2147483648
+    mul A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li X, -2147483648
+    li Y, 2147483647
+    mul A, X, Y
+    call R, write_int
+    ; All done
+    ecalli Z, Z, meta.exit_ok

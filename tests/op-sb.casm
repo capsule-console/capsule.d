@@ -1,0 +1,81 @@
+; Test sb (store byte) with a range of inputs
+; Store the low byte of rs2 at memory address rs1 + imm
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.data
+    target: .resb 16
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    ; Store some bytes
+    la C, target
+    li X, 0x12345678
+    sb X, C, 0
+    li X, 0xcdef
+    sb X, C, 1
+    li X, 0x20
+    sb X, C, 2
+    li X, 0xab
+    sb X, C, 3
+    li X, 0xff00
+    sb X, C, 4
+    li X, 0xff
+    sb X, C, 5
+    li X, 0x7f
+    sb X, C, 6
+    li X, 0x80
+    sb X, C, 7
+    li X, 0x00
+    sb X, C, 8
+    li X, 0x0f
+    sb X, C, 9
+    li X, 0xf0
+    sb X, C, 10
+    li X, 0xcc
+    sb X, C, 11
+    li X, 0xd9
+    sb X, C, 12
+    li X, 0x11
+    sb X, C, 13
+    li X, 0x01
+    sb X, C, 14
+    li X, 0x65
+    sb X, C, 15
+    ; Load them back
+    ; ab20ef78
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 807fff00
+    lw A, C, 4
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; ccf00f00
+    lw A, C, 8
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 650111d9
+    lw A, C, 12
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; And again, but differently
+    ; ab20ef78
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 807fff00
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; ccf00f00
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 650111d9
+    lw A, C, 0
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

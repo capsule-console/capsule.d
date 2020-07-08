@@ -1,0 +1,65 @@
+; Test sh (store half word) with a range of inputs
+; Store the low half word of rs2 at memory address rs1 + imm
+
+.extern write_hex
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.data
+    target: .resh 8
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    ; Store some half words
+    la C, target
+    li X, 0x12345678
+    sh X, C, 0
+    li X, 0xcdef
+    sh X, C, 2
+    li X, 0x4321
+    sh X, C, 4
+    li X, 0xabcd
+    sh X, C, 6
+    li X, 0xffff0000
+    sh X, C, 8
+    li X, 0xffff
+    sh X, C, 10
+    li X, 0x7fff
+    sh X, C, 12
+    li X, 0x8000
+    sh X, C, 14
+    ; Load them back
+    ; cdef5678
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; abcd4321
+    lw A, C, 4
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; ffff0000
+    lw A, C, 8
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; 80007fff
+    lw A, C, 12
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    ; And again, but differently
+    ; cdef5678
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; abcd4321
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; ffff0000
+    lw A, C, 0
+    call R, write_hex li X, ' ' ecalli Z, X, stdio.put_byte
+    addi C, C, 4
+    ; 80007fff
+    lw A, C, 0
+    call R, write_hex
+    ; All done
+    ecalli Z, Z, meta.exit_ok

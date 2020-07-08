@@ -1,0 +1,105 @@
+; Test sub (arithmetic subtraction) with a range of values
+; Store the result of rs1 - rs2 to rd
+
+.extern write_int
+
+.const meta.exit_ok, 0x0001
+.const stdio.init, 0x0100
+.const stdio.put_byte, 0x0102
+
+.bss
+    ; Reserve memory needed by write_int
+    write_int.target: .resw 1
+
+.text
+.entry
+    ; Initialize
+    ecalli Z, Z, stdio.init
+    la S, write_int.target
+    li B, ' '
+    ; 0
+    li X, 0
+    sub A, X, Z
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 0
+    sub A, Z, X
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, 1
+    sub A, X, Z
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, -1
+    sub A, X, Z
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, 1
+    sub A, Z, X
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, -1
+    sub A, Z, X
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 1
+    li Y, 1
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 5
+    li X, 20
+    li Y, 15
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -5
+    li X, 15
+    li Y, 20
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 255
+    li X, 256
+    li Y, 1
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 29950
+    li X, 30000
+    li Y, 50
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -30050
+    li X, -30000
+    li Y, 50
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, 2147483647
+    li Y, 2147483647
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -2147483648
+    li X, 2147483647
+    li Y, -1
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 0
+    li X, -2147483648
+    li Y, -2147483648
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 2147483647
+    li X, -2147483648
+    li Y, 1
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; -1
+    li X, 2147483647
+    li Y, -2147483648
+    sub A, X, Y
+    call R, write_int ecalli Z, B, stdio.put_byte
+    ; 1
+    li X, -2147483648
+    li Y, 2147483647
+    sub A, X, Y
+    call R, write_int
+    ; All done
+    ecalli Z, Z, meta.exit_ok
