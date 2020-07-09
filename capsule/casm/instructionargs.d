@@ -237,6 +237,10 @@ struct CapsuleInstructionArgs {
         Registers.DestinationSource, Immediate.Maybe,
         ReferenceType.PCRelativeAddressHalf,
     );
+    /// Examples: ecall
+    static enum ExtensionCall = typeof(this)(
+        Registers.AllSourcesSwapped, Immediate.Maybe,
+    );
     /// Examples: j (pseudo-instruction)
     static enum Jump = typeof(this)(
         Registers.None, Immediate.Always,
@@ -268,7 +272,7 @@ struct CapsuleInstructionArgs {
     );
     /// Examples: ecalli (pseudo-instruction)
     static enum ExtensionCallImmediate = typeof(this)(
-        Registers.DestinationSource, Immediate.Always,
+        Registers.DestinationSecondSource, Immediate.Always,
         ReferenceType.AbsoluteWord,
     );
     /// Examples: lba, lbua, lha, lhua, lwa (pseudo-instructions)

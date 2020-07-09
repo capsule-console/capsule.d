@@ -564,9 +564,9 @@ struct CapsuleEngine {
                     break;
                 case Opcode.ExtensionCall:
                     assert(this.ecall !is null);
-                    this.ecallId = ru(i.rs2) + i.imm32;
+                    this.ecallId = ru(i.rs1) + i.imm32;
                     const result = this.ecall(
-                        this.ecallData, &this, this.ecallId, ru(i.rs1)
+                        this.ecallData, &this, this.ecallId, ru(i.rs2)
                     );
                     if(result.ok) {
                         rset(i.rd, result.value);

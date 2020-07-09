@@ -48,13 +48,13 @@ Note the following abbreviations:
 | 0x41 | \-                     | _Reserved_                                | \- |
 | 0x42 | \-                     | _Reserved_                                | \- |
 | 0x43 | \-                     | _Reserved_                                | \- |
-| 0x44 | andi rd,rs1,imm        | Bitwise AND immediate                     | rd = rs1 AND i32 |
-| 0x45 | ori rd,rs1,imm         | Bitwise OR immediate                      | rd = rs1 OR i32 |
-| 0x46 | xori rd,rs1,imm        | Bitwise XOR immediate                     | rd = rs1 XOR i32 |
+| 0x44 | andi rd,rs1,imm        | Bitwise AND immediate                     | rd = rs1 & i32 |
+| 0x45 | ori rd,rs1,imm         | Bitwise OR immediate                      | rd = rs1 | i32 |
+| 0x46 | xori rd,rs1,imm        | Bitwise XOR immediate                     | rd = rs1 ^ i32 |
 | 0x47 | \-                     | _Reserved_                                | \- |
-| 0x48 | sll rd,rs1,rs2,imm     | Shift logical left                        | rd = (rs1 << (i32 & 0x1F)) << (rs2 & 0x1F) |
-| 0x49 | srl rd,rs1,rs2,imm     | Shift logical right                       | rd = (rs1 >>> (i32 & 0x1F)) >>> (rs2 & 0x1F) |
-| 0x4a | sra rd,rs1,rs2,imm     | Shift arithmetic right                    | rd = (rs1 >> (i32 & 0x1F)) >> (rs2 & 0x1F) |
+| 0x48 | sll rd,rs1,rs2,imm     | Shift logical left                        | rd = (rs1 << (i32 & 0x1f)) << (rs2 & 0x1f) |
+| 0x49 | srl rd,rs1,rs2,imm     | Shift logical right                       | rd = (rs1 >>> (i32 & 0x1f)) >>> (rs2 & 0x1f) |
+| 0x4a | sra rd,rs1,rs2,imm     | Shift arithmetic right                    | rd = (rs1 >> (i32 & 0x1f)) >> (rs2 & 0x1f) |
 | 0x4b | add rd,rs1,rs2,imm     | Add                                       | rd = rs1 + rs2 + i32 |
 | 0x4c | slti rd,rs1,imm        | Set if less than immediate signed         | rd = rs1 < i32 ? 1 : 0 |
 | 0x4d | sltiu rd,rs1,imm       | Set if less than immediate unsigned       | rd = rs1 < i32 ? 1 : 0 |
@@ -77,7 +77,7 @@ Note the following abbreviations:
 | 0x5e | bge rs1,rs2,imm        | Branch if greater or equal signed         | if rs1 >= rs2: pc = pc + (i32) |
 | 0x5f | bgeu rs1,rs2,imm       | Branch if greater or equal unsigned       | if rs1 >= rs2: pc = pc + (i32) |
 | 0x60 | \-                     | _Reserved, through to 0x7e_               | \- |
-| 0x7f | ecall rd,rs1,rs2,imm   | Call extension                            | rd = ecall(extid: rs2 + i32, input: rs1) |
+| 0x7f | ecall rd,rs2,rs1,imm   | Call extension                            | rd = ecall(extid: rs2 + i32, input: rs1) |
 
 ## Pseudo-instructions
 

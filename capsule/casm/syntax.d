@@ -219,7 +219,7 @@ auto getCapsuleInstructionArgs(
         case Opcode.BranchLessUnsigned: return Args.Branch;
         case Opcode.BranchGreaterEqualSigned: return Args.Branch;
         case Opcode.BranchGreaterEqualUnsigned: return Args.Branch;
-        case Opcode.ExtensionCall: return Args.RegAllImmMaybe;
+        case Opcode.ExtensionCall: return Args.ExtensionCall;
         case Opcode.Breakpoint: return Args.None;
         default: return Args.None;
     }

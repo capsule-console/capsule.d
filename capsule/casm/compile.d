@@ -1517,13 +1517,13 @@ struct CapsuleAsmCompiler {
         else if(pseudoType is PseudoType.ExtensionCallImmediate) {
             const values = this.getNumberHalves(immediate);
             const rdz = values.high ? rd : 0;
-            if(values.high && rd == rs1) this.addStatus(
+            if(values.high && rd == rs2) this.addStatus(
                 node.location,
                 Status.PseudoInstructionBadDstRegisterArgs,
                 node.getName()
             );
             emitHighHalf(values.high);
-            emit(Node(loc, Opcode.ExtensionCall, rd, rs1, rdz, values.low));
+            emit(Node(loc, Opcode.ExtensionCall, rd, rdz, rs2, values.low));
         }
         // Shouldn't happen. Would imply an inconsistency between the parser
         // and the compiler implementation.

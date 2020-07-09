@@ -743,10 +743,10 @@ exception (0x04).
 
 ### Call extension (ecall, 0x7f)
 
-_rd = ecall(extid: rs2 + i32, input: rs1)_
+_rd = ecall(extid: rs1 + i32, input: rs2)_
 
 The _ecall_ instruction invokes the extension identified by the sum of
-_rs2_ and _i32_. The value of _rs1_ may be treated as an input, depending
+_rs1_ and _i32_. The value of _rs2_ may be treated as an input, depending
 on the extension.
 
 Attempting to call an extension which is not supported by the implementation
