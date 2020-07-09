@@ -14,9 +14,9 @@ import capsule.io.file : FileLocation;
 import capsule.meta.enums : getEnumMemberName, getEnumMemberAttribute;
 import capsule.string.ascii : isDigit, eitherCaseStringEquals;
 
+import capsule.core.instruction : CapsuleInstruction;
 import capsule.core.obj : CapsuleObjectReference, CapsuleObjectSymbol;
-import capsule.core.typestrings : getCapsuleOpcodeName;
-import capsule.core.types : CapsuleInstruction, CapsuleOpcode;
+import capsule.core.opcode : CapsuleOpcode, getCapsuleOpcodeName;
 
 import capsule.casm.instructionargs : CapsuleInstructionArgs;
 
@@ -642,7 +642,7 @@ struct CapsuleAsmInstructionNode {
     }
     
     uint encode() const {
-        return this.getInstruction().encode();
+        return this.getInstruction().data;
     }
     
     /// Set register by index (rd = 0, rs1 = 1, rs2 = 2)

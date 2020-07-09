@@ -29,12 +29,13 @@ import capsule.time.sleep : sleepPreciseMilliseconds;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.core.engineinit : initializeCapsuleEngine;
+import capsule.core.exception : CapsuleExceptionCode;
+import capsule.core.exception : getCapsuleExceptionDescription;
 import capsule.core.extension : CapsuleExtension;
+import capsule.core.opcode : CapsuleOpcode, getCapsuleOpcodeName;
 import capsule.core.program : CapsuleProgram;
 import capsule.core.programencode : CapsuleProgramDecoder;
 import capsule.core.programstring : capsuleProgramToString;
-import capsule.core.types : CapsuleExceptionCode, CapsuleOpcode;
-import capsule.core.typestrings : getCapsuleExceptionDescription;
 
 import capsule.extension.common : CapsuleModuleMessageSeverity;
 import capsule.extension.list : CapsuleExtensionList;
@@ -630,7 +631,7 @@ CapsuleApplicationStatus execute(string[] args) {
             }
             stdio.writeln("Instructions executed per opcode:");
             for(uint i = 0; i < engine.opExecCount.length; i++) {
-                const name = getEnumMemberAttribute!string(cast(CapsuleOpcode) i);
+                const name = getCapsuleOpcodeName(cast(CapsuleOpcode) i);
                 const count = engine.opExecCount[i];
                 if(count && name.length) stdio.writeln(
                     getByteHexString(cast(ubyte) i), " ", name, ": ",

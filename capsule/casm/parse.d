@@ -18,9 +18,8 @@ import capsule.string.escape : unescapeCapsuleText;
 import capsule.string.hex : isHexDigit, getHexDigitValue, parseHexString;
 
 import capsule.core.obj : CapsuleObject;
-import capsule.core.typestrings : CapsuleRegisterNames;
-import capsule.core.typestrings : getCapsuleRegisterIndex;
-import capsule.core.types : CapsuleOpcode;
+import capsule.core.opcode : CapsuleOpcode, getCapsuleOpcodeWithName;
+import capsule.core.register : CapsuleRegisterNames, getCapsuleRegisterWithName;
 
 import capsule.casm.instructionargs : CapsuleInstructionArgs;
 import capsule.casm.messages : CapsuleAsmMessageStatus, CapsuleAsmMessageMixin;
@@ -86,17 +85,6 @@ struct CapsuleAsmParser {
         assert(log);
         this.log = log;
         this.reader = reader;
-    }
-    
-    static int parseInstructionName(in string name) {
-        foreach(member; __traits(allMembers, CapsuleOpcode)) {
-            enum opcode = __traits(getMember, CapsuleOpcode, member);
-            const memberName = getEnumMemberAttribute!string(opcode);
-            if(eitherCaseStringEquals(name, memberName)) {
-                return cast(int) opcode;
-            }
-        }
-        return -1;
     }
     
     void addResultStatus(T)(in CapsuleAsmParseResult!T result) {
@@ -206,8 +194,8 @@ struct CapsuleAsmParser {
             return this.parseHexInstruction();
         }
         Node node;
-        const opcode = typeof(this).parseInstructionName(opName);
-        if(opcode < 0) {
+        const CapsuleOpcode opcode = getCapsuleOpcodeWithName(opName);
+        if(opcode is CapsuleOpcode.None) {
             const pseudoType = Node.getPseudoInstructionTypeWithName(opName);
             if(pseudoType is PseudoInstructionType.None) {
                 this.addStatusSkipLine(
@@ -220,7 +208,7 @@ struct CapsuleAsmParser {
             node = Node(location, pseudoType);
         }
         else {
-            assert(opcode >= 0 && opcode <= 0x7f);
+            assert(opcode > 0 && opcode <= 0x7f);
             node = Node(location, Node.Type.Instruction);
             node.instruction.opcode = cast(ubyte) opcode;
         }
@@ -368,20 +356,11 @@ struct CapsuleAsmParser {
         if(!argument.ok) {
             return Result.Error(argument);
         }
-        // Argument is a register name (Z, A, B, C, R, S, X, Y)
-        else if(name.length == 1) {
-            const register = cast(byte) getCapsuleRegisterIndex(name[0]);
-            if(register >= 0 && register < 8) {
-                const arg = InstructionArg(Node.Number.init, register);
-                return Result.Ok(argument.location, arg);
-            }
-        }
-        // Argument is a register number (r0, r1, r2, r3, r4, r5, r6, r7)
-        else if(name.length == 2 &&
-            (name[0] == 'r' || name[1] == 'R') &&
-            (name[2] >= '0' && name[2] <= '7')
-        ) {
-            const arg = InstructionArg(Node.Number.init, cast(byte) (name[2] - '0'));
+        // Argument is a register name (e.g. Z, A, B, C, R, S, X, Y)
+        const register = getCapsuleRegisterWithName(name);
+        if(register >= 0) {
+            assert(register < 8);
+            const arg = InstructionArg(Node.Number.init, cast(byte) register);
             return Result.Ok(argument.location, arg);
         }
         // Argument is an immediate value

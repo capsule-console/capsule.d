@@ -11,12 +11,13 @@ private:
 import capsule.bits.clz : clz;
 import capsule.bits.ctz : ctz;
 import capsule.bits.pcnt : pcnt;
-import capsule.math.minmax : min, max;
 
+import capsule.core.exception : CapsuleExceptionCode;
+import capsule.core.exception : getCapsuleExceptionDescription;
+import capsule.core.instruction : CapsuleInstruction;
 import capsule.core.memory : CapsuleMemory;
-import capsule.core.typestrings : getCapsuleExceptionDescription;
-import capsule.core.types : CapsuleOpcode, CapsuleExceptionCode;
-import capsule.core.types : CapsuleRegister, CapsuleInstruction;
+import capsule.core.opcode : CapsuleOpcode;
+import capsule.core.register : CapsuleRegister;
 
 public:
 
@@ -198,7 +199,7 @@ struct CapsuleEngine {
         static if(nextInstruction) {
             const idata = this.mem.loadInstructionWord(this.pc);
             this.instrStatus = idata.status;
-            this.instr = Instruction.decode(idata.value);
+            this.instr = Instruction(idata.value);
         }
         static if(execInstruction) {
             alias i = this.instr;
@@ -208,7 +209,7 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.AndImmediate:
-                    rset(i.rd, ru(i.rs1) & i.i32);
+                    rset(i.rd, ru(i.rs1) & i.imm32);
                     pc += 4;
                     break;
                 case Opcode.Or:
@@ -216,7 +217,7 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.OrImmediate:
-                    rset(i.rd, ru(i.rs1) | i.i32);
+                    rset(i.rd, ru(i.rs1) | i.imm32);
                     pc += 4;
                     break;
                 case Opcode.Xor:
@@ -224,35 +225,43 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.XorImmediate:
-                    rset(i.rd, ru(i.rs1) ^ i.i32);
+                    rset(i.rd, ru(i.rs1) ^ i.imm32);
                     pc += 4;
                     break;
                 case Opcode.ShiftLeftLogical:
-                    rset(i.rd, (ri(i.rs1) << (i.i32 & 0x1F)) << (ru(i.rs2) & 0x1F));
+                    rset(i.rd, (ri(i.rs1) << (i.imm32 & 0x1f)) << (ru(i.rs2) & 0x1f));
                     pc += 4;
                     break;
                 case Opcode.ShiftRightLogical:
-                    rset(i.rd, (ri(i.rs1) >>> (i.i32 & 0x1F)) >>> (ru(i.rs2) & 0x1F));
+                    rset(i.rd, (ri(i.rs1) >>> (i.imm32 & 0x1f)) >>> (ru(i.rs2) & 0x1f));
                     pc += 4;
                     break;
                 case Opcode.ShiftRightArithmetic:
-                    rset(i.rd, (ri(i.rs1) >> (i.i32 & 0x1F)) >> (ru(i.rs2) & 0x1F));
+                    rset(i.rd, (ri(i.rs1) >> (i.imm32 & 0x1f)) >> (ru(i.rs2) & 0x1f));
                     pc += 4;
                     break;
                 case Opcode.SetMinimumSigned:
-                    rset(i.rd, min(ri(i.rs1), ri(i.rs2)));
+                    const int left = ri(i.rs1);
+                    const int right = ri(i.rs2);
+                    rset(i.rd, left < right ? left : right);
                     pc += 4;
                     break;
                 case Opcode.SetMinimumUnsigned:
-                    rset(i.rd, min(ru(i.rs1), ru(i.rs2)));
+                    const uint left = ru(i.rs1);
+                    const uint right = ru(i.rs2);
+                    rset(i.rd, left < right ? left : right);
                     pc += 4;
                     break;
                 case Opcode.SetMaximumSigned:
-                    rset(i.rd, max(ri(i.rs1), ri(i.rs2)));
+                    const int left = ri(i.rs1);
+                    const int right = ri(i.rs2);
+                    rset(i.rd, left >= right ? left : right);
                     pc += 4;
                     break;
                 case Opcode.SetMaximumUnsigned:
-                    rset(i.rd, max(ru(i.rs1), ru(i.rs2)));
+                    const uint left = ru(i.rs1);
+                    const uint right = ru(i.rs2);
+                    rset(i.rd, left >= right ? left : right);
                     pc += 4;
                     break;
                 case Opcode.SetLessThanSigned:
@@ -264,15 +273,15 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.SetLessThanImmediateSigned:
-                    rset(i.rd, ri(i.rs1) < i.i32 ? 1 : 0);
+                    rset(i.rd, ri(i.rs1) < i.imm32 ? 1 : 0);
                     pc += 4;
                     break;
                 case Opcode.SetLessThanImmediateUnsigned:
-                    rset(i.rd, ru(i.rs1) < cast(uint) i.i32 ? 1 : 0);
+                    rset(i.rd, ru(i.rs1) < cast(uint) i.imm32 ? 1 : 0);
                     pc += 4;
                     break;
                 case Opcode.Add:
-                    rset(i.rd, ri(i.rs1) + ri(i.rs2) + i.i32);
+                    rset(i.rd, ri(i.rs1) + ri(i.rs2) + i.imm32);
                     pc += 4;
                     break;
                 case Opcode.Subtract:
@@ -280,11 +289,11 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.LoadUpperImmediate:
-                    rset(i.rd, i.i32 << 16);
+                    rset(i.rd, i.imm32 << 16);
                     pc += 4;
                     break;
                 case Opcode.AddUpperImmediateToPC:
-                    rset(i.rd, pc + (i.i32 << 16));
+                    rset(i.rd, pc + (i.imm32 << 16));
                     pc += 4;
                     break;
                 case Opcode.MultiplyAndTruncate:
@@ -311,7 +320,8 @@ struct CapsuleEngine {
                     const divisor = ri(i.rs2);
                     // Inputs that cause D to crash
                     if(divisor == 0) rset(i.rd, -1);
-                    else if(divisor == -1 && dividend == int.min) rset(i.rd, int.min);
+                    // int.min / -1 crashes
+                    else if(divisor == -1) rset(i.rd, -dividend);
                     // Everything else
                     else rset(i.rd, dividend / divisor);
                     pc += 4;
@@ -326,7 +336,8 @@ struct CapsuleEngine {
                     const divisor = ri(i.rs2);
                     // Inputs that cause D to crash
                     if(divisor == 0) rset(i.rd, dividend);
-                    else if(divisor == -1) rset(i.rd, 0); // int.min % -1 crashes
+                    // int.min % -1 crashes
+                    else if(divisor == -1) rset(i.rd, 0);
                     // Everything else
                     else rset(i.rd, dividend % divisor);
                     pc += 4;
@@ -338,7 +349,7 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.ReverseByteOrder:
-                    union Bytes{uint u32; ubyte[4] u8;}
+                    union Bytes {uint u32; ubyte[4] u8;}
                     const b = Bytes(ru(i.rs1)).u8;
                     rset(i.rd, (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]);
                     pc += 4;
@@ -361,7 +372,7 @@ struct CapsuleEngine {
                     pc += 4;
                     break;
                 case Opcode.LoadByteSignExt:
-                    const load = this.mem.loadByteSigned(ri(i.rs1) + i.i32);
+                    const load = this.mem.loadByteSigned(ri(i.rs1) + i.imm32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(int) load.value);
@@ -380,7 +391,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadByteZeroExt:
-                    const load = this.mem.loadByteUnsigned(ri(i.rs1) + i.i32);
+                    const load = this.mem.loadByteUnsigned(ri(i.rs1) + i.imm32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(uint) load.value);
@@ -399,7 +410,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadHalfWordSignExt:
-                    const load = this.mem.loadHalfWordSigned(ri(i.rs1) + i.i32);
+                    const load = this.mem.loadHalfWordSigned(ri(i.rs1) + i.imm32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(int) load.value);
@@ -418,7 +429,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadHalfWordZeroExt:
-                    const load = this.mem.loadHalfWordUnsigned(ri(i.rs1) + i.i32);
+                    const load = this.mem.loadHalfWordUnsigned(ri(i.rs1) + i.imm32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, cast(uint) load.value);
@@ -437,7 +448,7 @@ struct CapsuleEngine {
                     }
                     break;
                 case Opcode.LoadWord:
-                    const load = this.mem.loadWord(ri(i.rs1) + i.i32);
+                    const load = this.mem.loadWord(ri(i.rs1) + i.imm32);
                     final switch(load.status) {
                         case Memory.Status.Ok:
                             rset(i.rd, load.value);
@@ -457,7 +468,7 @@ struct CapsuleEngine {
                     break;
                 case Opcode.StoreByte:
                     const status = this.mem.storeByte(
-                        ri(i.rs1) + i.i32, cast(ubyte) ru(i.rs2)
+                        ri(i.rs1) + i.imm32, cast(ubyte) ru(i.rs2)
                     );
                     final switch(status) {
                         case Memory.Status.Ok:
@@ -478,7 +489,7 @@ struct CapsuleEngine {
                     break;
                 case Opcode.StoreHalfWord:
                     const status = this.mem.storeHalfWord(
-                        (ri(i.rs1) + i.i32), cast(ushort) ru(i.rs2)
+                        (ri(i.rs1) + i.imm32), cast(ushort) ru(i.rs2)
                     );
                     final switch(status) {
                         case Memory.Status.Ok:
@@ -499,7 +510,7 @@ struct CapsuleEngine {
                     break;
                 case Opcode.StoreWord:
                     const status = this.mem.storeWord(
-                        (ri(i.rs1) + i.i32), ru(i.rs2)
+                        (ri(i.rs1) + i.imm32), ru(i.rs2)
                     );
                     final switch(status) {
                         case Memory.Status.Ok:
@@ -520,40 +531,40 @@ struct CapsuleEngine {
                     break;
                 case Opcode.JumpAndLink:
                     rset(i.rd, 4 + pc);
-                    pc = (i.i32 + pc);
+                    pc = (i.imm32 + pc);
                     return;
                 case Opcode.JumpAndLinkRegister:
                     const next = 4 + pc;
-                    pc = (i.i32 + ri(i.rs1));
+                    pc = (i.imm32 + ri(i.rs1));
                     rset(i.rd, next);
                     return;
                 case Opcode.BranchEqual:
-                    if(ru(i.rs1) == ru(i.rs2)) pc += i.i32;
+                    if(ru(i.rs1) == ru(i.rs2)) pc += i.imm32;
                     else pc += 4;
                     break;
                 case Opcode.BranchNotEqual:
-                    if(ru(i.rs1) != ru(i.rs2)) pc += i.i32;
+                    if(ru(i.rs1) != ru(i.rs2)) pc += i.imm32;
                     else pc += 4;
                     break;
                 case Opcode.BranchLessSigned:
-                    if(ri(i.rs1) < ri(i.rs2)) pc += i.i32;
+                    if(ri(i.rs1) < ri(i.rs2)) pc += i.imm32;
                     else pc += 4;
                     break;
                 case Opcode.BranchLessUnsigned:
-                    if(ru(i.rs1) < ru(i.rs2)) pc += i.i32;
+                    if(ru(i.rs1) < ru(i.rs2)) pc += i.imm32;
                     else pc += 4;
                     break;
                 case Opcode.BranchGreaterEqualSigned:
-                    if(ri(i.rs1) >= ri(i.rs2)) pc += i.i32;
+                    if(ri(i.rs1) >= ri(i.rs2)) pc += i.imm32;
                     else pc += 4;
                     break;
                 case Opcode.BranchGreaterEqualUnsigned:
-                    if(ru(i.rs1) >= ru(i.rs2)) pc += i.i32;
+                    if(ru(i.rs1) >= ru(i.rs2)) pc += i.imm32;
                     else pc += 4;
                     break;
                 case Opcode.ExtensionCall:
                     assert(this.ecall !is null);
-                    this.ecallId = ru(i.rs2) + i.i32;
+                    this.ecallId = ru(i.rs2) + i.imm32;
                     const result = this.ecall(
                         this.ecallData, &this, this.ecallId, ru(i.rs1)
                     );

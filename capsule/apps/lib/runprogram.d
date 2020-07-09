@@ -21,13 +21,14 @@ import capsule.string.substring : startsWith;
 import capsule.string.writeint : writeInt;
 
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
+import capsule.core.exception : CapsuleExceptionCode;
+import capsule.core.instruction : CapsuleInstruction;
 import capsule.core.memory : CapsuleMemoryStatus;
 import capsule.core.obj : CapsuleObjectReferenceLocalType;
+import capsule.core.opcode : CapsuleOpcode;
+import capsule.core.opcode :  getCapsuleOpcodeName, getCapsuleOpcodeWithName;
 import capsule.core.program : CapsuleProgram;
-import capsule.core.types : CapsuleInstruction;
-import capsule.core.types : CapsuleOpcode, CapsuleExceptionCode;
-import capsule.core.typestrings : CapsuleRegisterNames;
-import capsule.core.typestrings : getCapsuleOpcodeWithName;
+import capsule.core.register : CapsuleRegisterNames;
 
 public:
 
@@ -36,7 +37,7 @@ void logInstruction(in CapsuleEngine* engine) {
 }
 
 void logInstruction(in int address, in CapsuleInstruction instr) {
-    const opName = getEnumMemberAttribute!string(instr.opcode);
+    const opName = getCapsuleOpcodeName(instr.opcode);
     stdio.write("@", getHexString(address), ": ");
     if(opName) {
         stdio.write(opName);
@@ -48,7 +49,7 @@ void logInstruction(in int address, in CapsuleInstruction instr) {
         " rd: ", CapsuleRegisterNames[instr.rd & 0x7],
         " rs1: ", CapsuleRegisterNames[instr.rs1 & 0x7],
         " rs2: ", CapsuleRegisterNames[instr.rs2 & 0x7],
-        " imm: ", getHexString(instr.imm),
+        " imm: ", getHexString(instr.imm16),
     );
 }
 
@@ -570,7 +571,7 @@ void debugProgram(CapsuleProgram program, CapsuleEngine* engine) {
             }
             const load = engine.mem.loadWord(parsed.value);
             if(load.ok) {
-                logInstruction(parsed.value, CapsuleInstruction.decode(cast(uint) load.value));
+                logInstruction(parsed.value, CapsuleInstruction(cast(uint) load.value));
             }
             else {
                 stdio.write("@", getHexString(parsed.value), ": ");

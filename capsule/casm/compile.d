@@ -21,9 +21,10 @@ import capsule.time.unix : getUnixSeconds;
 
 import capsule.core.encoding : CapsuleArchitecture, CapsuleHashType;
 import capsule.core.encoding : CapsuleTextEncoding, CapsuleTimeEncoding;
+import capsule.core.instruction : CapsuleInstruction;
 import capsule.core.obj : CapsuleObject;
+import capsule.core.opcode : CapsuleOpcode;
 import capsule.core.programsource : CapsuleProgramSource;
-import capsule.core.types : CapsuleOpcode, CapsuleInstruction;
 
 import capsule.casm.messages : CapsuleAsmMessageStatus, CapsuleAsmMessageMixin;
 import capsule.casm.messages : CapsuleAsmMessageStatusSeverity;

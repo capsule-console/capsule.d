@@ -11,7 +11,8 @@ module capsule.casm.instructionargs;
 private:
 
 import capsule.core.obj : CapsuleObjectReferenceType;
-import capsule.core.types : CapsuleOpcode, CapsuleRegisterParameter;
+import capsule.core.opcode : CapsuleOpcode;
+import capsule.core.register : CapsuleRegisterParameter;
 
 public:
 

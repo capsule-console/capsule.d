@@ -8,10 +8,10 @@ to a function implementing that extension call.
 
 module capsule.extension.list;
 
+import capsule.core.exception : CapsuleExceptionCode;
 import capsule.core.extension : CapsuleExtension;
 import capsule.core.engine : CapsuleEngine, CapsuleExtensionCallResult;
 import capsule.io.stdio : stdio;
-import capsule.core.types : CapsuleExceptionCode;
 
 private alias Entry = CapsuleExtensionListEntry;
 

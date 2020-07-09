@@ -16,8 +16,8 @@ import capsule.string.hex : getByteHexString, getHexString;
 import capsule.string.writeint : writeInt;
 
 import capsule.core.objstring : getCapsuleObjectReferenceTypeName;
-import capsule.core.types : CapsuleOpcode, CapsuleRegisterParameter;
-import capsule.core.typestrings : getCapsuleOpcodeName, getCapsuleRegisterName;
+import capsule.core.opcode : CapsuleOpcode, getCapsuleOpcodeName;
+import capsule.core.register : CapsuleRegisterParameter, getCapsuleRegisterName;
 
 import capsule.casm.syntax : CapsuleAsmNode;
 
@@ -99,7 +99,7 @@ string capsuleAsmInstructionNodeToString(in Node node) @trusted {
     string argsText;
     string name;
     if(node.type is Node.Type.Instruction) {
-        const opName = getEnumMemberAttribute!string(opcode);
+        const opName = getCapsuleOpcodeName(opcode);
         name = (opName.length ? opName : "[" ~ getByteHexString(opcode) ~ "]");
     }
     else if(node.type is Node.Type.PseudoInstruction) {
