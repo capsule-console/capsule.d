@@ -2,6 +2,8 @@ module capsule.dynarec.x86.size;
 
 public:
 
+alias X86AddressSize = X86DataSize;
+
 alias X86ImmediateSize = X86DataSize;
 
 alias X86DisplacementSize = X86DataSize;

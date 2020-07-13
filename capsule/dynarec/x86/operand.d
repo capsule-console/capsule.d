@@ -6,6 +6,7 @@ import capsule.dynarec.x86.instruction : X86SIBScale;
 import capsule.dynarec.x86.register : X86Register, X86SegmentRegister;
 import capsule.dynarec.x86.register : getX86RegisterId, getX86RegisterSize;
 import capsule.dynarec.x86.register : isX86ExtendedRegister;
+import capsule.dynarec.x86.size : X86AddressSize;
 import capsule.dynarec.x86.size : X86ImmediateSize, X86DisplacementSize;
 
 public:
@@ -13,7 +14,7 @@ public:
 enum X86OperandType: ubyte {
     Register = 1,
     SegmentRegister = 2,
-    Indirect = 3,
+    Indirect = 4,
     Immediate8 = X86ImmediateSize.Byte,
     Immediate16 = X86ImmediateSize.Word,
     Immediate32 = X86ImmediateSize.DWord,
@@ -85,35 +86,39 @@ ubyte getX86AddressMode32Mod(in X86AddressMode32 mode) pure nothrow @safe @nogc 
 /// or immediate values.
 struct X86Operand {
     alias AddressMode = X86AddressMode32;
+    alias AddressSize = X86AddressSize;
     alias ImmediateSize = X86ImmediateSize;
     alias Scale = X86SIBScale;
     alias Type = X86OperandType;
     
     /// What kind of operand this instance represents.
     Type type;
-    
-    union {
-        /// Represents either a regular GP register operand,
-        /// or the base register for a memory address.
-        X86Register register;
-        /// Represents a segment register operand.
-        X86SegmentRegister segmentRegister;
-    }
-    
+    /// Represents either a regular GP register operand,
+    /// or the base register for a memory address.
+    X86Register register;
     /// Index register for a memory address.
     X86Register index;
+    /// Represents a segment register operand, or a segment that a
+    /// memory address should be relative to.
+    X86SegmentRegister segmentRegister;
+    /// Whether this operand has a segment override prefix.
+    /// Relates to indirection operands.
+    bool hasSegmentOverride;
     /// Memory address index scaling factor.
     Scale scale;
     /// Memory address displacement.
     int displacement = 0;
     /// Indicates what addressing mode to use, for indirection operands.
     AddressMode addressMode = AddressMode.None;
+    ///
+    AddressSize addressSize = AddressSize.None;
     
     /// Immediate value.
     long immediate;
     
     alias base = register;
     
+    /// General purpose register, e.g. al, ax, eax, rax
     static typeof(this) Register(in X86Register register) {
         X86Operand operand;
         operand.type = Type.Register;
@@ -121,6 +126,7 @@ struct X86Operand {
         return operand;
     }
     
+    /// Segment register, e.g. cs, ds, ss, es
     static typeof(this) SegmentRegister(in X86SegmentRegister register) {
         X86Operand operand;
         operand.type = Type.SegmentRegister;
@@ -128,29 +134,40 @@ struct X86Operand {
         return operand;
     }
     
-    static typeof(this) Indirect(in int displacement) {
+    /// Indirection with displacement, e.g. [0x123456780]
+    static typeof(this) Indirect(in AddressSize addressSize, in int displacement) {
         X86Operand operand;
         operand.type = Type.Indirect;
         operand.displacement = displacement;
         operand.addressMode = AddressMode.disp32;
+        operand.addressSize = addressSize;
         return operand;
     }
     
-    static typeof(this) IndirectRIP(in int displacement) {
+    /// Instruction pointer relative address
+    static typeof(this) IndirectRIP(in AddressSize addressSize, in int displacement) {
         X86Operand operand;
         operand.type = Type.Indirect;
         operand.displacement = displacement;
         operand.addressMode = AddressMode.rip_disp32;
+        operand.addressSize = addressSize;
         return operand;
     }
     
-    static typeof(this) Indirect(in X86Register base, in int displacement = 0) {
+    static typeof(this) Indirect(
+        in AddressSize addressSize, in X86Register base,
+        in int displacement = 0,
+    ) {
         X86Operand operand;
         operand.type = Type.Indirect;
         operand.register = base;
         operand.displacement = displacement;
+        operand.addressSize = addressSize;
+        enum bpRegisterId = getX86RegisterId(X86Register.rbp);
+        const baseRegisterId = getX86RegisterId(base);
         operand.addressMode = (
-            displacement == 0 ? AddressMode.base :
+            displacement == 0 && baseRegisterId != bpRegisterId ?
+            AddressMode.base :
             displacement == cast(byte) displacement ?
             AddressMode.base_disp8 :
             AddressMode.base_disp32
@@ -159,7 +176,9 @@ struct X86Operand {
     }
     
     static typeof(this) IndirectIndex(
-        in X86Register index, in Scale scale, in int displacement
+        in AddressSize addressSize,
+        in X86Register index, in Scale scale,
+        in int displacement,
     ) {
         assert(scale !is Scale.One);
         X86Operand operand;
@@ -167,11 +186,13 @@ struct X86Operand {
         operand.index = index;
         operand.scale = scale;
         operand.displacement = displacement;
+        operand.addressSize = addressSize;
         operand.addressMode = AddressMode.index_disp32;
         return operand;
     }
     
     static typeof(this) Indirect(
+        in AddressSize addressSize,
         in X86Register base, in X86Register index,
         in Scale scale, in int displacement = 0
     ) {
@@ -182,8 +203,12 @@ struct X86Operand {
         operand.index = index;
         operand.scale = scale;
         operand.displacement = displacement;
+        operand.addressSize = addressSize;
+        enum bpRegisterId = getX86RegisterId(X86Register.rbp);
+        const baseRegisterId = getX86RegisterId(base);
         operand.addressMode = (
-            displacement == 0 && scale == 0 ? AddressMode.base_index :
+            displacement == 0 && baseRegisterId != bpRegisterId ?
+            AddressMode.base_index :
             displacement == cast(byte) displacement ?
             AddressMode.base_index_disp8 :
             AddressMode.base_index_disp32
@@ -219,6 +244,14 @@ struct X86Operand {
         return operand;
     }
     
+    typeof(this) SegmentOverride(in X86SegmentRegister register) pure const {
+        assert(this.isIndirect);
+        X86Operand operand = this;
+        operand.segmentRegister = register;
+        operand.hasSegmentOverride = true;
+        return operand;
+    }
+    
     bool isValidIndirect() pure const {
         const hasBase = this.hasBaseRegister;
         const hasIndex = this.hasIndexRegister;
@@ -227,7 +260,8 @@ struct X86Operand {
         return this.isIndirect && this.addressMode && (
             (!hasBase || baseSize >= 32) &&
             (!hasIndex || indexSize >= 32) &&
-            (!hasBase || !hasIndex || baseSize == indexSize)
+            (!hasBase || !hasIndex || baseSize == indexSize) &&
+            (this.addressSize !is AddressSize.None)
         );
     }
     
@@ -309,6 +343,12 @@ struct X86Operand {
         );
     }
     
+    int segmentRegisterId() pure const {
+        return (this.hasSegmentRegister ?
+            cast(int) this.segmentRegister : -1
+        );
+    }
+    
     int baseRegisterId() pure const {
         return (this.hasBaseRegister ?
             cast(int) getX86RegisterId(this.base) : -1
@@ -335,6 +375,12 @@ struct X86Operand {
     ///
     bool indexIsExtendedRegister() pure const {
         return (this.hasIndexRegister && isX86ExtendedRegister(this.index));
+    }
+    
+    bool hasSegmentRegister() pure const {
+        return this.type is Type.SegmentRegister || (
+            this.hasSegmentOverride && this.type is Type.Indirect
+        );
     }
     
     bool hasBaseRegister() pure const {
