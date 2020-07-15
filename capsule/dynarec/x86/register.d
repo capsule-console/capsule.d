@@ -1,6 +1,10 @@
 module capsule.dynarec.x86.register;
 
-public:
+private:
+
+import capsule.dynarec.x86.size : X86DataSize;
+
+public pure nothrow @safe @nogc:
 
 enum X86SegmentRegister: ubyte {
     /// Extra Segment (ES). Pointer to extra data ('E' stands for 'Extra').
@@ -133,30 +137,34 @@ enum X86Register: ubyte {
 /// then a REX prefix byte must be present.
 /// The low three bits appear in the ModR/M byte and the
 /// high bit, if there is one, appears in the REX byte.
-uint getX86RegisterId(in X86Register register) pure nothrow @safe @nogc {
+uint X86RegisterId(in X86Register register) {
     return (cast(uint) register) & 0xf;
 }
 
 /// Returns true if the highest bit of a register ID is
 /// set, necessitating an REX prefix byte to encode it.
-bool isX86ExtendedRegister(in X86Register register) pure nothrow @safe @nogc {
+bool X86RegisterIsExtended(in X86Register register) {
     return (register & 0x8) != 0;
+}
+
+bool X86RegisterIsByteHigh(in X86Register register) {
+    return register >= X86Register.ah && register <= X86Register.bh; 
 }
 
 /// Get the size in bits of the value held in a register,
 /// e.g. 64 for rax and 32 for eax.
-uint getX86RegisterSize(in X86Register register) pure nothrow @safe @nogc {
+X86DataSize X86RegisterSize(in X86Register register) {
     if(register < 16) {
-        return 64;
+        return X86DataSize.QWord;
     }
     else if(register < 32) {
-        return 32;
+        return X86DataSize.DWord;
     }
     else if(register < 48) {
-        return 16;
+        return X86DataSize.Word;
     }
     else {
         assert(register < 64);
-        return 8;
+        return X86DataSize.Byte;
     }
 }

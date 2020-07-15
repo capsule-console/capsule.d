@@ -1,1057 +1,829 @@
-/**
-
-This module defines abstractions and other tools that are useful for
-dealing with x86 and x86-64 machine code.
-
-https://en.wikipedia.org/wiki/X86-64
-
-https://wiki.osdev.org/X86-64_Instruction_Encoding
-
-*/
-
 module capsule.dynarec.x86.instruction;
 
 private:
 
-import capsule.dynarec.x86.operand : X86Operand, getX86AddressMode32Mod;
-import capsule.dynarec.x86.register : X86Register, getX86RegisterId;
-import capsule.dynarec.x86.register : isX86ExtendedRegister, X86SegmentRegister;
-import capsule.dynarec.x86.size : X86ImmediateSize, X86DisplacementSize;
+import capsule.dynarec.x86.opcode : X86Opcode;
+import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeIsImplicit;
+import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeIsReg;
+import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeIsRM;
+import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeIsImmediate;
+import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeIsMemoryOffset;
+import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeSize;
+import capsule.dynarec.x86.opcodes : X86AllOpcodes, X86FilterAllOpcodes;
+import capsule.dynarec.x86.register : X86Register, X86SegmentRegister;
+import capsule.dynarec.x86.register : X86RegisterSize, X86RegisterIsExtended;
+import capsule.dynarec.x86.size : X86DataSize;
+import capsule.dynarec.x86.size : X86DisplacementSize, X86ImmediateSize;
 
-import capsule.dynarec.x86.opcodes;
+public pure nothrow @safe @nogc:
 
-public:
+alias X86InstructionOperandSize = X86DataSize;
 
-enum X86LockPrefix: ubyte {
+enum X86InstructionOperandType: ubyte {
     None = 0,
-    Lock = 0xf0,
-    RepeatZ = 0xf2,
-    RepeatNZ = 0xf3,
+    Register,
+    SegmentRegister,
+    MemoryAddress,
+    MemoryOffset,
+    Immediate,
+    RelativeImmediate,
 }
 
-/// TODO
-enum X86SegmentOverridePrefix: ubyte {
+/// base flag: 0x1
+/// index flag: 0x2
+/// disp32 flag: 0x4
+/// disp8 flag: 0x8
+/// rip/eip flag: 0x10
+enum X86MemoryAddressMode: ubyte {
     None = 0,
-    CSSegmentOverride = 0x2e,
-    SSSegmentOverride = 0x36,
-    DSSegmentOverride = 0x3e,
-    ESSegmentOverride = 0x26,
-    FSSegmentOverride = 0x64,
-    GSSegmentOverride = 0x65,
-    BranchNotTaken = 0x2e,
-    BranchTaken = 0x3e,
+    /// [base]
+    base = 0x1,
+    /// [base + index * scale]
+    base_index = 0x3,
+    /// [disp32]
+    /// When not in protected mode, this is treated as rip_disp32
+    disp32 = 0x4,
+    /// [base + disp32]
+    base_disp32 = 0x5,
+    /// [index + disp32]
+    index_disp32 = 0x6,
+    /// [base + index * scale + disp32]
+    base_index_disp32 = 0x7,
+    /// [base + disp8]
+    base_disp8 = 0x9,
+    /// [base + index * scale + disp8]
+    base_index_disp8 = 0xb,
+    /// [EIP/RIP + disp32]
+    /// Not available in protected mode; conflicts with disp32
+    rip_disp32 = 0x14,
 }
 
-X86SegmentOverridePrefix getX86SegmentPrefixForRegister(
-    in X86SegmentRegister register
-) pure nothrow @safe @nogc {
-    alias Prefix = X86SegmentOverridePrefix;
-    alias Register = X86SegmentRegister;
-    final switch(register) {
-        case Register.es: return Prefix.ESSegmentOverride;
-        case Register.cs: return Prefix.CSSegmentOverride;
-        case Register.ss: return Prefix.SSSegmentOverride;
-        case Register.ds: return Prefix.DSSegmentOverride;
-        case Register.fs: return Prefix.FSSegmentOverride;
-        case Register.gs: return Prefix.GSSegmentOverride;
-    }
+bool X86MemoryAddressHasBase(in X86MemoryAddressMode mode) {
+    return (mode & 0x1) != 0;
 }
 
-/// Represents an instruction's ModR/M byte.
-struct X86ModRM {
-    byte mod;
-    union {
-        byte reg;
-        /// Opcode bits 3-5 in the ModR/M byte (unavailable for register-register)
-        byte opcode;
-    }
-    byte rm;
-    
-    static typeof(this) Opcode(in byte opcode) pure nothrow @safe @nogc {
-        X86ModRM modrm;
-        modrm.opcode = opcode;
-        return modrm;
-    }
-    
-    bool opCast(T: bool)() pure const nothrow @safe @nogc {
-        return this.mod != 0 || this.reg != 0 || this.rm != 0;
-    }
-    
-    byte getByte() pure const nothrow @safe @nogc {
-        return cast(byte) (
-            ((this.mod & 0x3) << 6) |
-            ((this.reg & 0x7) << 3) |
-            (this.rm & 0x7)
-        );
-    }
+bool X86MemoryAddressHasIndex(in X86MemoryAddressMode mode) {
+    return (mode & 0x2) != 0;
 }
 
-/// Represents an instruction's REX prefix byte.
-struct X86REX {
-    bool w;
-    bool r;
-    bool x;
-    bool b;
-    
-    bool opCast(T: bool)() pure const nothrow @safe @nogc {
-        return this.w || this.r || this.x || this.b;
-    }
-    
-    byte getByte() pure const nothrow @safe @nogc {
-        const rex = cast(byte) (
-            (cast(int) this.b) |
-            ((cast(int) this.x) << 1) |
-            ((cast(int) this.r) << 2) |
-            ((cast(int) this.w) << 3)
-        );
-        return rex ? 0x40 | rex : 0;
+bool X86MemoryAddressHasDisp32(in X86MemoryAddressMode mode) {
+    return (mode & 0x4) != 0;
+}
+
+bool X86MemoryAddressHasDisp8(in X86MemoryAddressMode mode) {
+    return (mode & 0x8) != 0;
+}
+
+/// Given a memory addressing mode, get the value that should be written
+/// to an instruction's ModR/M byte "mod" field (the two highest bits).
+ubyte X86InstructionMemoryAddressModeMod(in X86MemoryAddressMode mode) {
+    alias Mode = X86MemoryAddressMode;
+    final switch(mode) {
+        case Mode.None: return 0;
+        case Mode.base: return 0;
+        case Mode.base_index: return 0;
+        case Mode.disp32: return 0;
+        case Mode.base_disp32: return 2;
+        case Mode.index_disp32: return 0;
+        case Mode.base_index_disp32: return 2;
+        case Mode.base_disp8: return 1;
+        case Mode.base_index_disp8: return 1;
+        case Mode.rip_disp32: return 0;
     }
 }
 
-enum X86SIBScale: byte {
-    One = 0,
-    Two = 1,
-    Four = 2,
-    Eight = 3,
+/// Determine whether a given operand list is a match for the given
+/// opcode.
+static bool X86OperandListMatch(T...)(
+    in X86Opcode* opcode, in ref T operands
+) {
+    static assert(T.length <= 4, "Too many operands.");
+    if(opcode is null) {
+        return false;
+    }
+    uint numOperands = 0;
+    foreach(i, _; operands) {
+        static assert(IsX86InstructionOperandType!(T[i]), "Wrong argument type.");
+        numOperands += cast(bool) operands[i] ? 1 : 0;
+        //static if(is(T[i] == X86InstructionOperand)) {
+        //    alias operand = operands[i];
+        //}
+        //else {
+        //    const operand = X86InstructionOperand(operands[i]);
+        //}
+        if(!X86OperandMatch(opcode.operands[i], operands[i])) {
+            return false;
+        }
+    }
+    return numOperands == opcode.countOperands;
 }
 
-/// Represents an instruction's SIB (scale-index-base) byte.
-struct X86SIB {
+static bool X86OperandMatch(
+    in X86Opcode.OperandType operandType, in X86Register register
+) {
+    return X86OperandMatch(operandType, X86InstructionOperand(register));
+}
+
+static bool X86OperandMatch(
+    in X86Opcode.OperandType operandType, in X86SegmentRegister segmentRegister
+) {
+    return X86OperandMatch(operandType, X86InstructionOperand(segmentRegister));
+}
+
+/// Determine whether a given operand is a match for an expected operand type.
+static bool X86OperandMatch(
+    in X86Opcode.OperandType operandType, in X86InstructionOperand operand
+) {
+    alias Opcode = X86Opcode;
+    alias Operand = X86InstructionOperand;
     alias Register = X86Register;
-    alias Scale = X86SIBScale;
-    
-    Scale scale;
-    Register index;
-    Register base;
-    
-    byte getByte() pure const nothrow @safe @nogc {
-        return cast(byte) (
-            (((cast(byte) this.scale) & 0x3) << 6) |
-            ((getX86RegisterId(this.index) & 0x7) << 3) |
-            (getX86RegisterId(this.base) & 0x7)
-        );
+    alias SegmentRegister = X86SegmentRegister;
+    final switch(operandType) {
+        case Opcode.OperandType.None:
+            return operand.type is Operand.Type.None;
+        case Opcode.OperandType.al:
+            return operand.isRegister(Register.al);
+        case Opcode.OperandType.ax:
+            return operand.isRegister(Register.ax);
+        case Opcode.OperandType.eax:
+            return operand.isRegister(Register.eax);
+        case Opcode.OperandType.rax:
+            return operand.isRegister(Register.rax);
+        case Opcode.OperandType.cl:
+            return operand.isRegister(Register.cl);
+        case Opcode.OperandType.cs:
+            return operand.isSegmentRegister(SegmentRegister.cs);
+        case Opcode.OperandType.ss:
+            return operand.isSegmentRegister(SegmentRegister.ss);
+        case Opcode.OperandType.ds:
+            return operand.isSegmentRegister(SegmentRegister.ds);
+        case Opcode.OperandType.es:
+            return operand.isSegmentRegister(SegmentRegister.es);
+        case Opcode.OperandType.fs:
+            return operand.isSegmentRegister(SegmentRegister.fs);
+        case Opcode.OperandType.gs:
+            return operand.isSegmentRegister(SegmentRegister.gs);
+        case Opcode.OperandType.lit1:
+            return operand.isImmediate && operand.immediate == 1;
+        case Opcode.OperandType.sreg:
+            return operand.isSegmentRegister;
+        case Opcode.OperandType.r8:
+            return operand.isRegisterSize(8);
+        case Opcode.OperandType.r16:
+            return operand.isRegisterSize(16);
+        case Opcode.OperandType.r32:
+            return operand.isRegisterSize(32);
+        case Opcode.OperandType.r64:
+            return operand.isRegisterSize(64);
+        case Opcode.OperandType.rm8:
+            return operand.isRegisterOrMemoryAddressSize(8);
+        case Opcode.OperandType.rm16:
+            return operand.isRegisterOrMemoryAddressSize(16);
+        case Opcode.OperandType.rm32:
+            return operand.isRegisterOrMemoryAddressSize(32);
+        case Opcode.OperandType.rm64:
+            return operand.isRegisterOrMemoryAddressSize(64);
+        case Opcode.OperandType.rm_r8:
+            return operand.isRegisterSize(8);
+        case Opcode.OperandType.rm_r16:
+            return operand.isRegisterSize(16);
+        case Opcode.OperandType.rm_r32:
+            return operand.isRegisterSize(32);
+        case Opcode.OperandType.rm_r64:
+            return operand.isRegisterSize(64);
+        case Opcode.OperandType.m16_16:
+            return operand.isMemoryAddressSize(16); // ?
+        case Opcode.OperandType.m16_32:
+            return operand.isMemoryAddressSize(32); // ?
+        case Opcode.OperandType.m16_64:
+            return operand.isMemoryAddressSize(64); // ?
+        case Opcode.OperandType.moffs8:
+            return operand.isMemoryOffsetSize(8);
+        case Opcode.OperandType.moffs16:
+            return operand.isMemoryOffsetSize(16);
+        case Opcode.OperandType.moffs32:
+            return operand.isMemoryOffsetSize(32);
+        case Opcode.OperandType.moffs64:
+            return operand.isMemoryOffsetSize(64);
+        case Opcode.OperandType.imm8:
+            return operand.isImmediateSize(8);
+        case Opcode.OperandType.imm16:
+            return operand.isImmediateSize(16);
+        case Opcode.OperandType.imm32:
+            return operand.isImmediateSize(32);
+        case Opcode.OperandType.imm64:
+            return operand.isImmediateSize(64);
+        case Opcode.OperandType.rel8:
+            return operand.isRelativeImmediateSize(8);
+        case Opcode.OperandType.rel16:
+            return operand.isRelativeImmediateSize(16);
+        case Opcode.OperandType.rel32:
+            return operand.isRelativeImmediateSize(32);
+        case Opcode.OperandType.rel64:
+            return operand.isRelativeImmediateSize(64);
+        case Opcode.OperandType.far16:
+            return operand.isImmediateSize(16);
+        case Opcode.OperandType.far32:
+            return operand.isImmediateSize(32);
+        case Opcode.OperandType.far64:
+            return operand.isImmediateSize(64);
+        case Opcode.OperandType.farseg16:
+            return operand.isImmediateSize(16);
     }
 }
 
-/// TODO: Give these appropriate names
-enum X86InstructionOpcodeEscape: ushort {
-    None = 0,
-    A = 0x0f,
-    B = 0x0f38,
-    C = 0x0f3a,
+struct X86InstructionMemoryAddressData {
+    alias DisplacementSize = X86DisplacementSize;
+    alias Mode = X86MemoryAddressMode;
+    
+    align(1):
+    X86Register base;
+    X86Register index;
+    ubyte scale = 0;
+    Mode mode;
+    align(4):
+    int displacement = 0;
+    
+    pure const nothrow @safe @nogc:
+    
+    bool ok() const {
+        return (
+            this.mode !is Mode.None &&
+            this.base < X86Register.ax &&
+            this.index < X86Register.ax &&
+            this.scale <= 0x3
+        );
+    }
+    
+    static ubyte getScale(in uint value) {
+        assert(value == 1 || value == 2 || value == 4 || value == 8);
+        switch(value) {
+            case 1: return ubyte(0);
+            case 2: return ubyte(1);
+            case 4: return ubyte(2);
+            case 8: return ubyte(3);
+            default: assert(false);
+        }
+    }
+    
+    /// Returns true if the memory address includes a base register.
+    bool hasBase() {
+        return X86MemoryAddressHasBase(this.mode);
+    }
+    
+    /// Returns true if the memory address includes an index register.
+    bool hasIndex() {
+        return X86MemoryAddressHasIndex(this.mode);
+    }
+    
+    /// Returns true if the memory address includes a 32-bit displacement.
+    bool hasDisp32() {
+        return X86MemoryAddressHasDisp32(this.mode);
+    }
+    
+    /// Returns true if the memory address includes an 8-bit displacement.
+    bool hasDisp8() {
+        return X86MemoryAddressHasDisp8(this.mode);
+    }
+    
+    /// Returns true if the memory address includes an extended
+    /// base register, i.e. r8-r15.
+    bool hasExtendedBase() {
+        return this.hasBase && X86RegisterIsExtended(this.base);
+    }
+    
+    /// Returns true if the memory address includes an extended
+    /// index register, i.e. r8-r15.
+    bool hasExtendedIndex() {
+        return this.hasIndex && X86RegisterIsExtended(this.index);
+    }
+    
+    /// Returns the address's displacement size: dword, byte, or none.
+    DisplacementSize getDisplacementSize() {
+        if(this.hasDisp32) {
+            return DisplacementSize.DWord;
+        }
+        else if(this.hasDisp8) {
+            return DisplacementSize.Byte;
+        }
+        else {
+            return DisplacementSize.None;
+        }
+    }
+    
+    ubyte getScaleValue() {
+        assert(this.scale <= 0x3);
+        return cast(ubyte) (1 << this.scale);
+    }
+}
+
+struct X86InstructionMemoryOffsetData {
+    int offset;
+    X86SegmentRegister segmentRegister;
+}
+
+struct X86InstructionOperand {
+    alias MemoryAddressData = X86InstructionMemoryAddressData;
+    alias MemoryAddressMode = X86MemoryAddressMode;
+    alias MemoryOffsetData = X86InstructionMemoryOffsetData;
+    alias Type = X86InstructionOperandType;
+    alias Size = X86InstructionOperandSize;
+    
+    union {
+        X86Register register;
+        X86SegmentRegister segmentRegister;
+        MemoryAddressData memoryAddress;
+        MemoryOffsetData memoryOffset;
+        long immediate;
+    }
+    
+    align(1):
+    Type type;
+    Size size;
+    
+    pure nothrow @safe @nogc:
+    
+    this(in typeof(this) operand) {
+        this = operand;
+    }
+    
+    this(in X86Register register) {
+        this.type = Type.Register;
+        this.size = X86RegisterSize(register);
+        this.register = register;
+    }
+    
+    this(in X86SegmentRegister segmentRegister) {
+        this.type = Type.SegmentRegister;
+        this.size = Size.Word;
+        this.segmentRegister = segmentRegister;
+    }
+    
+    const:
+    
+    static typeof(this) Register(in X86Register register) {
+        return typeof(this)(register);
+    }
+    
+    static typeof(this) SegmentRegister(in X86SegmentRegister segmentRegister) {
+        return typeof(this)(segmentRegister);
+    }
+    
+    static typeof(this) MemoryOffset(
+        in Size size, in X86SegmentRegister segmentRegister, in int offset
+    ) {
+        X86InstructionOperand operand;
+        operand.type = Type.MemoryOffset;
+        operand.size = size;
+        operand.memoryOffset.segmentRegister = segmentRegister;
+        operand.memoryOffset.offset = offset;
+        return operand;
+    }
+    
+    static typeof(this) MemoryAddress(in Size size, in int displacement) {
+        X86InstructionOperand operand;
+        operand.type = Type.MemoryAddress;
+        operand.size = size;
+        operand.memoryAddress.mode = MemoryAddressMode.disp32;
+        operand.memoryAddress.displacement = displacement;
+        return operand;
+    }
+    
+    static typeof(this) MemoryAddressIPRelative(
+        in Size size, in int displacement
+    ) {
+        X86InstructionOperand operand;
+        operand.type = Type.MemoryAddress;
+        operand.size = size;
+        operand.memoryAddress.mode = MemoryAddressMode.rip_disp32;
+        operand.memoryAddress.displacement = displacement;
+        return operand;
+    }
+    
+    static typeof(this) MemoryAddress(
+        in Size size, in X86Register base, in int displacement = 0
+    ) {
+        X86InstructionOperand operand;
+        operand.type = Type.MemoryAddress;
+        operand.size = size;
+        operand.memoryAddress.base = base;
+        operand.memoryAddress.displacement = displacement;
+        operand.memoryAddress.mode = (
+            displacement == 0 && ((base & 0x7) != X86Register.rbp) ?
+            MemoryAddressMode.base :
+            displacement == cast(byte) displacement ?
+            MemoryAddressMode.base_disp8 :
+            MemoryAddressMode.base_disp32
+        );
+        return operand;
+    }
+    
+    static typeof(this) MemoryAddress(
+        in Size size, in X86Register base,
+        in X86Register index, in uint scale,
+        in int displacement = 0
+    ) {
+        assert((index & 0x7) != X86Register.rsp, "Invalid index register.");
+        X86InstructionOperand operand;
+        operand.type = Type.MemoryAddress;
+        operand.size = size;
+        operand.memoryAddress.base = base;
+        operand.memoryAddress.index = index;
+        operand.memoryAddress.scale = MemoryAddressData.getScale(scale);
+        operand.memoryAddress.displacement = displacement;
+        operand.memoryAddress.mode = (
+            displacement == 0 && ((base & 0x7) != X86Register.rbp) ?
+            MemoryAddressMode.base_index :
+            displacement == cast(byte) displacement ?
+            MemoryAddressMode.base_index_disp8 :
+            MemoryAddressMode.base_index_disp32
+        );
+        return operand;
+    }
+    
+    static typeof(this) MemoryAddressIndex(
+        in Size size, in X86Register index, in uint scale,
+        in int displacement = 0
+    ) {
+        assert((index & 0x7) != X86Register.rsp, "Invalid index register.");
+        X86InstructionOperand operand;
+        operand.type = Type.MemoryAddress;
+        operand.size = size;
+        operand.memoryAddress.index = index;
+        operand.memoryAddress.scale = MemoryAddressData.getScale(scale);
+        operand.memoryAddress.displacement = displacement;
+        operand.memoryAddress.mode = MemoryAddressMode.index_disp32;
+        return operand;
+    }
+    
+    static typeof(this) Immediate(in Size size, in long value) {
+        X86InstructionOperand operand;
+        operand.type = Type.Immediate;
+        operand.size = size;
+        operand.immediate = value;
+        return operand;
+    }
+    
+    static typeof(this) Relative(in Size size, in long value) {
+        X86InstructionOperand operand;
+        operand.type = Type.RelativeImmediate;
+        operand.size = size;
+        operand.immediate = value;
+        return operand;
+    }
+    
+    bool opCast(T: bool)() const {
+        return this.type !is Type.None;
+    }
+    
+    bool isRegister() {
+        return this.type is Type.Register;
+    }
+    
+    bool isRegister(in X86Register register) {
+        return this.type is Type.Register && this.register == register;
+    }
+    
+    bool isSegmentRegister() {
+        return this.type is Type.SegmentRegister;
+    }
+    
+    bool isSegmentRegister(in X86SegmentRegister segmentRegister) {
+        return (this.type is Type.SegmentRegister &&
+            this.segmentRegister is segmentRegister
+        );
+    }
+    
+    bool isMemoryOffset() {
+        return this.type is Type.MemoryOffset;
+    }
+    
+    bool isMemoryAddress() {
+        return this.type is Type.MemoryAddress;
+    }
+    
+    bool isRegisterOrMemoryAddress() {
+        return this.type is Type.Register || this.type is Type.MemoryAddress;
+    }
+    
+    bool isImmediate() {
+        return this.type is Type.Immediate;
+    }
+    
+    bool isRelativeImmediate() {
+        return this.type is Type.RelativeImmediate;
+    }
+    
+    bool isRegisterSize(in uint size) {
+        return this.type is Type.Register && this.size == size;
+    }
+    
+    bool isMemoryAddressSize(in uint size) {
+        return this.type is Type.MemoryAddress && this.size == size;
+    }
+    
+    bool isMemoryOffsetSize(in uint size) {
+        return this.type is Type.MemoryOffset && this.size == size;
+    }
+    
+    bool isRegisterOrMemoryAddressSize(in uint size) {
+        return this.size == size && (
+            this.type is Type.Register || this.type is Type.MemoryAddress
+        );
+    }
+    
+    bool isImmediateSize(in uint size) {
+        return this.type is Type.Immediate && this.size == size;
+    }
+    
+    bool isRelativeImmediateSize(in uint size) {
+        return this.type is Type.RelativeImmediate && this.size == size;
+    }
 }
 
 enum X86InstructionStatus: ubyte {
-    /// Opcode is valid
+    /// Instruction is fine and valid
     Ok = 0,
-    /// Instruction would be valid, but it hasn't been implemented (yet)
-    Unimplemented,
-    /// Instruction wasn't valid.
-    Invalid,
-    ///
-    SizeMismatch,
+    /// Instruction is not valid and can't be encoded
+    Invalid = 1,
+    /// Instruction doesn't have appropriate operands
+    OperandError = 2,
 }
 
-/// Helper used to distinguish between expected operands for instructions
-/// that have two operands, one of them an immediate value.
-enum X86InstructionBinaryOpImmediateType: ubyte {
-    /// Expect the immediate to be 8 bits
-    Byte,
-    /// Expect the dst and src operands to be the same size
-    SameSize,
-    /// Expect the dst and src operands to be the same size,
-    /// unless dst is 64 bits, then expect the src immediate to be
-    /// 32 bits.
-    SameSizeMax32,
-}
+static enum IsX86InstructionOperandType(T) = (
+    is(T == X86InstructionOperand) ||
+    is(T == X86Register) || is(T == X86SegmentRegister)
+);
 
-enum X86InstructionBinaryOpRMType: ubyte {
-    /// Expect r/m to be an 8-bit register or memory address
-    Byte,
-    /// Expect r/m to be a 16-bit register or memory address
-    Word,
-    /// Expect r/m to be a 32-bit register or memory address
-    DWord,
-    /// Expect the r and r/m operands to be the same size
-    SameSize,
+enum X86InstructionRMOperandType: ubyte {
+    None = 0,
+    Register,
+    MemoryAddress,
+    FarSegmentImmediate,
 }
 
 struct X86Instruction {
-    alias BinaryOpImmediateType = X86InstructionBinaryOpImmediateType;
-    alias BinaryOpRMType = X86InstructionBinaryOpRMType;
+    alias AllOpcodes = X86AllOpcodes;
+    alias DataSize = X86DataSize;
     alias DisplacementSize = X86DisplacementSize;
     alias ImmediateSize = X86ImmediateSize;
-    alias ModRM = X86ModRM;
-    alias OpcodeEscape = X86InstructionOpcodeEscape;
-    alias Operand = X86Operand;
-    alias LockPrefix = X86LockPrefix;
+    alias MemoryAddressData = X86InstructionMemoryAddressData;
+    alias MemoryOffsetData = X86InstructionMemoryOffsetData;
+    alias Operand = X86InstructionOperand;
+    alias Opcode = X86Opcode;
     alias Register = X86Register;
-    alias REX = X86REX;
-    alias SegmentOverridePrefix = X86SegmentOverridePrefix;
-    alias SIB = X86SIB;
+    alias RMOperandType = X86InstructionRMOperandType;
+    alias SegmentRegister = X86SegmentRegister;
     alias Status = X86InstructionStatus;
     
-    static enum ubyte OperandSizePrefix = 0x66;
-    static enum ubyte AddressSizePrefix = 0x67;
+    static enum typeof(this) Invalid = typeof(this)(Status.Invalid);
+    static enum typeof(this) OperandError = typeof(this)(Status.OperandError);
     
-    static enum typeof(this) Invalid = {status: Status.Invalid};
-    static enum typeof(this) SizeMismatch = {status: Status.SizeMismatch};
+    /// Pointer to the opcode item associated with this instruction
+    const(Opcode)* opcode = null;
+    /// Immediate value operand, when one is present
+    long immediate;
     
-    /// Create an instruction that represents an opcode.
-    static typeof(this) Opcode(in int opcode) {
-        X86Instruction instruction;
-        instruction.opcode = cast(ubyte) opcode;
-        if(opcode >> 8 == 0x0f) {
-            instruction.opcodeEscape = OpcodeEscape.A;
-        }
-        else if(opcode >> 8 == 0x0f38) {
-            instruction.opcodeEscape = OpcodeEscape.B;
-        }
-        else if(opcode >> 8 == 0x0f3a) {
-            instruction.opcodeEscape = OpcodeEscape.C;
-        }
-        else if(opcode >> 8) {
-            assert(false, "Unknown opcode prefix.");
-        }
-        return instruction;
+    /// Value of the r/m operand, if present (register or memory address)
+    union {
+        Register rmRegister;
+        MemoryAddressData rmMemoryAddress;
+        ushort farSegmentImmediate;
     }
     
-    /// Create an instruction that represents an opcode.
-    /// Providing the "modrm" argument indicates what the opcode
-    /// bits of the ModR/M byte must be set to.
-    static typeof(this) Opcode(in int opcode, in byte modrm) {
-        X86Instruction instruction = typeof(this).Opcode(opcode);
-        instruction.modrm.opcode = modrm;
-        instruction.forceModRMByte = true;
-        return instruction;
-    }
-    
-    typeof(this) Prefix(in LockPrefix lock) const {
-        X86Instruction instruction = this;
-        instruction.lockPrefix = lock;
-        return instruction;
-    }
-    
-    /// Opcode status
-    Status status = Status.Ok;
-    /// Opcode byte, not including escapes
-    ubyte opcode;
+    align(1):
+    /// Whether the r/m operand is a register or a memory address,
+    /// assuming the instruction has an r/m operand
+    RMOperandType rmOperandType = RMOperandType.None;
     ///
-    OpcodeEscape opcodeEscape;
-    /// Information for a ModR/M byte
-    ModRM modrm;
-    /// Force instruction encoder to output a ModR/M byte, even if it's zero
-    bool forceModRMByte = false;
-    /// Information for a SIB byte
-    SIB sib;
-    /// Flags for a REX prefix
-    REX rex;
+    union {
+        /// 
+        Register register;
+        ///
+        SegmentRegister segmentRegister;
+    }
     ///
-    SegmentOverridePrefix segmentOverridePrefix = SegmentOverridePrefix.None;
-    /// Include an 0x66 operand size override prefix?
-    bool operandSizePrefix = false;
-    /// Include an 0x67 address size override prefix?
-    bool addressSizePrefix = false;
-    ///
-    LockPrefix lockPrefix = LockPrefix.None;
-    ///
-    long immediate = 0;
-    ///
-    ImmediateSize immediateSize = ImmediateSize.None;
-    ///
-    int displacement = 0;
-    ///
-    DisplacementSize displacementSize = DisplacementSize.None;
+    Status status;
     
-    /// Returns true if this opcode is not in an error state.
-    bool ok() const {
-        return this.status is Status.Ok;
+    pure nothrow @safe @nogc:
+    
+    this(in Status status) {
+        this.status = status;
     }
     
-    bool hasLockByte() pure const nothrow @safe @nogc {
-        return this.lockPrefix !is LockPrefix.None;
-    }
-    
-    byte getLockByte() pure const nothrow @safe @nogc {
-        assert(this.hasLockByte);
-        return cast(byte) this.lockPrefix;
-    }
-    
-    bool hasSegmentOverridePrefixByte() pure const nothrow @safe @nogc {
-        return this.segmentOverridePrefix !is SegmentOverridePrefix.None;
-    }
-    
-    byte getSegmentOverridePrefixByte() pure const nothrow @safe @nogc {
-        assert(this.hasSegmentOverridePrefixByte);
-        return cast(byte) this.segmentOverridePrefix;
-    }
-    
-    bool hasAddressSizePrefixByte() pure const nothrow @safe @nogc {
-        return this.addressSizePrefix;
-    }
-    
-    byte getAddressSizePrefixByte() pure const nothrow @safe @nogc {
-        assert(this.hasAddressSizePrefixByte);
-        return cast(byte) typeof(this).AddressSizePrefix;
-    }
-    
-    bool hasOperandSizePrefixByte() pure const nothrow @safe @nogc {
-        return this.operandSizePrefix;
-    }
-    
-    byte getOperandSizePrefixByte() pure const nothrow @safe @nogc {
-        assert(this.hasOperandSizePrefixByte);
-        return cast(byte) typeof(this).OperandSizePrefix;
-    }
-    
-    bool hasREXByte() pure const nothrow @safe @nogc {
-        return cast(bool) this.rex;
-    }
-    
-    byte getREXByte() pure const nothrow @safe @nogc {
-        assert(this.hasREXByte);
-        return this.rex.getByte();
-    }
-    
-    bool hasModRMByte() pure const nothrow @safe @nogc {
-        return cast(bool) this.modrm || this.forceModRMByte;
-    }
-    
-    byte getModRMByte() pure const nothrow @safe @nogc {
-        assert(this.hasModRMByte);
-        return this.modrm.getByte();
-    }
-    
-    bool hasSIBByte() pure const nothrow @safe @nogc {
-        return this.modrm.rm == 0x4 && this.modrm.mod != 0x3;
-    }
-    
-    byte getSIBByte() pure const nothrow @safe @nogc {
-        assert(this.hasSIBByte);
-        return this.sib.getByte();
-    }
-    
-    bool hasImmediate() pure const nothrow @safe @nogc {
-        return this.immediateSize !is ImmediateSize.None;
-    }
-    
-    bool hasDisplacement() pure const nothrow @safe @nogc {
-        return this.displacementSize !is DisplacementSize.None;
-    }
-    
-    void setImmediate(in Operand operand) {
-        assert(operand.isImmediate && operand.immediateSize);
-        this.immediate = operand.immediate;
-        this.immediateSize = operand.immediateSize;
-    }
-    
-    void setRegisterB(in Register register) {
-        this.rex.b = isX86ExtendedRegister(register);
-        this.modrm.rm = getX86RegisterId(register) & 0x7;
-    }
-    
-    void setRegisterR(in Register register) {
-        this.rex.r = isX86ExtendedRegister(register);
-        this.modrm.reg = getX86RegisterId(register) & 0x7;
-    }
-    
-    ///
-    void setOperandSize(in uint bits) {
-        this.rex.w = (bits == 64);
-        this.operandSizePrefix = (bits == 16);
-    }
-    
-    void setIndirection(in Operand operand) {
-        assert(operand.isValidIndirect);
-        this.displacement = operand.displacement;
-        this.displacementSize = operand.displacementSize;
-        this.modrm.mod = operand.getAddressModeMod();
-        // TODO: Account for modes other than long mode
-        // https://wiki.osdev.org/X86-64_Instruction_Encoding#Operand-size_and_address-size_override_prefix
-        if(operand.baseRegisterSize == 32 || operand.indexRegisterSize == 32) {
-            this.addressSizePrefix = true;
-        }
-        if(operand.hasSegmentOverride) {
-            this.segmentOverridePrefix = (
-                getX86SegmentPrefixForRegister(operand.segmentRegister)
-            );
-        }
-        if(operand.hasBaseRegister) {
-            this.sib.base = operand.base;
-            this.rex.b = operand.baseIsExtendedRegister;
-            this.rex.x = operand.indexIsExtendedRegister;
-            this.modrm.rm = cast(byte) (operand.base & 0x7);
-        }
-        else {
-            this.sib.base = Register.rbp;
-            this.rex.b = operand.indexIsExtendedRegister;
-        }
-        if(operand.hasIndexRegister) {
-            this.sib.scale = operand.scale;
-            this.sib.index = operand.index;
-            this.modrm.rm = 0x4;
-        }
-        else {
-            this.sib.index = Register.rsp;
-        }
-        if(operand.addressMode is Operand.AddressMode.rip_disp32) {
-            // TODO: Only in long mode
-            assert(this.modrm.mod == 0);
-            this.modrm.rm = 0x4;
-        }
-        else if(operand.addressMode is Operand.AddressMode.disp32) {
-            // TODO: Not in long mode
-            assert(this.modrm.mod == 0);
-            this.modrm.rm = 0x4;
-        }
-    }
-    
-    static bool OpBinaryCheckImmediateType(
-        in BinaryOpImmediateType immediateType,
-        in Operand rm, in Operand immediate
-    ) {
-        assert(immediate.isImmediate);
-        assert(rm.isRegister || rm.isIndirect);
-        const rmSize = rm.isRegister ? rm.registerSize : rm.addressSize;
-        final switch(immediateType) {
-            case BinaryOpImmediateType.Byte:
-                return immediate.immediateSize == 8;
-            case BinaryOpImmediateType.SameSize:
-                return immediate.immediateSize == rmSize;
-            case BinaryOpImmediateType.SameSizeMax32:
-                const size = (rmSize == 64 ? 32 : rmSize);
-                return immediate.immediateSize == size;
-        }
-    }
-    
-    static bool OpBinaryCheckRMType(
-        in BinaryOpRMType rmType, in Operand rm, in Operand reg
-    ) {
-        assert(reg.isRegister);
-        assert(rm.isRegister || rm.isIndirect);
-        const rmSize = rm.isRegister ? rm.registerSize : rm.addressSize;
-        final switch(rmType) {
-            case BinaryOpRMType.Byte:
-                return rmSize == 8;
-            case BinaryOpRMType.Word:
-                return rmSize == 16;
-            case BinaryOpRMType.DWord:
-                return rmSize == 32;
-            case BinaryOpRMType.SameSize:
-                return rmSize == reg.registerSize;
-        }
-    }
-    
-    /// Implement a binary operation like: op register, register
-    /// dst is encoded as ModR/M reg and src as ModR/M r/m
-    static typeof(this) OpBinaryRM(
-        in BinaryOpRMType rmType,
-        in X86Instruction OperandR8, in X86Instruction OperandRx,
-        in Operand dst, in Operand src
-    ) {
-        assert(dst.isRegister && src.isRegister);
-        if(!OpBinaryCheckRMType(rmType, dst, src)) return SizeMismatch;
-        X86Instruction instruction;
-        instruction = dst.registerSize == 8 ? OperandR8 : OperandRx;
-        instruction.modrm.mod = 0x3;
-        instruction.setRegisterR(src.register);
-        instruction.setRegisterB(dst.register);
-        instruction.setOperandSize(src.registerSize);
-        return instruction;
-    }
-    
-    /// Implement a binary operation like: op register, register
-    /// dst is encoded as ModR/M r/m and src as ModR/M reg
-    static typeof(this) OpBinaryMR(
-        in BinaryOpRMType rmType,
-        in X86Instruction OperandR8, in X86Instruction OperandRx,
-        in Operand dst, in Operand src
-    ) {
-        return typeof(this).OpBinaryRM(rmType, OperandR8, OperandRx, src, dst);
-    }
-    
-    /// Implement a binary operation like: op register, [address]
-    static typeof(this) OpBinaryRA(
-        in BinaryOpRMType rmType,
-        in X86Instruction OperandRM8, in X86Instruction OperandRMx,
-        in Operand dst, in Operand src
-    ) {
-        assert(dst.isRegister && src.isIndirect);
-        if(!src.isValidIndirect) return Invalid;
-        if(!OpBinaryCheckRMType(rmType, src, dst)) return SizeMismatch;
-        X86Instruction instruction;
-        instruction = dst.registerSize == 8 ? OperandRM8 : OperandRMx;
-        instruction.setIndirection(src);
-        instruction.setRegisterR(dst.register);
-        instruction.setOperandSize(dst.registerSize);
-        return instruction;
-    }
-    
-    /// Implement a binary operation like: op [address], register
-    static typeof(this) OpBinaryAR(
-        in BinaryOpRMType rmType,
-        in X86Instruction OperandR8, in X86Instruction OperandRx,
-        in Operand dst, in Operand src
-    ) {
-        assert(dst.isIndirect && src.isRegister);
-        if(!dst.isValidIndirect) return Invalid;
-        if(!OpBinaryCheckRMType(rmType, dst, src)) return SizeMismatch;
-        X86Instruction instruction;
-        instruction = dst.registerSize == 8 ? OperandR8 : OperandRx;
-        instruction.setIndirection(dst);
-        instruction.setRegisterR(src.register);
-        instruction.setOperandSize(src.registerSize);
-        return instruction;
-    }
-    
-    /// Implement a binary operation like: op register, immediate
-    /// The register is written to ModR/M r/m
-    static typeof(this) OpBinaryRI(
-        in BinaryOpImmediateType immediateType,
-        in X86Instruction OperandR8I8, in X86Instruction OperandRxI8,
-        in Operand dst, in Operand src
-    ) {
-        assert(dst.isRegister && src.isImmediate);
-        if(!typeof(this).OpBinaryCheckImmediateType(immediateType, dst, src)) {
-            return SizeMismatch;
-        }
-        X86Instruction instruction;
-        instruction = dst.registerSize == 8 ? OperandR8I8 : OperandRxI8;
-        if(instruction.modrm.opcode != 0) {
-            instruction.modrm.mod = 0x3;
-        }
-        instruction.setImmediate(src);
-        instruction.setRegisterB(dst.register);
-        instruction.setOperandSize(dst.registerSize);
-        return instruction;
-    }
-    
-    /// Implement a binary operation like: op register, immediate
-    /// The register ID is added to the opcode byte
-    static typeof(this) OpBinaryOI(
-        in BinaryOpImmediateType immediateType,
-        in X86Instruction OperandR8I8, in X86Instruction OperandRxI8,
-        in Operand dst, in Operand src
-    ) {
-        assert(dst.isRegister && src.isImmediate);
-        if(!typeof(this).OpBinaryCheckImmediateType(immediateType, dst, src)) {
-            return SizeMismatch;
-        }
-        X86Instruction instruction;
-        instruction = dst.registerSize == 8 ? X86MovR8I8 : X86MovRIq;
-        instruction.opcode += (dst.registerId & 0x7);
-        instruction.rex.b = dst.isExtendedRegister;
-        instruction.setOperandSize(dst.registerSize);
-        instruction.setImmediate(src);
-        return instruction;
-    }
-    
-    /// Implement a binary operation like: op [address], immediate
-    static typeof(this) OpBinaryAI(
-        in BinaryOpImmediateType immediateType,
-        in X86Instruction OperandR8I8, in X86Instruction OperandRIx,
-        in Operand dst, in Operand src
-    ) {
-        assert(dst.isIndirect && src.isImmediate);
-        if(!typeof(this).OpBinaryCheckImmediateType(immediateType, dst, src)) {
-            return SizeMismatch;
-        }
-        X86Instruction instruction;
-        instruction = dst.addressSize == 8 ? OperandR8I8 : OperandRIx;
-        instruction.setIndirection(dst);
-        instruction.setOperandSize(dst.addressSize);
-        instruction.setImmediate(src);
-        return instruction;
-    }
-    
-    /// Operation with just a dst register or memory address,
-    /// either 8, 16, 32, or 64 bits.
-    /// Examples: not, neg, inc, dec
-    static typeof(this) UnaryOpRb(string name, string suffix = "")(
-        in Operand dst
-    ) {
-        static enum OperandR8 = mixin("X86" ~ name ~ "R8" ~ suffix);
-        static enum OperandRx = mixin("X86" ~ name ~ "Rx" ~ suffix);
-        if(dst.isRegister) {
-            X86Instruction instruction;
-            instruction = dst.registerSize == 8 ? OperandR8 : OperandRx;
-            instruction.setRegisterB(dst.register);
-            instruction.setOperandSize(dst.registerSize);
-            instruction.modrm.mod = 0x3;
-            return instruction;
-        }
-        else if(dst.isIndirect) {
-            X86Instruction instruction;
-            instruction = dst.addressSize == 8 ? OperandR8 : OperandRx;
-            instruction.setIndirection(dst);
-            instruction.setOperandSize(dst.addressSize);
-            return instruction;
-        }
-        else {
-            return Invalid;
-        }
-    }
-    
-    /// Operation with only a 32 bit or 64 bit destination register.
-    /// The low 3 bits of the destination register ID are added to
-    /// the instruction's opcode.
-    /// Examples: bswap
-    static typeof(this) UnaryOpRe(string name)(in Operand dst) {
-        static enum OperandRe = mixin("X86" ~ name ~ "Re");
-        if(dst.registerSize >= 32) {
-            X86Instruction instruction = OperandRe;
-            instruction.opcode += (dst.registerId & 0x7);
-            instruction.rex.b = dst.isExtendedRegister;
-            instruction.setOperandSize(dst.registerSize);
-            return instruction;
-        }
-        else {
-            return Invalid;
-        }
-    }
-    
-    /// Operation with register or memory dst and an 8-bit immediate.
-    /// Register dst can be 8, 16, 32, or 64 bits.
-    /// Examples: shl, shr, sar
-    static typeof(this) BinaryOpRbI8(string name)(
-        in Operand dst, in Operand src
-    ) {
-        static enum OperandR8I8 = mixin("X86" ~ name ~ "R8I8");
-        static enum OperandRxI8 = mixin("X86" ~ name ~ "RxI8");
-        static enum ImmByte = BinaryOpImmediateType.Byte;
-        if(src.immediateSize != 8) return SizeMismatch;
-        /// register, immediate
-        if(dst.isRegister) {
-            return OpBinaryRI(ImmByte, OperandR8I8, OperandRxI8, dst, src);
-        }
-        // [address], immediate
-        else if(dst.isIndirect) {
-            return OpBinaryAI(ImmByte, OperandR8I8, OperandRxI8, dst, src);
-        }
-        else {
-            return Invalid;
-        }
-    }
-    
-    /// Operation with register dst and either a register or indirect src.
-    /// Register dst can only be 16 bits or larger.
-    /// Examples: bsf, bsr
-    static typeof(this) BinaryOpRx(string name)(
-        in Operand dst, in Operand src
-    ) {
-        static enum OperandRx = mixin("X86" ~ name ~ "Rx");
-        if(dst.registerSize < 16) return Invalid;
-        // register, register (Note swapped operands)
-        if(src.isRegister && dst.isRegister) {
-            return OpBinaryMR(BinaryOpRMType.SameSize, Invalid, OperandRx, dst, src);
-        }
-        // register, [address]
-        else if(src.isIndirect && dst.isRegister) {
-            return OpBinaryRA(BinaryOpRMType.SameSize, Invalid, OperandRx, dst, src);
-        }
-        // ?
-        else {
-            return Invalid;
-        }
-    }
-    
-    /// Operation with register or indirect dst and register, indirect,
-    /// or immediate src. So-named because it covers 9 total opcodes
-    /// covering the same conceptual operation.
-    /// Examples: add, sub, and, or, xor
-    static typeof(this) BinaryOp9(string name)(
-        in Operand dst, in Operand src
-    ) {
-        alias ImmType = BinaryOpImmediateType;
-        static enum OperandR8 = mixin("X86" ~ name ~ "R8");
-        static enum OperandRx = mixin("X86" ~ name ~ "Rx");
-        static enum OperandRM8 = mixin("X86" ~ name ~ "RM8");
-        static enum OperandRMx = mixin("X86" ~ name ~ "RMx");
-        static enum OperandAL = mixin("X86" ~ name ~ "AL");
-        static enum OperandAX = mixin("X86" ~ name ~ "AX");
-        static enum OperandR8I8 = mixin("X86" ~ name ~ "R8I8");
-        static enum OperandRIx = mixin("X86" ~ name ~ "RIx");
-        static enum OperandRxI8 = mixin("X86" ~ name ~ "RxI8");
-        // register, register
-        if(src.isRegister && dst.isRegister) {
-            return OpBinaryRM(BinaryOpRMType.SameSize, OperandR8, OperandRx, dst, src);
-        }
-        // register, [address]
-        else if(src.isIndirect && dst.isRegister) {
-            return OpBinaryRA(BinaryOpRMType.SameSize, OperandRM8, OperandRMx, dst, src);
-        }
-        // [address], register
-        else if(dst.isIndirect && src.isRegister) {
-            return OpBinaryAR(BinaryOpRMType.SameSize, OperandR8, OperandRx, dst, src);
-        }
-        // [address], immediate
-        else if(src.isImmediate && dst.isIndirect) {
-            return OpBinaryAI(ImmType.SameSize, OperandR8I8, OperandRIx, dst, src);
-        }
-        // al/ax/eax/rax, immediate
-        else if(src.isImmediate && dst.isRegister && dst.registerId == 0) {
-            return OpBinaryRI(ImmType.SameSizeMax32, OperandAL, OperandAX, dst, src);
-        }
-        // register, immediate8
-        else if(src.isImmediate && dst.isRegister && src.immediateSize == 8) {
-            return OpBinaryRI(ImmType.Byte, OperandR8I8, OperandRxI8, dst, src);
-        }
-        // register, immediate
-        else if(src.isImmediate && dst.isRegister) {
-            return OpBinaryRI(ImmType.SameSizeMax32, OperandR8I8, OperandRIx, dst, src);
-        }
-        // ?
-        else {
-            return Invalid;
-        }
-    }
-    
-    /// Examples: movsx, movzx
-    static typeof(this) BinaryOpMovX(string name)(
-        in Operand dst, in Operand src
-    ) {
-        static enum OperandR8 = mixin("X86" ~ name ~ "R8");
-        static enum OperandR16 = mixin("X86" ~ name ~ "R16");
-        if(dst.registerSize < 16) return Invalid;
-        if(src.registerSize == 8) {
-            return OpBinaryMR(BinaryOpRMType.Byte, OperandR8, OperandR8, dst, src);
-        }
-        else if(src.addressSize == 8) {
-            return OpBinaryRA(BinaryOpRMType.Byte, OperandR8, OperandR8, dst, src);
-        }
-        else if(src.registerSize == 16) {
-            return OpBinaryMR(BinaryOpRMType.Word, OperandR16, OperandR16, dst, src);
-        }
-        else if(src.addressSize == 16) {
-            return OpBinaryRA(BinaryOpRMType.Word, OperandR16, OperandR16, dst, src);
-        }
-        else {
-            return Invalid;
-        }
-    }
-    
-    /// One's complement negation / bitwise negation
-    alias Not = UnaryOpRb!"Not";
-    /// Two's complement negation / arithmetic negation
-    alias Neg = UnaryOpRb!"Neg";
-    /// Increment by 1
-    alias Inc = UnaryOpRb!"Inc";
-    /// Decrement by 1
-    alias Dec = UnaryOpRb!"Dec";
-    /// Shift arithmetic right (shift once)
-    alias Sar1 = UnaryOpRb!("Sar", "1");
-    /// Shift arithmetic right (shift CL times)
-    alias SarCL = UnaryOpRb!("Sar", "CL");
-    /// Shift logical right (shift once)
-    alias Shr1 = UnaryOpRb!("Shr", "1");
-    /// Shift logical right (shift CL times)
-    alias ShrCL = UnaryOpRb!("Shr", "CL");
-    /// Shift logical left (shift once)
-    alias Shl1 = UnaryOpRb!("Shl", "1");
-    /// Shift logical left (shift CL times)
-    alias ShlCL = UnaryOpRb!("Shl", "CL");
-    /// Integer addition
-    alias Add = BinaryOp9!"Add";
-    /// Bitwise OR
-    alias Or = BinaryOp9!"Or";
-    /// Add with carry
-    alias Adc = BinaryOp9!"Adc";
-    /// Integer subtraction with borrow
-    alias Sbb = BinaryOp9!"Sbb";
-    /// Bitwise AND
-    alias And = BinaryOp9!"And";
-    /// Integer subtraction
-    alias Sub = BinaryOp9!"Sub";
-    /// Bitwise XOR
-    alias Xor = BinaryOp9!"Xor";
-    /// Compare two operands
-    alias Cmp = BinaryOp9!"Cmp";
-    /// Bit scan forward (count trailing zeros)
-    alias Bsf = BinaryOpRx!"Bsf";
-    /// Bit scan reverse (count leading zeros)
-    alias Bsr = BinaryOpRx!"Bsr";
-    /// Move with sign extension
-    alias Movsx = BinaryOpMovX!"Movsx";
-    /// Move with zero extension
-    alias Movzx = BinaryOpMovX!"Movzx";
-    /// Count the number of trailing zero bits
-    alias Tzcnt = BinaryOpRx!"Tzcnt";
-    /// Return the count of number of bits set to 1 (population count)
-    alias Popcnt = BinaryOpRx!"Popcnt";
-    /// Byte swap
-    alias Bswap = UnaryOpRe!"Bswap";
-    
-    /// No operation
-    /// Nop(1): Opcode 90
-    /// Nop(2): Prefix 66 / Opcode 90
-    /// Nop(3): Opcode 0f 1f / ModR/M 00
-    /// Nop(4): Opcode 0f 1f / ModR/M 40 / Disp8 00
-    /// Nop(5): Opcode 0f 1f / ModR/M 44 / SIB 00 / Disp8 00
-    /// Nop(6): Prefix 66 / Opcode 0f 1f / ModR/M 44 / SIB 00 / Disp8 00
-    /// Nop(7): Opcode 0f 1f / ModR/M 80 / Disp32 00 00 00 00
-    /// Nop(8): Opcode 0f 1f / ModR/M 84 / SIB 00 / Disp32 00 00 00 00
-    /// Nop(9): Prefix 66 / Opcode 0f 1f / ModR/M 84 / SIB 00 / Disp32 00 00 00 00
-    static typeof(this) Nop(in ubyte length = 1) {
-        if(length <= 0 || length > 9) return Invalid;
-        if(length <= 2) {
-            X86Instruction instruction = X86Nop1;
-            instruction.operandSizePrefix = (length == 2);
-            return instruction;
-        }
-        X86Instruction instruction = X86NopRx;
-        instruction.forceModRMByte = true;
-        instruction.modrm.mod = (length >= 7 ? 0x2 : length >= 4 ? 0x01 : 0);
-        instruction.modrm.rm = (length >= 5 && length != 7 ? 0x4 : 0);
-        instruction.operandSizePrefix = (length == 6 || length == 9);
-        instruction.displacementSize = (
-            length >= 7 ? DisplacementSize.DWord :
-            length >= 4 ? DisplacementSize.Byte : DisplacementSize.None
-        );
-        return instruction;
-    }
-    
-    /// Shift arithmetic right
-    static typeof(this) Sar(in Operand dst, in Operand src) {
-        if(src.isImmediate && src.immediate == 1) {
-            return typeof(this).Sar1(dst);
-        }
-        else if(src.isRegister && src.register is Register.cl) {
-            return typeof(this).SarCL(dst);
-        }
-        else {
-            return typeof(this).BinaryOpRbI8!("Sar")(dst, src);
-        }
-    }
-    
-    /// Shift logical right
-    static typeof(this) Shr(in Operand dst, in Operand src) {
-        if(src.isImmediate && src.immediate == 1) {
-            return typeof(this).Shr1(dst);
-        }
-        else if(src.isRegister && src.register is Register.cl) {
-            return typeof(this).ShrCL(dst);
-        }
-        else {
-            return typeof(this).BinaryOpRbI8!("Shr")(dst, src);
-        }
-    }
-    
-    /// Shift logical left
-    static typeof(this) Shl(in Operand dst, in Operand src) {
-        if(src.isImmediate && src.immediate == 1) {
-            return typeof(this).Shl1(dst);
-        }
-        else if(src.isRegister && src.register is Register.cl) {
-            return typeof(this).ShlCL(dst);
-        }
-        else {
-            return typeof(this).BinaryOpRbI8!("Shl")(dst, src);
-        }
-    }
-    
-    /// Move
-    static typeof(this) Mov(in Operand dst, in Operand src) {
-        // register, register
-        if(src.isRegister && dst.isRegister) {
-            return OpBinaryRM(BinaryOpRMType.SameSize, X86MovR8, X86MovRx, dst, src);
-        }
-        // register, [address]
-        else if(src.isIndirect && dst.isRegister) {
-            return OpBinaryRA(BinaryOpRMType.SameSize, X86MovRM8, X86MovRMx, dst, src);
-        }
-        // [address], register
-        else if(dst.isIndirect && src.isRegister) {
-            return OpBinaryAR(BinaryOpRMType.SameSize, X86MovR8, X86MovRx, dst, src);
-        }
-        // [address], immediate
-        else if(dst.isIndirect && src.isImmediate) {
-            static enum ImmSameSize = BinaryOpImmediateType.SameSize;
-            return OpBinaryAI(ImmSameSize, X86MovRM8I8, X86MovRMIx, dst, src);
-        }
-        // register, segment
-        else if(src.isSegmentRegister && dst.isRegister) {
-            if(dst.registerSize < 16) return Invalid;
-            X86Instruction instruction = X86MovRxS;
-            instruction.modrm.mod = 0x3;
-            instruction.modrm.reg = cast(byte) (src.segmentRegisterId & 0x7);
-            instruction.setRegisterB(dst.register);
-            instruction.setOperandSize(dst.registerSize);
-            return instruction;
-        }
-        // segment, register
-        else if(src.isRegister && dst.isSegmentRegister) {
-            if(src.registerSize < 16) return Invalid;
-            X86Instruction instruction = X86MovSRx;
-            instruction.modrm.mod = 0x3;
-            instruction.modrm.reg = cast(byte) (dst.segmentRegisterId & 0x7);
-            instruction.setRegisterB(src.register);
-            instruction.rex.w = (src.registerSize == 64);
-            return instruction;
-        }
-        // register, immediate
-        else if(dst.isRegister && src.isImmediate) {
-            if(dst.registerSize == 64 && src.immediateSize == 32) {
-                X86Instruction instruction = OpBinaryRI(
-                    BinaryOpImmediateType.SameSizeMax32,
-                    X86MovR8I8, X86MovRMIx, dst, src
-                );
-                // Always has a ModR/M byte, even when modrm.opcode == 0
-                instruction.modrm.mod = 0x3;
-                return instruction;
+    @trusted this(T...)(in Opcode* opcode, in T operands) {
+        assert(operands.length == opcode.countOperands, "Wrong number of operands.");
+        this.opcode = opcode;
+        foreach(i, _; operands) {
+            static assert(IsX86InstructionOperandType!(T[i]), "Wrong arugment type.");
+            static if(is(T[i] == Operand)) {
+                this.setOperand(opcode.operands[i], operands[i]);
             }
             else {
-                static enum ImmSameSize = BinaryOpImmediateType.SameSize;
-                return OpBinaryOI(ImmSameSize, X86MovR8I8, X86MovRIq, dst, src);
+                this.setOperand(opcode.operands[i], Operand(operands[i]));
             }
         }
-        // ?
-        else {
-            return Invalid;
-        }
-    }
-}
-
-enum X86Mode: ubyte {
-    Real,
-    Protected,
-    //Unreal,
-    Virtual8086,
-    //SystemManagement,
-    Long,
-    //Virtualization,
-}
-
-/// Capacity should generally be at minimum 15, since a single instruction
-/// can be up to 15 bytes long.
-struct X86InstructionBuffer(size_t capacity) {
-    alias DisplacementSize = X86DisplacementSize;
-    alias ImmediateSize = X86ImmediateSize;
-    alias Instruction = X86Instruction;
-    alias Operand = X86Operand;
-    alias Register = X86Register;
-    alias REX = X86REX;
-    
-    ubyte length;
-    byte[capacity] buffer;
-    
-    this(size_t N)(in byte[N] bytes) {
-        this = bytes;
     }
     
-    void clear() {
-        this.length = 0;
+    static auto OpcodeTemplate(string name, T...)(in T operands) {
+        // Check preconditions
+        static assert(operands.length <= 4, "Too many operands.");
+        static foreach(i, _; operands) {
+            static assert(IsX86InstructionOperandType!(T[i]), "Wrong argument type.");
+        }
+        // Find a matching opcode and return an instruction instance
+        static enum Opcodes = X86FilterAllOpcodes(name, operands.length);
+        static foreach(opcodeIndex; Opcodes) {
+            if(X86OperandListMatch(&X86AllOpcodes[opcodeIndex], operands)) {
+                return typeof(this)(&X86AllOpcodes[opcodeIndex], operands);
+            }
+        }
+        // No match; return an error status
+        return typeof(this).OperandError;
     }
     
-    const(byte)[] getBytes() const {
-        return this.buffer[0 .. this.length];
+    void setOperand(in Opcode.OperandType operandType, in Operand operand) {
+        alias OperandType = Opcode.OperandType;
+        /// Implicit operands do not need to be specifically recorded or encoded
+        if(X86OpcodeOperandTypeIsImplicit(operandType)) {
+            return;
+        }
+        /// Segment register (sreg) operands
+        else if(operandType is OperandType.sreg) {
+            assert(this.segmentRegister == 0, "Duplicate segment register operand.");
+            this.segmentRegister = operand.segmentRegister;
+        }
+        // Register r8/r16/r32/r64 operands
+        else if(X86OpcodeOperandTypeIsReg(operandType)) {
+            assert(this.register == 0, "Duplicate register operand.");
+            this.register = operand.register;
+        }
+        /// Immediate value operands imm8/imm16/imm32/imm64
+        else if(X86OpcodeOperandTypeIsImmediate(operandType)) {
+            assert(this.immediate == 0, "Duplicate immediate operand.");
+            this.immediate = operand.immediate;
+        }
+        /// Memory offset operands moffs8/moffs16/moffs32/moffs64
+        else if(X86OpcodeOperandTypeIsMemoryOffset(operandType)) {
+            assert(this.immediate == 0, "Duplicate memory offset operand.");
+            assert(this.segmentRegister == 0, "Duplicate memory offset operand.");
+            this.segmentRegister = operand.memoryOffset.segmentRegister;
+            this.immediate = operand.memoryOffset.offset;
+        }
+        /// Far pointer 16-bit segment immediate operand
+        else if(operandType is OperandType.farseg16) {
+            assert(this.rmOperandType == 0,
+                "Duplicate far pointer segment immediate operand."
+            );
+            this.farSegmentImmediate = cast(ushort) operand.immediate;
+            this.rmOperandType = RMOperandType.FarSegmentImmediate;
+        }
+        /// ModR/M "r/m" operands; can represent a register or a memory address
+        else if(X86OpcodeOperandTypeIsRM(operandType)) {
+            assert(this.rmOperandType == 0, "Duplicate r/m operand.");
+            if(operand.type is Operand.Type.MemoryAddress) {
+                this.rmMemoryAddress = operand.memoryAddress;
+                this.rmOperandType = RMOperandType.MemoryAddress;
+            }
+            else {
+                this.rmRegister = operand.register;
+                this.rmOperandType = RMOperandType.Register;
+            }
+        }
     }
     
-    void opAssign(size_t N)(in byte[N] bytes) {
-        static assert(N <= this.buffer.length);
-        this.buffer[0 .. N] = bytes;
+    @trusted bool ok() const {
+        return (
+            this.opcode !is null &&
+            this.status is Status.Ok &&
+            (!this.hasMemoryAddress || this.rmMemoryAddress.ok)
+        );
     }
     
-    void pushByte(in byte value) {
-        assert(this.length < this.buffer.length);
-        this.buffer[this.length++] = value;
+    bool hasSegmentOverride() const {
+        if(this.opcode is null) {
+            return false;
+        }
+        foreach(operand; this.opcode.operands) {
+            if(X86OpcodeOperandTypeIsMemoryOffset(operand)) {
+                return true;
+            }
+        }
+        return false;
     }
     
-    void pushShort(in short value) {
-        assert(this.length + 2 <= this.buffer.length);
-        this.buffer[this.length++] = cast(byte) (value);
-        this.buffer[this.length++] = cast(byte) (value >> 8);
+    /// Returns true if the instruction has a memory address operand.
+    bool hasMemoryAddress() const {
+        return this.rmOperandType is RMOperandType.MemoryAddress;
     }
     
-    void pushInt(in int value) {
-        assert(this.length + 4 <= this.buffer.length);
-        this.buffer[this.length++] = cast(byte) (value);
-        this.buffer[this.length++] = cast(byte) (value >> 8);
-        this.buffer[this.length++] = cast(byte) (value >> 16);
-        this.buffer[this.length++] = cast(byte) (value >> 24);
+    bool hasRMRegister() const {
+        return this.rmOperandType is RMOperandType.Register;
     }
     
-    void pushLong(in long value) {
-        assert(this.length + 8 <= this.buffer.length);
-        this.buffer[this.length++] = cast(byte) (value);
-        this.buffer[this.length++] = cast(byte) (value >> 8);
-        this.buffer[this.length++] = cast(byte) (value >> 16);
-        this.buffer[this.length++] = cast(byte) (value >> 24);
-        this.buffer[this.length++] = cast(byte) (value >> 32);
-        this.buffer[this.length++] = cast(byte) (value >> 40);
-        this.buffer[this.length++] = cast(byte) (value >> 48);
-        this.buffer[this.length++] = cast(byte) (value >> 56);
+    bool hasExtendedRegister() const {
+        return X86RegisterIsExtended(this.register);
     }
     
-    void pushInstruction(in Instruction instr) {
-        final switch(instr.status) {
-            case Instruction.Status.Ok: break;
-            case Instruction.Status.Unimplemented: assert(false, "Unimplemented.");
-            case Instruction.Status.Invalid: assert(false, "Invalid.");
-            case Instruction.Status.SizeMismatch: assert(false, "Size Mismatch.");
+    bool hasRegRegister() const {
+        if(this.opcode is null) {
+            return false;
         }
-        if(instr.hasLockByte) {
-            this.pushByte(instr.getLockByte);
+        foreach(operand; this.opcode.operands) {
+            if(X86OpcodeOperandTypeIsReg(operand)) {
+                return true;
+            }
         }
-        if(instr.hasSegmentOverridePrefixByte) {
-            this.pushByte(instr.getSegmentOverridePrefixByte);
+        return false;
+    }
+    
+    bool hasSegmentRegister() const {
+        if(this.opcode is null) {
+            return false;
         }
-        if(instr.hasAddressSizePrefixByte) {
-            this.pushByte(instr.getAddressSizePrefixByte);
+        foreach(operand; this.opcode.operands) {
+            if(operand is Opcode.OperandType.sreg) {
+                return true;
+            }
         }
-        if(instr.hasOperandSizePrefixByte) {
-            this.pushByte(instr.getOperandSizePrefixByte);
+        return false;
+    }
+    
+    bool hasExtendedRMRegister() const {
+        return (
+            this.rmOperandType is RMOperandType.Register &&
+            X86RegisterIsExtended(this.rmRegister)
+        );
+    }
+    
+    X86DataSize getOperandSize() const {
+        if(this.opcode is null) {
+            return X86DataSize.None;
         }
-        if(instr.hasREXByte) {
-            this.pushByte(instr.getREXByte);
+        foreach(operand; this.opcode.operands) {
+            if(X86OpcodeOperandTypeIsReg(operand)) {
+                return X86OpcodeOperandTypeSize(operand);
+            }
+            else if(X86OpcodeOperandTypeIsRM(operand) &&
+                this.rmOperandType is RMOperandType.Register
+            ) {
+                return X86OpcodeOperandTypeSize(operand);
+            }
         }
-        if(cast(ushort) instr.opcodeEscape > ubyte.max) {
-            const escByte = cast(byte) (cast(short) instr.opcodeEscape >> 8);
-            this.pushByte(escByte);
+        return X86DataSize.None;
+    }
+    
+    X86DataSize getMemoryAddressSize() const {
+        assert(this.hasMemoryAddress);
+        return this.getRMSize();
+    }
+    
+    /// Get the size of this instruction's r8/r16/r32/r64 operand,
+    /// if it has one.
+    X86DataSize getRegSize() const {
+        if(this.opcode is null) {
+            return X86DataSize.None;
         }
-        if(instr.opcodeEscape) {
-            const escByte = cast(byte) instr.opcodeEscape;
-            this.pushByte(escByte);
+        foreach(operand; this.opcode.operands) {
+            if(X86OpcodeOperandTypeIsReg(operand)) {
+                return X86OpcodeOperandTypeSize(operand);
+            }
         }
-        if(true) {
-            this.pushByte(cast(byte) instr.opcode);
+        return X86DataSize.None;
+    }
+    
+    /// Get the size of this instruction's r/m operand,
+    /// if it has one.
+    X86DataSize getRMSize() const {
+        if(this.opcode is null) {
+            return X86DataSize.None;
         }
-        if(instr.hasModRMByte) {
-            this.pushByte(instr.getModRMByte);
+        foreach(operand; this.opcode.operands) {
+            if(X86OpcodeOperandTypeIsRM(operand)) {
+                return X86OpcodeOperandTypeSize(operand);
+            }
         }
-        if(instr.hasSIBByte) {
-            this.pushByte(instr.getSIBByte);
+        return X86DataSize.None;
+    }
+    
+    DisplacementSize getDisplacementSize() const {
+        if(this.opcode is null ||
+            this.rmOperandType !is RMOperandType.MemoryAddress
+        ) {
+            return DisplacementSize.None;
         }
-        final switch(instr.displacementSize) {
-            case ImmediateSize.None:
-                break;
-            case DisplacementSize.Byte:
-                this.pushByte(cast(byte) instr.displacement);
-                break;
-            case DisplacementSize.Word:
-                this.pushShort(cast(short) instr.displacement);
-                break;
-            case DisplacementSize.DWord:
-                this.pushInt(cast(int) instr.displacement);
-                break;
-            case DisplacementSize.QWord:
-                this.pushLong(cast(long) instr.displacement);
-                break;
+        return this.rmMemoryAddress.getDisplacementSize;
+    }
+    
+    ImmediateSize getImmediateSize() const {
+        if(this.opcode is null) {
+            return X86DataSize.None;
         }
-        final switch(instr.immediateSize) {
-            case ImmediateSize.None:
-                break;
-            case ImmediateSize.Byte:
-                this.pushByte(cast(byte) instr.immediate);
-                break;
-            case ImmediateSize.Word:
-                this.pushShort(cast(short) instr.immediate);
-                break;
-            case ImmediateSize.DWord:
-                this.pushInt(cast(int) instr.immediate);
-                break;
-            case ImmediateSize.QWord:
-                this.pushLong(cast(long) instr.immediate);
-                break;
+        foreach(operand; this.opcode.operands) {
+            if(X86OpcodeOperandTypeIsImmediate(operand)) {
+                return X86OpcodeOperandTypeSize(operand);
+            }
         }
+        return X86DataSize.None;
     }
 }

@@ -1,323 +1,719 @@
-/**
-
-This module defines opcodes used by the x86 recompilation module.
-
-*/
-
 module capsule.dynarec.x86.opcodes;
 
 private:
 
-import capsule.dynarec.x86.instruction : X86Instruction;
+import capsule.dynarec.x86.opcode : X86Opcode;
 
-private alias LockPrefix = X86Instruction.LockPrefix;
+private alias Op = X86Opcode;
+private alias Operand = X86Opcode.OperandType;
 
-public:
+public pure nothrow @safe:
 
-/// TODO:
-/// https://www.felixcloutier.com/x86/call (call procedure)
-/// https://www.felixcloutier.com/x86/cmovcc (conditional move)
-/// https://www.felixcloutier.com/x86/cmp (compare two operands)
-/// https://www.felixcloutier.com/x86/cpuid (CPU identification)
-/// https://www.felixcloutier.com/x86/div (unsigned divide)
-/// https://www.felixcloutier.com/x86/idiv (signed divide)
-/// https://www.felixcloutier.com/x86/imul (signed multiply)
-/// https://www.felixcloutier.com/x86/jmp (jump)
-/// https://www.felixcloutier.com/x86/jcc (jump if condition is met)
-/// https://www.felixcloutier.com/x86/mul (unsigned multiply)
-/// https://www.felixcloutier.com/x86/setcc (set byte on condition)
-/// https://www.felixcloutier.com/x86/stc (set carry flag)
-/// https://www.felixcloutier.com/x86/xchg (exchange register/memory)
-/// https://www.felixcloutier.com/x86/movbe (move after swapping bytes)
+/// Get only the list of opcode list indices that match a given name
+/// and number of operands (including implicit operands).
+static uint[] X86FilterAllOpcodes(in string name, in uint operands) {
+    return X86FilterOpcodes(X86AllOpcodes, name, operands);
+}
 
-/// DONE:
-/// https://www.felixcloutier.com/x86/movsx:movsxd (move with sign extension)
-/// https://www.felixcloutier.com/x86/movzx (move with zero extension)
-/// https://www.felixcloutier.com/x86/nop (no operation)
-/// https://www.felixcloutier.com/x86/dec (decrement by 1)
-/// https://www.felixcloutier.com/x86/inc (increment by 1)
+static uint[] X86FilterOpcodes(
+    in X86Opcode[] opcodes, in string name, in uint operands
+) {
+    uint[] matches;
+    foreach(i, opcode; opcodes) {
+        if(opcode.name == name && opcode.countOperands == operands) {
+            matches ~= cast(uint) i;
+        }
+    }
+    return matches;
+}
 
-/// No operation (one byte)
-static enum X86Nop1 = X86Instruction.Opcode(0x90);
-/// No operation (multiple bytes)
-static enum X86NopRx = X86Instruction.Opcode(0x0f1f);
-
-/// Increment an 8-bit register by 1
-static enum X86IncR8 = X86Instruction.Opcode(0xfe, 0x0);
-/// Increment a 16, 32, or 64-bit register by 1
-static enum X86IncRx = X86Instruction.Opcode(0xff, 0x0);
-/// Increment a 16 or 32-bit register by 1; not allowed in long mode
-static enum X86IncORx = X86Instruction.Opcode(0x40);
-
-/// Decrement an 8-bit register by 1
-static enum X86DecR8 = X86Instruction.Opcode(0xfe, 0x1);
-/// Decrement a 16, 32, or 64-bit register by 1
-static enum X86DecRx = X86Instruction.Opcode(0xff, 0x1);
-/// Decrement a 16 or 32-bit register by 1; not allowed in long mode
-static enum X86DecORx = X86Instruction.Opcode(0x48);
-
-/// Bitwise (one's complement) negate an 8-bit register
-static enum X86NotR8 = X86Instruction.Opcode(0xf6, 0x2);
-/// Bitwise (one's complement) negate a 16, 32, or 64-bit register
-static enum X86NotRx = X86Instruction.Opcode(0xf7, 0x2);
-
-/// Arithmetic (two's complement) negate an 8-bit register
-static enum X86NegR8 = X86Instruction.Opcode(0xf6, 0x3);
-/// Arithmetic (two's complement) negate a 16, 32, or 64-bit register
-static enum X86NegRx = X86Instruction.Opcode(0xf7, 0x3);
-
-/// Move and zero-extend; move 8-bit operand to 16, 32, or 64-bit register
-static enum X86MovzxR8 = X86Instruction.Opcode(0x0fb6);
-/// Move and zero-extend; move 16-bit operand to 32 or 64-bit register
-static enum X86MovzxR16 = X86Instruction.Opcode(0x0fb7);
-
-/// Move and sign-extend; move 8-bit operand to 16, 32, or 64-bit register
-static enum X86MovsxR8 = X86Instruction.Opcode(0x0fbe);
-/// Move and sign-extend; move 16-bit operand to 32 or 64-bit register
-static enum X86MovsxR16 = X86Instruction.Opcode(0x0fbf);
-
-/// Move and sign-extend; move 16 or 32-bit operand to 16, 32, 64-bit register
-/// Use for cases other than 32-bit operand to 64-bit register are discouraged
-static enum X86MovsxdRx = X86Instruction.Opcode(0x63);
-
-/// Add two registers (8 bits), indirection is source
-static enum X86AddR8 = X86Instruction.Opcode(0x00);
-/// Add two registers (16, 32, or 64 bits), indirection is source
-static enum X86AddRx = X86Instruction.Opcode(0x01);
-/// Add two registers (8 bits), indirection is destination
-static enum X86AddRM8 = X86Instruction.Opcode(0x02);
-/// Add two registers (16, 32, or 64 bits), indirection is destination
-static enum X86AddRMx = X86Instruction.Opcode(0x03);
-/// Add an 8-bit immediate to AL (8 bits)
-static enum X86AddAL = X86Instruction.Opcode(0x04);
-/// Add an immediate to AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86AddAX = X86Instruction.Opcode(0x05);
-/// Add an 8-bit immediate to an 8-bit register
-static enum X86AddR8I8 = X86Instruction.Opcode(0x80, 0x0);
-/// Add an immediate to a register (16, 32, or 64 bits)
-static enum X86AddRIx = X86Instruction.Opcode(0x81, 0x0);
-/// Add an 8-bit immediate to a register (16, 32, or 64 bits)
-static enum X86AddRxI8 = X86Instruction.Opcode(0x83, 0x0);
-
-/// Bitwise OR two registers (8 bits), indirection is source
-static enum X86OrR8 = X86Instruction.Opcode(0x08);
-/// Bitwise OR two registers (16, 32, or 64 bits), indirection is source
-static enum X86OrRx = X86Instruction.Opcode(0x09);
-/// Bitwise OR two registers (8 bits), indirection is destination
-static enum X86OrRM8 = X86Instruction.Opcode(0x0a);
-/// Bitwise OR two registers (16, 32, or 64 bits), indirection is destination
-static enum X86OrRMx = X86Instruction.Opcode(0x0b);
-/// Bitwise OR an 8-bit immediate to AL (8 bits)
-static enum X86OrAL = X86Instruction.Opcode(0x0c);
-/// Bitwise OR an immediate to AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86OrAX = X86Instruction.Opcode(0x0d);
-/// Bitwise OR an 8-bit immediate to an 8-bit register
-static enum X86OrR8I8 = X86Instruction.Opcode(0x80, 0x1);
-/// Bitwise OR an immediate to a register (16, 32, or 64 bits)
-static enum X86OrRIx = X86Instruction.Opcode(0x81, 0x1);
-/// Bitwise OR an 8-bit immediate to a register (16, 32, or 64 bits)
-static enum X86OrRxI8 = X86Instruction.Opcode(0x83, 0x1);
-
-/// Add CF and two registers (8 bits), indirection is source
-static enum X86AdcR8 = X86Instruction.Opcode(0x10);
-/// Add CF and two registers (16, 32, or 64 bits), indirection is source
-static enum X86AdcRx = X86Instruction.Opcode(0x11);
-/// Add CF and two registers (8 bits), indirection is destination
-static enum X86AdcRM8 = X86Instruction.Opcode(0x12);
-/// Add CF and two registers (16, 32, or 64 bits), indirection is destination
-static enum X86AdcRMx = X86Instruction.Opcode(0x13);
-/// Add CF and an 8-bit immediate to AL (8 bits)
-static enum X86AdcAL = X86Instruction.Opcode(0x14);
-/// Add CF and an immediate to AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86AdcAX = X86Instruction.Opcode(0x15);
-/// Add CF and an 8-bit immediate to an 8-bit register
-static enum X86AdcR8I8 = X86Instruction.Opcode(0x80, 0x2);
-/// Add CF and an immediate to a register (16, 32, or 64 bits)
-static enum X86AdcRIx = X86Instruction.Opcode(0x81, 0x2);
-/// Add CF and an 8-bit immediate to a register (16, 32, or 64 bits)
-static enum X86AdcRxI8 = X86Instruction.Opcode(0x83, 0x2);
-
-/// Subtract CF and two registers (8 bits), indirection is source
-static enum X86SbbR8 = X86Instruction.Opcode(0x18);
-/// Subtract CF and two registers (16, 32, or 64 bits), indirection is source
-static enum X86SbbRx = X86Instruction.Opcode(0x19);
-/// Subtract CF and two registers (8 bits), indirection is destination
-static enum X86SbbRM8 = X86Instruction.Opcode(0x1a);
-/// Subtract CF and two registers (16, 32, or 64 bits), indirection is destination
-static enum X86SbbRMx = X86Instruction.Opcode(0x1b);
-/// Subtract CF and an 8-bit immediate from AL (8 bits)
-static enum X86SbbAL = X86Instruction.Opcode(0x1c);
-/// Subtract CF and an immediate from AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86SbbAX = X86Instruction.Opcode(0x1d);
-/// Subtract CF and an 8-bit immediate from an 8-bit register
-static enum X86SbbR8I8 = X86Instruction.Opcode(0x80, 0x3);
-/// Subtract CF and an immediate from a register (16, 32, or 64 bits)
-static enum X86SbbRIx = X86Instruction.Opcode(0x81, 0x3);
-/// Subtract CF and an 8-bit immediate from a register (16, 32, or 64 bits)
-static enum X86SbbRxI8 = X86Instruction.Opcode(0x83, 0x3);
-
-/// Bitwise AND two registers (8 bits), indirection is source
-static enum X86AndR8 = X86Instruction.Opcode(0x20);
-/// Bitwise AND two registers (16, 32, or 64 bits), indirection is source
-static enum X86AndRx = X86Instruction.Opcode(0x21);
-/// Bitwise AND two registers (8 bits), indirection is destination
-static enum X86AndRM8 = X86Instruction.Opcode(0x22);
-/// Bitwise AND two registers (16, 32, or 64 bits), indirection is destination
-static enum X86AndRMx = X86Instruction.Opcode(0x23);
-/// Bitwise AND an 8-bit immediate to AL (8 bits)
-static enum X86AndAL = X86Instruction.Opcode(0x24);
-/// Bitwise AND an immediate to AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86AndAX = X86Instruction.Opcode(0x25);
-/// Bitwise AND an 8-bit immediate to an 8-bit register
-static enum X86AndR8I8 = X86Instruction.Opcode(0x80, 0x4);
-/// Bitwise AND an immediate to a register (16, 32, or 64 bits)
-static enum X86AndRIx = X86Instruction.Opcode(0x81, 0x4);
-/// Bitwise AND an 8-bit immediate to a register (16, 32, or 64 bits)
-static enum X86AndRxI8 = X86Instruction.Opcode(0x83, 0x4);
-
-/// Subtract two registers (8 bits), indirection is source
-static enum X86SubR8 = X86Instruction.Opcode(0x28);
-/// Subtract two registers (16, 32, or 64 bits), indirection is source
-static enum X86SubRx = X86Instruction.Opcode(0x29);
-/// Subtract two registers (8 bits), indirection is destination
-static enum X86SubRM8 = X86Instruction.Opcode(0x2a);
-/// Subtract two registers (16, 32, or 64 bits), indirection is destination
-static enum X86SubRMx = X86Instruction.Opcode(0x2b);
-/// Subtract an 8-bit immediate from AL (8 bits)
-static enum X86SubAL = X86Instruction.Opcode(0x2c);
-/// Subtract an immediate from AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86SubAX = X86Instruction.Opcode(0x2d);
-/// Subtract an 8-bit immediate from an 8-bit register
-static enum X86SubR8I8 = X86Instruction.Opcode(0x80, 0x5);
-/// Subtract an immediate from a register (16, 32, or 64 bits)
-static enum X86SubRIx = X86Instruction.Opcode(0x81, 0x5);
-/// Subtract an 8-bit immediate from a register (16, 32, or 64 bits)
-static enum X86SubRxI8 = X86Instruction.Opcode(0x83, 0x5);
-
-/// Bitwise XOR two registers (8 bits), indirection is source
-static enum X86XorR8 = X86Instruction.Opcode(0x30);
-/// Bitwise XOR two registers (16, 32, or 64 bits), indirection is source
-static enum X86XorRx = X86Instruction.Opcode(0x31);
-/// Bitwise XOR two registers (8 bits), indirection is destination
-static enum X86XorRM8 = X86Instruction.Opcode(0x32);
-/// Bitwise XOR two registers (16, 32, or 64 bits), indirection is destination
-static enum X86XorRMx = X86Instruction.Opcode(0x33);
-/// Bitwise XOR an 8-bit immediate to AL (8 bits)
-static enum X86XorAL = X86Instruction.Opcode(0x34);
-/// Bitwise XOR an immediate to AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86XorAX = X86Instruction.Opcode(0x35);
-/// Bitwise XOR an 8-bit immediate to an 8-bit register
-static enum X86XorR8I8 = X86Instruction.Opcode(0x80, 0x6);
-/// Bitwise XOR an immediate to a register (16, 32, or 64 bits)
-static enum X86XorRIx = X86Instruction.Opcode(0x81, 0x6);
-/// Bitwise XOR an 8-bit immediate to a register (16, 32, or 64 bits)
-static enum X86XorRxI8 = X86Instruction.Opcode(0x83, 0x6);
-
-/// Compare two registers (8 bits), indirection is source
-static enum X86CmpR8 = X86Instruction.Opcode(0x38);
-/// Compare two registers (16, 32, or 64 bits), indirection is source
-static enum X86CmpRx = X86Instruction.Opcode(0x39);
-/// Compare two registers (8 bits), indirection is destination
-static enum X86CmpRM8 = X86Instruction.Opcode(0x3a);
-/// Compare two registers (16, 32, or 64 bits), indirection is destination
-static enum X86CmpRMx = X86Instruction.Opcode(0x3b);
-/// Compare an 8-bit immediate to AL (8 bits)
-static enum X86CmpAL = X86Instruction.Opcode(0x3c);
-/// Compare an immediate to AX (16 bits), EAX (32 bits), or RAX (64 bits)
-static enum X86CmpAX = X86Instruction.Opcode(0x3d);
-/// Compare an 8-bit immediate to an 8-bit register
-static enum X86CmpR8I8 = X86Instruction.Opcode(0x80, 0x7);
-/// Compare an immediate to a register (16, 32, or 64 bits)
-static enum X86CmpRIx = X86Instruction.Opcode(0x81, 0x7);
-/// Compare an 8-bit immediate to a register (16, 32, or 64 bits)
-static enum X86CmpRxI8 = X86Instruction.Opcode(0x83, 0x7);
-
-/// Move registers (8 bits), indirection is source
-static enum X86MovR8 = X86Instruction.Opcode(0x88);
-/// Move registers (16, 32, or 64 bits), indirection is source
-static enum X86MovRx = X86Instruction.Opcode(0x89);
-/// Move registers (8 bits), indirection is destination
-static enum X86MovRM8 = X86Instruction.Opcode(0x8a);
-/// Move registers (16, 32, or 64 bits), indirection is destination
-static enum X86MovRMx = X86Instruction.Opcode(0x8b);
-/// Move a segment register to a 16, 32, or 64 bit GP register
-static enum X86MovRxS = X86Instruction.Opcode(0x8c);
-/// Move a 16, 32, or 64 bit GP register to a segment register
-static enum X86MovSRx = X86Instruction.Opcode(0x8e);
-/// Move byte at (seg:offset) to AL.
-/// Support seems sketchy? Use X86MovR8 with a segment override prefix instead.
-static enum X86MovStoAL = X86Instruction.Opcode(0xa0);
-/// Move value at (seg:offset) to AX (16 bits), EAX (32 bits), or RAX (64 bits).
-/// Support seems sketchy? Use X86MovRx with a segment override prefix instead.
-static enum X86MovStoAX = X86Instruction.Opcode(0xa1);
-/// Move AL to (seg:offset).
-/// Support seems sketchy? Use X86MovRM8 with a segment override prefix instead.
-static enum X86MovALtoS = X86Instruction.Opcode(0xa0);
-/// Move AX (16 bits), EAX (32 bits), or RAX (64 bits) to (seg:offset).
-/// Support seems sketchy? Use X86MovRMx with a segment override prefix instead.
-static enum X86MovAXtoS = X86Instruction.Opcode(0xa1);
-/// Move 8-bit immediate to an 8-bit register (r)
-static enum X86MovR8I8 = X86Instruction.Opcode(0xb0);
-/// Move immediate to a register (r: 16, 32, or 64 bits), 64-bit imm for 64-bit reg
-static enum X86MovRIq = X86Instruction.Opcode(0xb8);
-/// Move 8-bit immediate to an 8-bit register (r/m)
-static enum X86MovRM8I8 = X86Instruction.Opcode(0xc6, 0x0);
-/// Move immediate to a register (r/m: 16, 32, or 64 bits), 32-bit imm for 64-bit reg
-static enum X86MovRMIx = X86Instruction.Opcode(0xc7, 0x0);
-
-/// Arithmetic bit shift right an 8-bit register, once
-static enum X86SarR81 = X86Instruction.Opcode(0xd0, 0x7);
-/// Arithmetic bit shift right a 16, 32, or 64 bit register, once
-static enum X86SarRx1 = X86Instruction.Opcode(0xd1, 0x7);
-/// Arithmetic bit shift right an 8-bit register, CL times
-static enum X86SarR8CL = X86Instruction.Opcode(0xd2, 0x7);
-/// Arithmetic bit shift right a 16, 32, or 64 bit register, CL times
-static enum X86SarRxCL = X86Instruction.Opcode(0xd3, 0x7);
-
-/// Arithmetic bit shift right an 8-bit register, imm8 times
-static enum X86SarR8I8 = X86Instruction.Opcode(0xc0, 0x7);
-/// Arithmetic bit shift right a 16, 32, or 64 bit register, imm8 times
-static enum X86SarRxI8 = X86Instruction.Opcode(0xc1, 0x7);
-
-/// Logical bit shift left an 8-bit register, once
-static enum X86ShlR81 = X86Instruction.Opcode(0xd0, 0x4);
-/// Logical bit shift left a 16, 32, or 64 bit register, once
-static enum X86ShlRx1 = X86Instruction.Opcode(0xd1, 0x4);
-/// Logical bit shift left an 8-bit register, CL times
-static enum X86ShlR8CL = X86Instruction.Opcode(0xd2, 0x4);
-/// Logical bit shift left a 16, 32, or 64 bit register, CL times
-static enum X86ShlRxCL = X86Instruction.Opcode(0xd3, 0x4);
-
-/// Logical bit shift left an 8-bit register, imm8 times
-static enum X86ShlR8I8 = X86Instruction.Opcode(0xc0, 0x4);
-/// Logical bit shift left a 16, 32, or 64 bit register, imm8 times
-static enum X86ShlRxI8 = X86Instruction.Opcode(0xc1, 0x4);
-
-/// Logical bit shift right an 8-bit register, once
-static enum X86ShrR81 = X86Instruction.Opcode(0xd0, 0x5);
-/// Logical bit shift right a 16, 32, or 64 bit register, once
-static enum X86ShrRx1 = X86Instruction.Opcode(0xd1, 0x5);
-/// Logical bit shift right an 8-bit register, CL times
-static enum X86ShrR8CL = X86Instruction.Opcode(0xd2, 0x5);
-/// Logical bit shift right a 16, 32, or 64 bit register, CL times
-static enum X86ShrRxCL = X86Instruction.Opcode(0xd3, 0x5);
-
-/// Logical bit shift right an 8-bit register, imm8 times
-static enum X86ShrR8I8 = X86Instruction.Opcode(0xc0, 0x5);
-/// Logical bit shift right a 16, 32, or 64 bit register, imm8 times
-static enum X86ShrRxI8 = X86Instruction.Opcode(0xc1, 0x5);
-
-/// Bit scan forward for a 16, 32, or 64 bit register
-static enum X86BsfRx = X86Instruction.Opcode(0x0fbc);
-
-/// Bit scan reverse for a 16, 32, or 64 bit register
-static enum X86BsrRx = X86Instruction.Opcode(0x0fbd);
-
-/// Count the number of trailing zero bits in a 16, 32, or 64 bit register
-static enum X86TzcntRx = X86Instruction.Opcode(0x0fbc).Prefix(LockPrefix.RepeatNZ);
-
-/// Count set bits (population count) in a 16, 32, or 64 bit register
-static enum X86PopcntRx = X86Instruction.Opcode(0x0fb8).Prefix(LockPrefix.RepeatNZ);
-
-/// Byte swap, for a 16 or 32 bit register
-static enum X86BswapRe = X86Instruction.Opcode(0x0fc8);
+/// A list of definitions describing every supported opcode, what operands
+/// each supports, and how to encode them.
+shared immutable X86Opcode[] X86AllOpcodes = [
+    // ADC: Add integers and carry flag (CF)
+    Op(0x14, "adc", [Operand.al, Operand.imm8]),
+    Op(0x15, "adc", [Operand.ax, Operand.imm16]),
+    Op(0x15, "adc", [Operand.eax, Operand.imm32]),
+    Op(0x15, "adc", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x10, "adc", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x11, "adc", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x11, "adc", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x11, "adc", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x12, "adc", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x13, "adc", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x13, "adc", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x13, "adc", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "adc", [Operand.rm8, Operand.imm8]).ROpcode(2),
+    Op(0x81, "adc", [Operand.rm16, Operand.imm16]).ROpcode(2),
+    Op(0x81, "adc", [Operand.rm32, Operand.imm32]).ROpcode(2),
+    Op(0x81, "adc", [Operand.rm64, Operand.imm32]).ROpcode(2).RexW,
+    Op(0x83, "adc", [Operand.rm16, Operand.imm8]).ROpcode(2),
+    Op(0x83, "adc", [Operand.rm32, Operand.imm8]).ROpcode(2),
+    Op(0x83, "adc", [Operand.rm64, Operand.imm8]).ROpcode(2).RexW,
+    // ADD: Add integers
+    Op(0x04, "add", [Operand.al, Operand.imm8]),
+    Op(0x05, "add", [Operand.ax, Operand.imm16]),
+    Op(0x05, "add", [Operand.eax, Operand.imm32]),
+    Op(0x05, "add", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x00, "add", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x01, "add", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x01, "add", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x01, "add", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x02, "add", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x03, "add", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x03, "add", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x03, "add", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "add", [Operand.rm8, Operand.imm8]).ROpcode(0),
+    Op(0x81, "add", [Operand.rm16, Operand.imm16]).ROpcode(0),
+    Op(0x81, "add", [Operand.rm32, Operand.imm32]).ROpcode(0),
+    Op(0x81, "add", [Operand.rm64, Operand.imm32]).ROpcode(0).RexW,
+    Op(0x83, "add", [Operand.rm16, Operand.imm8]).ROpcode(0),
+    Op(0x83, "add", [Operand.rm32, Operand.imm8]).ROpcode(0),
+    Op(0x83, "add", [Operand.rm64, Operand.imm8]).ROpcode(0).RexW,
+    // AND: Bitwise and
+    Op(0x24, "and", [Operand.al, Operand.imm8]),
+    Op(0x25, "and", [Operand.ax, Operand.imm16]),
+    Op(0x25, "and", [Operand.eax, Operand.imm32]),
+    Op(0x25, "and", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x20, "and", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x21, "and", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x21, "and", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x21, "and", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x22, "and", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x23, "and", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x23, "and", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x23, "and", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "and", [Operand.rm8, Operand.imm8]).ROpcode(4),
+    Op(0x81, "and", [Operand.rm16, Operand.imm16]).ROpcode(4),
+    Op(0x81, "and", [Operand.rm32, Operand.imm32]).ROpcode(4),
+    Op(0x81, "and", [Operand.rm64, Operand.imm32]).ROpcode(4).RexW,
+    Op(0x83, "and", [Operand.rm16, Operand.imm8]).ROpcode(4),
+    Op(0x83, "and", [Operand.rm32, Operand.imm8]).ROpcode(4),
+    Op(0x83, "and", [Operand.rm64, Operand.imm8]).ROpcode(4).RexW,
+    // BSF: Bit scan forward
+    Op(0x0fbc, "bsf", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0fbc, "bsf", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0fbc, "bsf", [Operand.r64, Operand.rm64]).RMod.RexW,
+    // BSR: Bit scan reverse
+    Op(0x0fbd, "bsr", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0fbd, "bsr", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0fbd, "bsr", [Operand.r64, Operand.rm64]).RMod.RexW,
+    // BSWAP: Swap byte order
+    Op(0x0fc8, "bswap", [Operand.r32]).AddRToOpcode,
+    Op(0x0fc8, "bswap", [Operand.r64]).AddRToOpcode.RexW,
+    // CALL: Call procedure
+    Op(0x9a, "call", [Operand.farseg16, Operand.far16]).LegacyOnly,
+    Op(0x9a, "call", [Operand.farseg16, Operand.far32]).LegacyOnly,
+    Op(0xe8, "call", [Operand.rel16]).LegacyOnly,
+    Op(0xe8, "call", [Operand.rel32]),
+    Op(0xff, "call", [Operand.rm16]).ROpcode(2).LegacyOnly,
+    Op(0xff, "call", [Operand.rm32]).ROpcode(2).LegacyOnly,
+    Op(0xff, "call", [Operand.rm64]).ROpcode(2).LongOnly,
+    Op(0xff, "call", [Operand.m16_16]).ROpcode(3),
+    Op(0xff, "call", [Operand.m16_32]).ROpcode(3),
+    Op(0xff, "call", [Operand.m16_64]).ROpcode(3).RexW,
+    // Convert word to doubleword, convert doubleword to quadword
+    Op(0x99, "cwd", [Operand.ax]).OpSize(16),
+    Op(0x99, "cdq", [Operand.ax]).OpSize(32),
+    Op(0x99, "cdo", [Operand.ax]).OpSize(64).RexW,
+    // CLC: Clear carry flag
+    Op(0xf8, "clc", Operand[0].init),
+    // CMC: Complement carry flag
+    Op(0xf5, "cmc", Operand[0].init),
+    // CMOVcc: Conditional move
+    Op(0x0f47, "cmova", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f47, "cmova", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f47, "cmova", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f43, "cmovae", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f43, "cmovae", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f43, "cmovae", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f42, "cmovb", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f42, "cmovb", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f42, "cmovb", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f46, "cmovbe", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f46, "cmovbe", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f46, "cmovbe", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f42, "cmovc", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f42, "cmovc", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f42, "cmovc", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f44, "cmove", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f44, "cmove", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f44, "cmove", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4f, "cmovg", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4f, "cmovg", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4f, "cmovg", [Operand.r64, Operand.rm64]).RMod.RexW.NotEncodable, // ?
+    Op(0x0f4d, "cmovge", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4d, "cmovge", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4d, "cmovge", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4c, "cmovl", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4c, "cmovl", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4c, "cmovl", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4e, "cmovle", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4e, "cmovle", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4e, "cmovle", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f46, "cmovna", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f46, "cmovna", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f46, "cmovna", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f42, "cmovnae", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f42, "cmovnae", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f42, "cmovnae", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f43, "cmovnb", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f43, "cmovnb", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f43, "cmovnb", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f47, "cmovnbe", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f47, "cmovnbe", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f47, "cmovnbe", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f43, "cmovnc", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f43, "cmovnc", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f43, "cmovnc", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f45, "cmovne", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f45, "cmovne", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f45, "cmovne", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4e, "cmovng", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4e, "cmovng", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4e, "cmovng", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4c, "cmovnge", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4c, "cmovnge", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4c, "cmovnge", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4d, "cmovnl", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4d, "cmovnl", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4d, "cmovnl", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4f, "cmovnle", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4f, "cmovnle", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4f, "cmovnle", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f41, "cmovno", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f41, "cmovno", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f41, "cmovno", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4b, "cmovnp", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4b, "cmovnp", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4b, "cmovnp", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f49, "cmovns", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f49, "cmovns", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f49, "cmovns", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f45, "cmovnz", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f45, "cmovnz", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f45, "cmovnz", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f40, "cmovo", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f40, "cmovo", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f40, "cmovo", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4a, "cmovp", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4a, "cmovp", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4a, "cmovp", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4a, "cmovpe", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4a, "cmovpe", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4a, "cmovpe", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f4b, "cmovpo", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f4b, "cmovpo", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f4b, "cmovpo", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f48, "cmovs", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f48, "cmovs", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f48, "cmovs", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x0f44, "cmovz", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0f44, "cmovz", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0f44, "cmovz", [Operand.r64, Operand.rm64]).RMod.RexW,
+    // CMP: Compare two operands
+    Op(0x3c, "cmp", [Operand.al, Operand.imm8]),
+    Op(0x3d, "cmp", [Operand.ax, Operand.imm16]),
+    Op(0x3d, "cmp", [Operand.eax, Operand.imm32]),
+    Op(0x3d, "cmp", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x38, "cmp", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x39, "cmp", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x39, "cmp", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x39, "cmp", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x3a, "cmp", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x3b, "cmp", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x3b, "cmp", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x3b, "cmp", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "cmp", [Operand.rm8, Operand.imm8]).ROpcode(7),
+    Op(0x81, "cmp", [Operand.rm16, Operand.imm16]).ROpcode(7),
+    Op(0x81, "cmp", [Operand.rm32, Operand.imm32]).ROpcode(7),
+    Op(0x81, "cmp", [Operand.rm64, Operand.imm32]).ROpcode(7).RexW,
+    Op(0x83, "cmp", [Operand.rm16, Operand.imm8]).ROpcode(7),
+    Op(0x83, "cmp", [Operand.rm32, Operand.imm8]).ROpcode(7),
+    Op(0x83, "cmp", [Operand.rm64, Operand.imm8]).ROpcode(7).RexW,
+    // CMPXCHG: Compare and exchange
+    Op(0x0fb0, "cmpxchg", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x0fb1, "cmpxchg", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x0fb1, "cmpxchg", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x0fb1, "cmpxchg", [Operand.rm64, Operand.r64]).RMod.RexW,
+    // CPUID: CPU identification
+    Op(0x0fa2, "cpuid", Operand[0].init),
+    // DEC: Decrement
+    Op(0x48, "dec", [Operand.r16]).AddRToOpcode.LegacyOnly,
+    Op(0x48, "dec", [Operand.r32]).AddRToOpcode.LegacyOnly,
+    Op(0xfe, "dec", [Operand.rm8]).ROpcode(1),
+    Op(0xff, "dec", [Operand.rm16]).ROpcode(1),
+    Op(0xff, "dec", [Operand.rm32]).ROpcode(1),
+    Op(0xff, "dec", [Operand.rm64]).ROpcode(1).RexW,
+    // DIV: Unsigned divide
+    Op(0xf6, "div", [Operand.rm8]).ROpcode(6),
+    Op(0xf7, "div", [Operand.rm16]).ROpcode(6),
+    Op(0xf7, "div", [Operand.rm32]).ROpcode(6),
+    Op(0xf7, "div", [Operand.rm64]).ROpcode(6).RexW,
+    // IDIV: Signed divide
+    Op(0xf6, "idiv", [Operand.rm8]).ROpcode(7),
+    Op(0xf7, "idiv", [Operand.rm16]).ROpcode(7),
+    Op(0xf7, "idiv", [Operand.rm32]).ROpcode(7),
+    Op(0xf7, "idiv", [Operand.rm64]).ROpcode(7).RexW,
+    // IMUL: Signed multiply
+    Op(0x69, "imul", [Operand.r16, Operand.rm16, Operand.imm16]).RMod,
+    Op(0x69, "imul", [Operand.r32, Operand.rm32, Operand.imm32]).RMod,
+    Op(0x69, "imul", [Operand.r64, Operand.rm64, Operand.imm32]).RMod.RexW,
+    Op(0x6b, "imul", [Operand.r16, Operand.rm16, Operand.imm8]).RMod,
+    Op(0x6b, "imul", [Operand.r32, Operand.rm32, Operand.imm8]).RMod,
+    Op(0x6b, "imul", [Operand.r64, Operand.rm64, Operand.imm8]).RMod.RexW,
+    Op(0xf6, "imul", [Operand.rm8]).ROpcode(5),
+    Op(0xf7, "imul", [Operand.rm16]).ROpcode(5),
+    Op(0xf7, "imul", [Operand.rm32]).ROpcode(5),
+    Op(0xf7, "imul", [Operand.rm64]).ROpcode(5).RexW,
+    Op(0x0faf, "imul", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0faf, "imul", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0faf, "imul", [Operand.r64, Operand.rm64]).RMod.RexW,
+    // INC: Increment
+    Op(0x40, "inc", [Operand.r16]).AddRToOpcode.LegacyOnly,
+    Op(0x40, "inc", [Operand.r32]).AddRToOpcode.LegacyOnly,
+    Op(0xfe, "inc", [Operand.rm8]).ROpcode(0),
+    Op(0xff, "inc", [Operand.rm16]).ROpcode(0),
+    Op(0xff, "inc", [Operand.rm32]).ROpcode(0),
+    Op(0xff, "inc", [Operand.rm64]).ROpcode(0).RexW,
+    // Jcc: Jump conditionally
+    Op(0x0f87, "ja", [Operand.rel16]).LegacyOnly,
+    Op(0x0f87, "ja", [Operand.rel32]),
+    Op(0x77, "ja", [Operand.rel8]),
+    Op(0x0f83, "jae", [Operand.rel16]).LegacyOnly,
+    Op(0x0f83, "jae", [Operand.rel32]),
+    Op(0x73, "jae", [Operand.rel8]),
+    Op(0x0f82, "jb", [Operand.rel16]).LegacyOnly,
+    Op(0x0f82, "jb", [Operand.rel32]),
+    Op(0x72, "jb", [Operand.rel8]),
+    Op(0x0f86, "jbe", [Operand.rel16]).LegacyOnly,
+    Op(0x0f86, "jbe", [Operand.rel32]),
+    Op(0x76, "jbe", [Operand.rel8]),
+    Op(0x0f82, "jc", [Operand.rel16]).LegacyOnly,
+    Op(0x0f82, "jc", [Operand.rel32]),
+    Op(0x72, "jc", [Operand.rel8]),
+    Op(0xe3, "jcxz", [Operand.rel8]).LegacyOnly,
+    Op(0x0f84, "je", [Operand.rel16]).LegacyOnly,
+    Op(0x0f84, "je", [Operand.rel32]),
+    Op(0x74, "je", [Operand.rel8]),
+    Op(0xe3, "jecxz", [Operand.rel8]),
+    Op(0x0f8f, "jg", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8f, "jg", [Operand.rel32]),
+    Op(0x7f, "jg", [Operand.rel8]),
+    Op(0x0f8d, "jge", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8d, "jge", [Operand.rel32]),
+    Op(0x7d, "jge", [Operand.rel8]),
+    Op(0x0f8c, "jl", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8c, "jl", [Operand.rel32]),
+    Op(0x7c, "jl", [Operand.rel8]),
+    Op(0x0f8e, "jle", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8e, "jle", [Operand.rel32]),
+    Op(0x7e, "jle", [Operand.rel8]),
+    Op(0x0f86, "jna", [Operand.rel16]).LegacyOnly,
+    Op(0x0f86, "jna", [Operand.rel32]),
+    Op(0x76, "jna", [Operand.rel8]),
+    Op(0x0f82, "jnae", [Operand.rel16]).LegacyOnly,
+    Op(0x0f82, "jnae", [Operand.rel32]),
+    Op(0x72, "jnae", [Operand.rel8]),
+    Op(0x0f83, "jnb", [Operand.rel16]).LegacyOnly,
+    Op(0x0f83, "jnb", [Operand.rel32]),
+    Op(0x73, "jnb", [Operand.rel8]),
+    Op(0x0f87, "jnbe", [Operand.rel16]).LegacyOnly,
+    Op(0x0f87, "jnbe", [Operand.rel32]),
+    Op(0x77, "jnbe", [Operand.rel8]),
+    Op(0x0f83, "jnc", [Operand.rel16]).LegacyOnly,
+    Op(0x0f83, "jnc", [Operand.rel32]),
+    Op(0x73, "jnc", [Operand.rel8]),
+    Op(0x0f85, "jne", [Operand.rel16]).LegacyOnly,
+    Op(0x0f85, "jne", [Operand.rel32]),
+    Op(0x75, "jne", [Operand.rel8]),
+    Op(0x0f8e, "jng", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8e, "jng", [Operand.rel32]),
+    Op(0x7e, "jng", [Operand.rel8]),
+    Op(0x0f8c, "jnge", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8c, "jnge", [Operand.rel32]),
+    Op(0x7c, "jnge", [Operand.rel8]),
+    Op(0x0f8d, "jnl", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8d, "jnl", [Operand.rel32]),
+    Op(0x7d, "jnl", [Operand.rel8]),
+    Op(0x0f8f, "jnle", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8f, "jnle", [Operand.rel32]),
+    Op(0x7f, "jnle", [Operand.rel8]),
+    Op(0x0f81, "jno", [Operand.rel16]).LegacyOnly,
+    Op(0x0f81, "jno", [Operand.rel32]),
+    Op(0x71, "jno", [Operand.rel8]),
+    Op(0x0f8b, "jnp", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8b, "jnp", [Operand.rel32]),
+    Op(0x7b, "jnp", [Operand.rel8]),
+    Op(0x0f89, "jns", [Operand.rel16]).LegacyOnly,
+    Op(0x0f89, "jns", [Operand.rel32]),
+    Op(0x79, "jns", [Operand.rel8]),
+    Op(0x0f85, "jnz", [Operand.rel16]).LegacyOnly,
+    Op(0x0f85, "jnz", [Operand.rel32]),
+    Op(0x75, "jnz", [Operand.rel8]),
+    Op(0x0f80, "jo", [Operand.rel16]).LegacyOnly,
+    Op(0x0f80, "jo", [Operand.rel32]),
+    Op(0x70, "jo", [Operand.rel8]),
+    Op(0x0f8a, "jp", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8a, "jp", [Operand.rel32]),
+    Op(0x7a, "jp", [Operand.rel8]),
+    Op(0x0f8a, "jpe", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8a, "jpe", [Operand.rel32]),
+    Op(0x7a, "jpe", [Operand.rel8]),
+    Op(0x0f8b, "jpo", [Operand.rel16]).LegacyOnly,
+    Op(0x0f8b, "jpo", [Operand.rel32]),
+    Op(0x7b, "jpo", [Operand.rel8]),
+    Op(0xe3, "jrcxz", [Operand.rel8]).LongOnly,
+    Op(0x0f88, "js", [Operand.rel16]).LegacyOnly,
+    Op(0x0f88, "js", [Operand.rel32]),
+    Op(0x78, "js", [Operand.rel8]),
+    Op(0x0f84, "jz", [Operand.rel16]).LegacyOnly,
+    Op(0x0f84, "jz", [Operand.rel32]),
+    Op(0x74, "jz", [Operand.rel8]),
+    // JMP: Jump unconditionally
+    Op(0xeb, "jmp", [Operand.rel8]),
+    Op(0xe9, "jmp", [Operand.rel16]).LegacyOnly,
+    Op(0xe9, "jmp", [Operand.rel32]),
+    Op(0xea, "jmp", [Operand.farseg16, Operand.far16]).LegacyOnly,
+    Op(0xea, "jmp", [Operand.farseg16, Operand.far32]).LegacyOnly,
+    Op(0xff, "jmp", [Operand.rm16]).ROpcode(4).LegacyOnly,
+    Op(0xff, "jmp", [Operand.rm32]).ROpcode(4).LegacyOnly,
+    Op(0xff, "jmp", [Operand.rm64]).ROpcode(4).LongOnly,
+    Op(0xff, "jmp", [Operand.m16_16]).ROpcode(5),
+    Op(0xff, "jmp", [Operand.m16_32]).ROpcode(5),
+    Op(0xff, "jmp", [Operand.m16_64]).ROpcode(5).RexW,
+    // LDS/LES/LFS/LGS/LSS: Load far pointer
+    Op(0xc4, "les", [Operand.r16, Operand.m16_16]).RMod.LegacyOnly,
+    Op(0xc4, "les", [Operand.r32, Operand.m16_32]).RMod.LegacyOnly,
+    Op(0xc5, "lds", [Operand.r16, Operand.m16_16]).RMod.LegacyOnly,
+    Op(0xc5, "lds", [Operand.r32, Operand.m16_32]).RMod.LegacyOnly,
+    Op(0x0fb2, "lss", [Operand.r16, Operand.m16_16]).RMod,
+    Op(0x0fb2, "lss", [Operand.r32, Operand.m16_32]).RMod,
+    Op(0x0fb2, "lss", [Operand.r64, Operand.m16_64]).RMod.RexW,
+    Op(0x0fb4, "lfs", [Operand.r16, Operand.m16_16]).RMod,
+    Op(0x0fb4, "lfs", [Operand.r32, Operand.m16_32]).RMod,
+    Op(0x0fb4, "lfs", [Operand.r64, Operand.m16_64]).RMod.RexW,
+    Op(0x0fb5, "lgs", [Operand.r16, Operand.m16_16]).RMod,
+    Op(0x0fb5, "lgs", [Operand.r32, Operand.m16_32]).RMod,
+    Op(0x0fb5, "lgs", [Operand.r64, Operand.m16_64]).RMod.RexW,
+    // MOV: Move
+    Op(0x88, "mov", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x89, "mov", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x89, "mov", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x89, "mov", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x8a, "mov", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x8b, "mov", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x8b, "mov", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x8b, "mov", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x8c, "mov", [Operand.rm16, Operand.sreg]).RMod,
+    Op(0x8c, "mov", [Operand.rm_r32, Operand.sreg]).RMod, // ?
+    Op(0x8c, "mov", [Operand.rm64, Operand.sreg]).RMod.RexW,
+    Op(0x8e, "mov", [Operand.sreg, Operand.rm16]).RMod,
+    Op(0x8e, "mov", [Operand.sreg, Operand.rm64]).RMod.RexW,
+    Op(0xb0, "mov", [Operand.r8, Operand.imm8]).AddRToOpcode,
+    Op(0xb8, "mov", [Operand.r16, Operand.imm16]).AddRToOpcode,
+    Op(0xb8, "mov", [Operand.r32, Operand.imm32]).AddRToOpcode,
+    Op(0xb8, "mov", [Operand.r64, Operand.imm64]).AddRToOpcode.RexW,
+    Op(0xc6, "mov", [Operand.rm8, Operand.imm8]).ROpcode(0),
+    Op(0xc7, "mov", [Operand.rm16, Operand.imm16]).ROpcode(0),
+    Op(0xc7, "mov", [Operand.rm32, Operand.imm32]).ROpcode(0),
+    Op(0xc7, "mov", [Operand.rm64, Operand.imm32]).ROpcode(0).RexW,
+    Op(0xa0, "mov", [Operand.al, Operand.moffs8]),
+    Op(0xa1, "mov", [Operand.ax, Operand.moffs16]),
+    Op(0xa1, "mov", [Operand.eax, Operand.moffs32]),
+    Op(0xa1, "mov", [Operand.rax, Operand.moffs64]).RexW,
+    Op(0xa2, "mov", [Operand.moffs8, Operand.al]),
+    Op(0xa3, "mov", [Operand.moffs16, Operand.ax]),
+    Op(0xa3, "mov", [Operand.moffs32, Operand.eax]),
+    Op(0xa3, "mov", [Operand.moffs64, Operand.rax]).RexW,
+    // MOVSX: Move and sign-extend value
+    Op(0x63, "movsx", [Operand.r16, Operand.rm16]).RMod.Discouraged,
+    Op(0x63, "movsx", [Operand.r32, Operand.rm32]).RMod.Discouraged,
+    Op(0x63, "movsx", [Operand.r64, Operand.rm32]).RMod.RexW,
+    Op(0x0fbe, "movsx", [Operand.r16, Operand.rm8]).RMod,
+    Op(0x0fbe, "movsx", [Operand.r32, Operand.rm8]).RMod,
+    Op(0x0fbe, "movsx", [Operand.r64, Operand.rm8]).RMod.RexW,
+    Op(0x0fbf, "movsx", [Operand.r32, Operand.rm16]).RMod,
+    Op(0x0fbf, "movsx", [Operand.r64, Operand.rm16]).RMod.RexW,
+    // MOVZX: Move and zero-extend value
+    Op(0x0fb6, "movzx", [Operand.r16, Operand.rm8]).RMod,
+    Op(0x0fb6, "movzx", [Operand.r32, Operand.rm8]).RMod,
+    Op(0x0fb6, "movzx", [Operand.r64, Operand.rm8]).RMod.RexW,
+    Op(0x0fb7, "movzx", [Operand.r32, Operand.rm16]).RMod,
+    Op(0x0fb7, "movzx", [Operand.r64, Operand.rm16]).RMod.RexW,
+    // MUL: Unsigned multiply
+    Op(0xf6, "mul", [Operand.rm8]).ROpcode(4),
+    Op(0xf7, "mul", [Operand.rm16]).ROpcode(4),
+    Op(0xf7, "mul", [Operand.rm32]).ROpcode(4),
+    Op(0xf7, "mul", [Operand.rm64]).ROpcode(4).RexW,
+    // NEG: Two's complement negation
+    Op(0xf6, "neg", [Operand.rm8]).ROpcode(3),
+    Op(0xf7, "neg", [Operand.rm16]).ROpcode(3),
+    Op(0xf7, "neg", [Operand.rm32]).ROpcode(3),
+    Op(0xf7, "neg", [Operand.rm64]).ROpcode(3).RexW,
+    // NOP: No operation
+    Op(0x90, "nop", Operand[0].init),
+    Op(0x0f1f, "nop", [Operand.r16, Operand.rm16]).ROpcode(0),
+    Op(0x0f1f, "nop", [Operand.r32, Operand.rm32]).ROpcode(0),
+    // NOT: One's complement negation
+    Op(0xf6, "not", [Operand.rm8]).ROpcode(2),
+    Op(0xf7, "not", [Operand.rm16]).ROpcode(2),
+    Op(0xf7, "not", [Operand.rm32]).ROpcode(2),
+    Op(0xf7, "not", [Operand.rm64]).ROpcode(2).RexW,
+    /// OR: Bitwise inclusive or
+    Op(0x0c, "or", [Operand.al, Operand.imm8]),
+    Op(0x0d, "or", [Operand.ax, Operand.imm16]),
+    Op(0x0d, "or", [Operand.eax, Operand.imm32]),
+    Op(0x0d, "or", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x08, "or", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x09, "or", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x09, "or", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x09, "or", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x0a, "or", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x0b, "or", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x0b, "or", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x0b, "or", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "or", [Operand.rm8, Operand.imm8]).ROpcode(1),
+    Op(0x81, "or", [Operand.rm16, Operand.imm16]).ROpcode(1),
+    Op(0x81, "or", [Operand.rm32, Operand.imm32]).ROpcode(1),
+    Op(0x81, "or", [Operand.rm64, Operand.imm32]).ROpcode(1).RexW,
+    Op(0x83, "or", [Operand.rm16, Operand.imm8]).ROpcode(1),
+    Op(0x83, "or", [Operand.rm32, Operand.imm8]).ROpcode(1),
+    Op(0x83, "or", [Operand.rm64, Operand.imm8]).ROpcode(1).RexW,
+    // POP: Pop value from stack
+    Op(0x58, "pop", [Operand.r16]).AddRToOpcode,
+    Op(0x58, "pop", [Operand.r32]).AddRToOpcode.LegacyOnly,
+    Op(0x58, "pop", [Operand.r64]).AddRToOpcode.LongOnly,
+    Op(0x8f, "pop", [Operand.rm16]).ROpcode(0),
+    Op(0x8f, "pop", [Operand.rm32]).ROpcode(0).LegacyOnly,
+    Op(0x8f, "pop", [Operand.rm64]).ROpcode(0).LongOnly,
+    Op(0x07, "pop", [Operand.es]).LegacyOnly,
+    Op(0x1f, "pop", [Operand.ds]).LegacyOnly,
+    Op(0x17, "pop", [Operand.ss]).LegacyOnly,
+    Op(0x0fa1, "pop", [Operand.fs]).OpSize(16),
+    Op(0x0fa1, "popd", [Operand.fs]).OpSize(32).LegacyOnly,
+    Op(0x0fa1, "popq", [Operand.fs]).OpSize(64).LongOnly,
+    Op(0x0fa9, "pop", [Operand.gs]).OpSize(16),
+    Op(0x0fa9, "popd", [Operand.gs]).OpSize(32).LegacyOnly,
+    Op(0x0fa9, "popq", [Operand.gs]).OpSize(64).LongOnly,
+    // POPCNT: Population count, AKA count set bits
+    Op(0x0fb8, "popcnt", [Operand.r16, Operand.rm16]).RMod.RepZ,
+    Op(0x0fb8, "popcnt", [Operand.r32, Operand.rm32]).RMod.RepZ,
+    Op(0x0fb8, "popcnt", [Operand.r64, Operand.rm64]).RMod.RepZ.RexW,
+    // PUSH: Push value onto stack
+    Op(0x50, "push", [Operand.r16]).AddRToOpcode,
+    Op(0x50, "push", [Operand.r32]).AddRToOpcode.LegacyOnly,
+    Op(0x50, "push", [Operand.r64]).AddRToOpcode.LongOnly,
+    Op(0x68, "push", [Operand.imm16]),
+    Op(0x68, "push", [Operand.imm32]),
+    Op(0x6a, "push", [Operand.imm8]),
+    Op(0xff, "push", [Operand.rm16]).ROpcode(6),
+    Op(0xff, "push", [Operand.rm32]).ROpcode(6).LegacyOnly,
+    Op(0xff, "push", [Operand.rm64]).ROpcode(6).LongOnly,
+    Op(0x0e, "push", [Operand.cs]).LegacyOnly,
+    Op(0x16, "push", [Operand.ss]).LegacyOnly,
+    Op(0x1e, "push", [Operand.ds]).LegacyOnly,
+    Op(0x06, "push", [Operand.es]).LegacyOnly,
+    Op(0x0fa0, "push", [Operand.fs]),
+    Op(0x0fa8, "push", [Operand.gs]),
+    // PUSHA/PUSHAD: Push all general-purpose registers
+    Op(0x60, "pusha", Operand[0].init).OpSize(16).LegacyOnly,
+    Op(0x60, "pushad", Operand[0].init).OpSize(32).LegacyOnly,
+    // RET: Return from procedure (near/far variants)
+    Op(0xc2, "retn", [Operand.imm16]),
+    Op(0xc3, "retn", Operand[0].init),
+    Op(0xca, "retf", [Operand.imm16]),
+    Op(0xcb, "retf", Operand[0].init),
+    // SAL: Shift arithmetic left (Same as SHL)
+    Op(0xc0, "sal", [Operand.rm8, Operand.imm8]).ROpcode(4),
+    Op(0xc1, "sal", [Operand.rm16, Operand.imm8]).ROpcode(4),
+    Op(0xc1, "sal", [Operand.rm32, Operand.imm8]).ROpcode(4),
+    Op(0xc1, "sal", [Operand.rm64, Operand.imm8]).ROpcode(4).RexW,
+    Op(0xd0, "sal", [Operand.rm8, Operand.lit1]).ROpcode(4),
+    Op(0xd1, "sal", [Operand.rm16, Operand.lit1]).ROpcode(4),
+    Op(0xd1, "sal", [Operand.rm32, Operand.lit1]).ROpcode(4),
+    Op(0xd1, "sal", [Operand.rm64, Operand.lit1]).ROpcode(4).RexW,
+    Op(0xd2, "sal", [Operand.rm8, Operand.cl]).ROpcode(4),
+    Op(0xd3, "sal", [Operand.rm16, Operand.cl]).ROpcode(4),
+    Op(0xd3, "sal", [Operand.rm32, Operand.cl]).ROpcode(4),
+    Op(0xd3, "sal", [Operand.rm64, Operand.cl]).ROpcode(4).RexW,
+    // SAR: Shift arithmetic right
+    Op(0xc0, "sar", [Operand.rm8, Operand.imm8]).ROpcode(7),
+    Op(0xc1, "sar", [Operand.rm16, Operand.imm8]).ROpcode(7),
+    Op(0xc1, "sar", [Operand.rm32, Operand.imm8]).ROpcode(7),
+    Op(0xc1, "sar", [Operand.rm64, Operand.imm8]).ROpcode(7).RexW,
+    Op(0xd0, "sar", [Operand.rm8, Operand.lit1]).ROpcode(7),
+    Op(0xd1, "sar", [Operand.rm16, Operand.lit1]).ROpcode(7),
+    Op(0xd1, "sar", [Operand.rm32, Operand.lit1]).ROpcode(7),
+    Op(0xd1, "sar", [Operand.rm64, Operand.lit1]).ROpcode(7).RexW,
+    Op(0xd2, "sar", [Operand.rm8, Operand.cl]).ROpcode(7),
+    Op(0xd3, "sar", [Operand.rm16, Operand.cl]).ROpcode(7),
+    Op(0xd3, "sar", [Operand.rm32, Operand.cl]).ROpcode(7),
+    Op(0xd3, "sar", [Operand.rm64, Operand.cl]).ROpcode(7).RexW,
+    // SBB: Subtract with borrow
+    Op(0x1c, "sbb", [Operand.al, Operand.imm8]),
+    Op(0x1d, "sbb", [Operand.ax, Operand.imm16]),
+    Op(0x1d, "sbb", [Operand.eax, Operand.imm32]),
+    Op(0x1d, "sbb", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x18, "sbb", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x19, "sbb", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x19, "sbb", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x19, "sbb", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x1a, "sbb", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x1b, "sbb", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x1b, "sbb", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x1b, "sbb", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "sbb", [Operand.rm8, Operand.imm8]).ROpcode(3),
+    Op(0x81, "sbb", [Operand.rm16, Operand.imm16]).ROpcode(3),
+    Op(0x81, "sbb", [Operand.rm32, Operand.imm32]).ROpcode(3),
+    Op(0x81, "sbb", [Operand.rm64, Operand.imm32]).ROpcode(3).RexW,
+    Op(0x83, "sbb", [Operand.rm16, Operand.imm8]).ROpcode(3),
+    Op(0x83, "sbb", [Operand.rm32, Operand.imm8]).ROpcode(3),
+    Op(0x83, "sbb", [Operand.rm64, Operand.imm8]).ROpcode(3).RexW,
+    // SETcc: Set byte on condition
+    Op(0x0f97, "seta", [Operand.rm8]).RMod,
+    Op(0x0f93, "setae", [Operand.rm8]).RMod,
+    Op(0x0f92, "setb", [Operand.rm8]).RMod,
+    Op(0x0f96, "setbe", [Operand.rm8]).RMod,
+    Op(0x0f92, "setc", [Operand.rm8]).RMod,
+    Op(0x0f94, "sete", [Operand.rm8]).RMod,
+    Op(0x0f9f, "setg", [Operand.rm8]).RMod,
+    Op(0x0f9d, "setge", [Operand.rm8]).RMod,
+    Op(0x0f9c, "setl", [Operand.rm8]).RMod,
+    Op(0x0f9e, "setle", [Operand.rm8]).RMod,
+    Op(0x0f96, "setna", [Operand.rm8]).RMod,
+    Op(0x0f92, "setnae", [Operand.rm8]).RMod,
+    Op(0x0f93, "setnb", [Operand.rm8]).RMod,
+    Op(0x0f97, "setnbe", [Operand.rm8]).RMod,
+    Op(0x0f93, "setnc", [Operand.rm8]).RMod,
+    Op(0x0f95, "setne", [Operand.rm8]).RMod,
+    Op(0x0f9e, "setng", [Operand.rm8]).RMod,
+    Op(0x0f9c, "setnge", [Operand.rm8]).RMod,
+    Op(0x0f9d, "setnl", [Operand.rm8]).RMod,
+    Op(0x0f9f, "setnle", [Operand.rm8]).RMod,
+    Op(0x0f91, "setno", [Operand.rm8]).RMod,
+    Op(0x0f9b, "setnp", [Operand.rm8]).RMod,
+    Op(0x0f99, "setns", [Operand.rm8]).RMod,
+    Op(0x0f95, "setnz", [Operand.rm8]).RMod,
+    Op(0x0f90, "seto", [Operand.rm8]).RMod,
+    Op(0x0f9a, "setp", [Operand.rm8]).RMod,
+    Op(0x0f9a, "setpe", [Operand.rm8]).RMod,
+    Op(0x0f9b, "setpo", [Operand.rm8]).RMod,
+    Op(0x0f98, "sets", [Operand.rm8]).RMod,
+    Op(0x0f94, "setz", [Operand.rm8]).RMod,
+    // SHL: Shift logical left
+    Op(0xc0, "shl", [Operand.rm8, Operand.imm8]).ROpcode(4),
+    Op(0xc1, "shl", [Operand.rm16, Operand.imm8]).ROpcode(4),
+    Op(0xc1, "shl", [Operand.rm32, Operand.imm8]).ROpcode(4),
+    Op(0xc1, "shl", [Operand.rm64, Operand.imm8]).ROpcode(4).RexW,
+    Op(0xd0, "shl", [Operand.rm8, Operand.lit1]).ROpcode(4),
+    Op(0xd1, "shl", [Operand.rm16, Operand.lit1]).ROpcode(4),
+    Op(0xd1, "shl", [Operand.rm32, Operand.lit1]).ROpcode(4),
+    Op(0xd1, "shl", [Operand.rm64, Operand.lit1]).ROpcode(4).RexW,
+    Op(0xd2, "shl", [Operand.rm8, Operand.cl]).ROpcode(4),
+    Op(0xd3, "shl", [Operand.rm16, Operand.cl]).ROpcode(4),
+    Op(0xd3, "shl", [Operand.rm32, Operand.cl]).ROpcode(4),
+    Op(0xd3, "shl", [Operand.rm64, Operand.cl]).ROpcode(4).RexW,
+    // SHLD: Double precision shift left
+    Op(0x0fa4, "shld", [Operand.rm16, Operand.r16, Operand.imm8]).RMod,
+    Op(0x0fa4, "shld", [Operand.rm32, Operand.r32, Operand.imm8]).RMod,
+    Op(0x0fa4, "shld", [Operand.rm64, Operand.r64, Operand.imm8]).RMod.RexW,
+    Op(0x0fa5, "shld", [Operand.rm16, Operand.r16, Operand.cl]).RMod,
+    Op(0x0fa5, "shld", [Operand.rm32, Operand.r32, Operand.cl]).RMod,
+    Op(0x0fa5, "shld", [Operand.rm64, Operand.r64, Operand.cl]).RMod.RexW,
+    // SHR: Shift logical right
+    Op(0xc0, "shr", [Operand.rm8, Operand.imm8]).ROpcode(5),
+    Op(0xc1, "shr", [Operand.rm16, Operand.imm8]).ROpcode(5),
+    Op(0xc1, "shr", [Operand.rm32, Operand.imm8]).ROpcode(5),
+    Op(0xc1, "shr", [Operand.rm64, Operand.imm8]).ROpcode(5).RexW,
+    Op(0xd0, "shr", [Operand.rm8, Operand.lit1]).ROpcode(5),
+    Op(0xd1, "shr", [Operand.rm16, Operand.lit1]).ROpcode(5),
+    Op(0xd1, "shr", [Operand.rm32, Operand.lit1]).ROpcode(5),
+    Op(0xd1, "shr", [Operand.rm64, Operand.lit1]).ROpcode(5).RexW,
+    Op(0xd2, "shr", [Operand.rm8, Operand.cl]).ROpcode(5),
+    Op(0xd3, "shr", [Operand.rm16, Operand.cl]).ROpcode(5),
+    Op(0xd3, "shr", [Operand.rm32, Operand.cl]).ROpcode(5),
+    Op(0xd3, "shr", [Operand.rm64, Operand.cl]).ROpcode(5).RexW,
+    // SHRD: Double precision shift right
+    Op(0x0fac, "shrd", [Operand.rm16, Operand.r16, Operand.imm8]).RMod,
+    Op(0x0fac, "shrd", [Operand.rm32, Operand.r32, Operand.imm8]).RMod,
+    Op(0x0fac, "shrd", [Operand.rm64, Operand.r64, Operand.imm8]).RMod.RexW,
+    Op(0x0fad, "shrd", [Operand.rm16, Operand.r16, Operand.cl]).RMod,
+    Op(0x0fad, "shrd", [Operand.rm32, Operand.r32, Operand.cl]).RMod,
+    Op(0x0fad, "shrd", [Operand.rm64, Operand.r64, Operand.cl]).RMod.RexW,
+    // STC: Set carry flag
+    Op(0xf9, "stc", Operand[0].init),
+    // SUB: Subtract
+    Op(0x2c, "sub", [Operand.al, Operand.imm8]),
+    Op(0x2d, "sub", [Operand.ax, Operand.imm16]),
+    Op(0x2d, "sub", [Operand.eax, Operand.imm32]),
+    Op(0x2d, "sub", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x28, "sub", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x29, "sub", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x29, "sub", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x29, "sub", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x2a, "sub", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x2b, "sub", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x2b, "sub", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x2b, "sub", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "sub", [Operand.rm8, Operand.imm8]).ROpcode(5),
+    Op(0x81, "sub", [Operand.rm16, Operand.imm16]).ROpcode(5),
+    Op(0x81, "sub", [Operand.rm32, Operand.imm32]).ROpcode(5),
+    Op(0x81, "sub", [Operand.rm64, Operand.imm32]).ROpcode(5).RexW,
+    Op(0x83, "sub", [Operand.rm16, Operand.imm8]).ROpcode(5),
+    Op(0x83, "sub", [Operand.rm32, Operand.imm8]).ROpcode(5),
+    Op(0x83, "sub", [Operand.rm64, Operand.imm8]).ROpcode(5).RexW,
+    // TEST: Logical compare
+    Op(0xa8, "test", [Operand.al, Operand.imm8]).RMod,
+    Op(0xa9, "test", [Operand.ax, Operand.imm16]).RMod,
+    Op(0xa9, "test", [Operand.eax, Operand.imm32]).RMod,
+    Op(0xa9, "test", [Operand.rax, Operand.imm32]).RMod.RexW,
+    Op(0xf6, "test", [Operand.rm8, Operand.imm8]).ROpcode(0),
+    Op(0xf7, "test", [Operand.rm16, Operand.imm16]).ROpcode(0),
+    Op(0xf7, "test", [Operand.rm32, Operand.imm32]).ROpcode(0),
+    Op(0xf7, "test", [Operand.rm64, Operand.imm32]).ROpcode(0).RexW,
+    Op(0x84, "test", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x85, "test", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x85, "test", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x85, "test", [Operand.rm64, Operand.r64]).RMod.RexW,
+    // XADD: Exchange and add
+    Op(0x0fc0, "xadd", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x0fc1, "xadd", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x0fc1, "xadd", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x0fc1, "xadd", [Operand.rm64, Operand.r64]).RMod.RexW,
+    // XCHG: Exchange register/memory with register
+    Op(0x90, "xchg", [Operand.ax, Operand.r16]).AddRToOpcode,
+    Op(0x90, "xchg", [Operand.r16, Operand.ax]).AddRToOpcode,
+    Op(0x90, "xchg", [Operand.eax, Operand.r32]).AddRToOpcode,
+    Op(0x90, "xchg", [Operand.r32, Operand.eax]).AddRToOpcode,
+    Op(0x90, "xchg", [Operand.rax, Operand.r64]).AddRToOpcode.RexW,
+    Op(0x90, "xchg", [Operand.r64, Operand.rax]).AddRToOpcode.RexW,
+    Op(0x86, "xchg", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x86, "xchg", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x87, "xchg", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x87, "xchg", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x87, "xchg", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x87, "xchg", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x87, "xchg", [Operand.rm64, Operand.r64]).RMod,
+    Op(0x87, "xchg", [Operand.r64, Operand.rm64]).RMod,
+    /// XOR: Bitwise exclusive or
+    Op(0x34, "xor", [Operand.al, Operand.imm8]),
+    Op(0x35, "xor", [Operand.ax, Operand.imm16]),
+    Op(0x35, "xor", [Operand.eax, Operand.imm32]),
+    Op(0x35, "xor", [Operand.rax, Operand.imm32]).RexW,
+    Op(0x30, "xor", [Operand.rm8, Operand.r8]).RMod,
+    Op(0x31, "xor", [Operand.rm16, Operand.r16]).RMod,
+    Op(0x31, "xor", [Operand.rm32, Operand.r32]).RMod,
+    Op(0x31, "xor", [Operand.rm64, Operand.r64]).RMod.RexW,
+    Op(0x32, "xor", [Operand.r8, Operand.rm8]).RMod,
+    Op(0x33, "xor", [Operand.r16, Operand.rm16]).RMod,
+    Op(0x33, "xor", [Operand.r32, Operand.rm32]).RMod,
+    Op(0x33, "xor", [Operand.r64, Operand.rm64]).RMod.RexW,
+    Op(0x80, "xor", [Operand.rm8, Operand.imm8]).ROpcode(6),
+    Op(0x81, "xor", [Operand.rm16, Operand.imm16]).ROpcode(6),
+    Op(0x81, "xor", [Operand.rm32, Operand.imm32]).ROpcode(6),
+    Op(0x81, "xor", [Operand.rm64, Operand.imm32]).ROpcode(6).RexW,
+    Op(0x83, "xor", [Operand.rm16, Operand.imm8]).ROpcode(6),
+    Op(0x83, "xor", [Operand.rm32, Operand.imm8]).ROpcode(6),
+    Op(0x83, "xor", [Operand.rm64, Operand.imm8]).ROpcode(6).RexW,
+];

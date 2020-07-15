@@ -1,9 +1,16 @@
 module capsule.dynarec.x86.cpuid;
 
+private:
+
+import capsule.dynarec.x86.register : X86Register;
+
+public:
+
 /// High 8 bits: Register ID (ebx, ecx, edx, or eax)
 /// Low 8 bits: Flag bit number
 /// https://en.wikipedia.org/wiki/CPUID#EAX=7,_ECX=0:_Extended_Features
 enum X86ExtendedFeatureFlag: ushort {
+    None = 0xffff,
     /// Access to base of %fs and %gs
     fsgsbase = 0x0300,
     /// IA32_TSC_ADJUST
