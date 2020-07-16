@@ -4,9 +4,11 @@ private:
 
 import capsule.dynarec.x86.encode : X86Encoder;
 import capsule.dynarec.x86.instruction : X86Instruction;
+import capsule.dynarec.x86.mode : X86Mode;
 import capsule.dynarec.x86.opcode : X86Opcode;
 import capsule.dynarec.x86.opcodes : X86AllOpcodes;
 import capsule.dynarec.x86.opcodes : X86FilterOpcodes, X86FilterAllOpcodes;
+import capsule.dynarec.x86.parse : X86Parser;
 import capsule.dynarec.x86.register : X86Register, X86SegmentRegister;
 import capsule.dynarec.x86.size : X86DataSize;
 import capsule.dynarec.x86.strings : X86ToString;
@@ -18,7 +20,7 @@ struct X86 {
     alias DataSize = X86DataSize;
     alias Encoder = X86Encoder;
     alias Instruction = X86Instruction;
-    alias Mode = X86Encoder.Mode;
+    alias Mode = X86Mode;
     alias Opcode = X86Opcode;
     alias Operand = X86Instruction.Operand;
     alias OperandType = X86Opcode.OperandType;
@@ -40,6 +42,10 @@ struct X86 {
     alias toString = X86ToString;
     
     pure nothrow @safe @nogc:
+    
+    static Operand imm(in long value) {
+        return Operand.Immediate(Operand.Size.None, value);
+    }
     
     static Operand imm8(in long value) {
         return Operand.Immediate(Operand.Size.Byte, value);
@@ -230,10 +236,22 @@ struct X86 {
             X86AllOpcodes[i > 0 ? i - 1 : 0].name != X86AllOpcodes[i].name
         ) {
             mixin(`
-                static auto ` ~ opcode.name ~ `(T...)(in T operands) {
-                    return X86Instruction.OpcodeTemplate!(opcode.name)(operands);
+                static auto ` ~ opcode.name ~ `(T...)(in Mode mode, in T operands) {
+                    return Instruction.OpcodeTemplate!(opcode.name)(mode, operands);
                 }
             `);
+        }
+    }
+        
+    struct Legacy {
+        static opDispatch(property: string, T...)(auto ref T args) {
+            mixin(`return X86.` ~ property ~ `(X86Mode.Legacy, ` ~ args ~ `);`);
+        }
+    }
+    
+    struct Long {
+        static opDispatch(property: string, T...)(auto ref T args) {
+            mixin(`return X86.` ~ property ~ `(X86Mode.Long, ` ~ args ~ `);`);
         }
     }
 }
@@ -241,6 +259,9 @@ struct X86 {
 version(unittest) {
     import capsule.io.stdio : stdio;
     import capsule.string.hex : getHexString;
+    //void test(in string assembly, in string expected) {
+        
+    //}
 }
 
 unittest {
@@ -248,20 +269,22 @@ unittest {
     //  stdio.writeln(X86OpcodeToString(X86AllOpcodes[i]));
     //}
     
-    stdio.writeln(X86.toString(
-        X86Instruction.Operand.Register(X86Register.ecx)
-    ));
+    //stdio.writeln(X86.toString(
+    //    X86Instruction.Operand.Register(X86Register.ecx)
+    //));
     
-    stdio.writeln(X86.toString(
-        X86.add(X86.eax, X86.edx)
-    ));
-    stdio.writeln(X86.toString(
-        X86.mov(X86.ax, X86.imm16(0x4321))
-    ));
-    stdio.writeln(X86.toString(
-        X86.mov(X86.ax, X86.rax)
-    ));
+    //stdio.writeln(X86.toString(
+    //    X86.add(X86.eax, X86.edx)
+    //));
+    //stdio.writeln(X86.toString(
+    //    X86.mov(X86.ax, X86.imm16(0x4321))
+    //));
     
+    //X86.mov(X86.eax, X86.ecx)
+    const instruction = X86Parser("mov eax, ecx").parseInstruction();
+    stdio.writeln(X86.toString(instruction));
+    
+    /*
     ubyte[16] buffer;
     auto encoder = X86.Encoder(X86.Mode.Long, buffer);
     // mov ax, 0x4321 [0x66, 0xb8, 0x21, 0x43]
@@ -274,6 +297,7 @@ unittest {
     else {
         stdio.writeln(getHexString(buffer[0 .. encoder.length]));
     }
+    */
 }
 
 //pragma(msg, "Instruction: ", X86.Instruction.sizeof);

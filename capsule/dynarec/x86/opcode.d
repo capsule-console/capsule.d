@@ -2,9 +2,10 @@ module capsule.dynarec.x86.opcode;
 
 private:
 
+import capsule.dynarec.x86.mode : X86Mode;
 import capsule.dynarec.x86.size : X86DataSize;
 
-public pure nothrow @safe @nogc:
+public pure nothrow @safe @nogc extern(C):
 
 alias X86OperandSize = X86DataSize;
 
@@ -48,93 +49,93 @@ enum X86OpcodeOperandType: ubyte {
     /// No operand
     None = 0,
     /// Implicit AL register operand
-    al,
+    al = 'a',
     /// Implicit AX register operand
-    ax,
+    ax = 'b',
     /// Implicit EAX register operand
-    eax,
+    eax = 'c',
     /// Implicit RAX register operand
-    rax,
+    rax = 'd',
     /// Implicit CL register operand
-    cl,
+    cl = 'e',
     /// Implicit CS segment register operand
-    cs,
+    cs = 'f',
     /// Implicit SS segment register operand
-    ss,
+    ss = 'g',
     /// Implicit DS segment register operand
-    ds,
+    ds = 'h',
     /// Implicit ES segment register operand
-    es,
+    es = 'i',
     /// Implicit FS segment register operand
-    fs,
+    fs = 'j',
     /// Implicit GS segment register operand
-    gs,
+    gs = 'k',
     /// Implicit literal 1 value operand
-    lit1,
+    lit1 = 'l',
     /// Segment register (encoded as reg in ModR/M byte)
-    sreg,
+    sreg = 'm',
     /// 8-bit "r" register
-    r8,
+    r8 = 'n',
     /// 16-bit "r" register
-    r16,
+    r16 = 'o',
     /// 32-bit "r" register
-    r32,
+    r32 = 'p',
     /// 64-bit "r" register
-    r64,
+    r64 = 'q',
     /// 8-bit "r/m" register or memory address
-    rm8,
+    rm8 = 'r',
     /// 16-bit "r/m" register or memory address
-    rm16,
+    rm16 = 's',
     /// 32-bit "r/m" register or memory address
-    rm32,
+    rm32 = 't',
     /// 64-bit "r/m" register or memory address
-    rm64,
+    rm64 = 'u',
     /// 8-bit "r/m" register; not a memory address
-    rm_r8,
+    rm_r8 = 'v',
     /// 16-bit "r/m" register; not a memory address
-    rm_r16,
+    rm_r16 = 'w',
     /// 32-bit "r/m" register; not a memory address
-    rm_r32,
+    rm_r32 = 'x',
     /// 64-bit "r/m" register; not a memory address
-    rm_r64,
+    rm_r64 = 'y',
     /// 16-bit "r/m" register; must be a memory address pointing to m16:16
-    m16_16,
+    m16_16 = 'z',
     /// 16-bit "r/m" register; must be a memory address pointing to m16:32
-    m16_32,
+    m16_32 = 'A',
     /// 16-bit "r/m" register; must be a memory address pointing to m16:64
-    m16_64,
+    m16_64 = 'B',
     /// 8-bit memory offset; has a segment register and an immediate offset
-    moffs8,
+    moffs8 = 'C',
     /// 16-bit memory offset; has a segment register and an immediate offset
-    moffs16,
+    moffs16 = 'D',
     /// 32-bit memory offset; has a segment register and an immediate offset
-    moffs32,
+    moffs32 = 'E',
     /// 64-bit memory offset; has a segment register and an immediate offset
-    moffs64,
+    moffs64 = 'F',
     /// 8-bit immediate
-    imm8,
+    imm8 = 'G',
     /// 16-bit immediate
-    imm16,
+    imm16 = 'H',
     /// 32-bit immediate
-    imm32,
+    imm32 = 'I',
     /// 64-bit immediate
-    imm64,
+    imm64 = 'J',
     /// 8-bit immediate relative offset
-    rel8,
+    rel8 = 'K',
     /// 16-bit immediate relative offset
-    rel16,
+    rel16 = 'L',
     /// 32-bit immediate relative offset
-    rel32,
+    rel32 = 'M',
     /// 64-bit immediate relative offset
-    rel64,
+    rel64 = 'N',
     /// The second portion of a far pointer, stored to EIP/RIP (16 bits)
-    far16,
+    far16 = 'O',
     /// The second portion of a far pointer, stored to EIP/RIP (32 bits)
-    far32,
+    far32 = 'P',
     /// The second portion of a far pointer, stored to EIP/RIP (64 bits)
-    far64,
+    far64 = 'Q',
     /// The first, 16-bit portion of a far pointer (stored to CS register)
-    farseg16,
+    farseg16 = 'R',
 }
 
 /// Get whether a given operand type corresponds to an implicit operand,
@@ -385,9 +386,13 @@ enum X86OpcodeFlag: ushort {
     HasModR = 0x1000,
     /// Must have a REX byte with the REX.W flag set
     HasRexW = 0x2000,
+    /// Set for instructions that use a sign-extended immediate value
+    SignExtendImmediate = 0x4000,
 }
 
 struct X86Opcode {
+    extern(C): // Make sure this works with --betterC
+    
     alias EncodingType = X86OpcodeEncodingType;
     alias Escape = X86OpcodeEscape;
     alias Flag = X86OpcodeFlag;
@@ -536,6 +541,15 @@ struct X86Opcode {
     alias hasModOpcode = getFlagTemplate!(Flag.HasModOpcode);
     alias hasModR = getFlagTemplate!(Flag.HasModR);
     alias hasRexW = getFlagTemplate!(Flag.HasRexW);
+    alias hasSignExtendedImmediate = getFlagTemplate!(Flag.SignExtendImmediate);
+    
+    bool validInMode(in X86Mode mode) pure const {
+        final switch(mode) {
+            case X86Mode.None: return false;
+            case X86Mode.Legacy: return this.validInLegacyMode;
+            case X86Mode.Long: return this.validInLongMode;
+        }
+    }
     
     /// Indicate that the instruction encodes part of its opcode bits
     /// in the "reg" field of its ModR/M byte.
@@ -609,6 +623,14 @@ struct X86Opcode {
         X86Opcode opcode = this;
         opcode.setFlag(Flag.HasRexW);
         opcode.setFlag(Flag.Legacy, false);
+        return opcode;
+    }
+    
+    /// Set for instructions which have an immediate operand that must
+    /// be sign-extended, e.g. to the size of a register operand.
+    typeof(this) SExtImm() const {
+        X86Opcode opcode = this;
+        opcode.setFlag(Flag.SignExtendImmediate);
         return opcode;
     }
     

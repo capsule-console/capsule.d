@@ -1,6 +1,8 @@
 module capsule.dynarec.x86.size;
 
-public:
+public pure nothrow @safe @nogc:
+
+extern(C): // Make sure this works with --betterC
 
 alias X86AddressSize = X86DataSize;
 

@@ -2,6 +2,7 @@ module capsule.dynarec.x86.instruction;
 
 private:
 
+import capsule.dynarec.x86.mode : X86Mode;
 import capsule.dynarec.x86.opcode : X86Opcode;
 import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeIsImplicit;
 import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeIsReg;
@@ -12,10 +13,13 @@ import capsule.dynarec.x86.opcode : X86OpcodeOperandTypeSize;
 import capsule.dynarec.x86.opcodes : X86AllOpcodes, X86FilterAllOpcodes;
 import capsule.dynarec.x86.register : X86Register, X86SegmentRegister;
 import capsule.dynarec.x86.register : X86RegisterSize, X86RegisterIsExtended;
+import capsule.dynarec.x86.register : X86RegisterLongModeOnly;
 import capsule.dynarec.x86.size : X86DataSize;
 import capsule.dynarec.x86.size : X86DisplacementSize, X86ImmediateSize;
 
 public pure nothrow @safe @nogc:
+
+extern(C): // Make sure this works with --betterC
 
 alias X86InstructionOperandSize = X86DataSize;
 
@@ -26,7 +30,7 @@ enum X86InstructionOperandType: ubyte {
     MemoryAddress,
     MemoryOffset,
     Immediate,
-    RelativeImmediate,
+    Relative,
 }
 
 /// base flag: 0x1
@@ -92,47 +96,85 @@ ubyte X86InstructionMemoryAddressModeMod(in X86MemoryAddressMode mode) {
     }
 }
 
-/// Determine whether a given operand list is a match for the given
+static bool X86OperandArrayMatch(
+    in X86Opcode* opcode, in X86InstructionOperand[] operands
+) {
+    assert(operands.length <= 4, "Too many operands.");
+    if(opcode is null || operands.length != opcode.countOperands) {
+        return false;
+    }
+    foreach(i, _; operands) {
+        if(!X86OperandMatch(
+            opcode.hasSignExtendedImmediate, opcode.operands[i], operands[i]
+        )) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/// Determine whether a given operand vararg list is a match for the given
 /// opcode.
 static bool X86OperandListMatch(T...)(
     in X86Opcode* opcode, in ref T operands
 ) {
-    static assert(T.length <= 4, "Too many operands.");
-    if(opcode is null) {
+    static assert(operands.length <= 4, "Too many operands.");
+    if(opcode is null || operands.length != opcode.countOperands) {
         return false;
     }
-    uint numOperands = 0;
+    const signExtImm = opcode.hasSignExtendedImmediate;
     foreach(i, _; operands) {
         static assert(IsX86InstructionOperandType!(T[i]), "Wrong argument type.");
-        numOperands += cast(bool) operands[i] ? 1 : 0;
-        //static if(is(T[i] == X86InstructionOperand)) {
-        //    alias operand = operands[i];
-        //}
-        //else {
-        //    const operand = X86InstructionOperand(operands[i]);
-        //}
-        if(!X86OperandMatch(opcode.operands[i], operands[i])) {
+        static if(is(T[i] == X86InstructionOperand)) {
+            const match = X86OperandMatch(
+                signExtImm, opcode.operands[i], operands[i]
+            );
+        }
+        else static if(is(T[i] == X86Register)) {
+            const match = X86OperandMatchRegister(
+                signExtImm, opcode.operands[i], operands[i]
+            );
+        }
+        else static if(is(T[i] == X86SegmentRegister)) {
+            const match = X86OperandMatchSegmentRegister(
+                signExtImm, opcode.operands[i], operands[i]
+            );
+        }
+        else {
+            static assert(false);
+        }
+        if(!match) {
             return false;
         }
     }
-    return numOperands == opcode.countOperands;
+    return true;
 }
 
-static bool X86OperandMatch(
-    in X86Opcode.OperandType operandType, in X86Register register
+static bool X86OperandMatchRegister(
+    in bool signExtendImmediates,
+    in X86Opcode.OperandType operandType,
+    in X86Register register
 ) {
-    return X86OperandMatch(operandType, X86InstructionOperand(register));
+    return X86OperandMatch(
+        signExtendImmediates, operandType, X86InstructionOperand(register)
+    );
 }
 
-static bool X86OperandMatch(
-    in X86Opcode.OperandType operandType, in X86SegmentRegister segmentRegister
+static bool X86OperandMatchSegmentRegister(
+    in bool signExtendImmediates,
+    in X86Opcode.OperandType operandType,
+    in X86SegmentRegister segmentRegister
 ) {
-    return X86OperandMatch(operandType, X86InstructionOperand(segmentRegister));
+    return X86OperandMatch(
+        signExtendImmediates, operandType, X86InstructionOperand(segmentRegister)
+    );
 }
 
 /// Determine whether a given operand is a match for an expected operand type.
 static bool X86OperandMatch(
-    in X86Opcode.OperandType operandType, in X86InstructionOperand operand
+    in bool signExtendImmediates,
+    in X86Opcode.OperandType operandType,
+    in X86InstructionOperand operand
 ) {
     alias Opcode = X86Opcode;
     alias Operand = X86InstructionOperand;
@@ -206,29 +248,29 @@ static bool X86OperandMatch(
         case Opcode.OperandType.moffs64:
             return operand.isMemoryOffsetSize(64);
         case Opcode.OperandType.imm8:
-            return operand.isImmediateSize(8);
+            return operand.isImmediateSize(8, signExtendImmediates);
         case Opcode.OperandType.imm16:
-            return operand.isImmediateSize(16);
+            return operand.isImmediateSize(16, signExtendImmediates);
         case Opcode.OperandType.imm32:
-            return operand.isImmediateSize(32);
+            return operand.isImmediateSize(32, signExtendImmediates);
         case Opcode.OperandType.imm64:
-            return operand.isImmediateSize(64);
+            return operand.isImmediateSize(64, signExtendImmediates);
         case Opcode.OperandType.rel8:
-            return operand.isRelativeImmediateSize(8);
+            return operand.isRelativeSize(8, signExtendImmediates);
         case Opcode.OperandType.rel16:
-            return operand.isRelativeImmediateSize(16);
+            return operand.isRelativeSize(16, signExtendImmediates);
         case Opcode.OperandType.rel32:
-            return operand.isRelativeImmediateSize(32);
+            return operand.isRelativeSize(32, signExtendImmediates);
         case Opcode.OperandType.rel64:
-            return operand.isRelativeImmediateSize(64);
+            return operand.isRelativeSize(64, signExtendImmediates);
         case Opcode.OperandType.far16:
-            return operand.isImmediateSize(16);
+            return operand.isImmediateSize(16, signExtendImmediates);
         case Opcode.OperandType.far32:
-            return operand.isImmediateSize(32);
+            return operand.isImmediateSize(32, signExtendImmediates);
         case Opcode.OperandType.far64:
-            return operand.isImmediateSize(64);
+            return operand.isImmediateSize(64, signExtendImmediates);
         case Opcode.OperandType.farseg16:
-            return operand.isImmediateSize(16);
+            return operand.isImmediateSize(16, signExtendImmediates);
     }
 }
 
@@ -323,6 +365,8 @@ struct X86InstructionMemoryOffsetData {
 }
 
 struct X86InstructionOperand {
+    extern(C): // Make sure this works with --betterC
+    
     alias MemoryAddressData = X86InstructionMemoryAddressData;
     alias MemoryAddressMode = X86MemoryAddressMode;
     alias MemoryOffsetData = X86InstructionMemoryOffsetData;
@@ -372,6 +416,7 @@ struct X86InstructionOperand {
     static typeof(this) MemoryOffset(
         in Size size, in X86SegmentRegister segmentRegister, in int offset
     ) {
+        assert(size !is Size.None);
         X86InstructionOperand operand;
         operand.type = Type.MemoryOffset;
         operand.size = size;
@@ -381,6 +426,7 @@ struct X86InstructionOperand {
     }
     
     static typeof(this) MemoryAddress(in Size size, in int displacement) {
+        assert(size !is Size.None);
         X86InstructionOperand operand;
         operand.type = Type.MemoryAddress;
         operand.size = size;
@@ -392,6 +438,7 @@ struct X86InstructionOperand {
     static typeof(this) MemoryAddressIPRelative(
         in Size size, in int displacement
     ) {
+        assert(size !is Size.None);
         X86InstructionOperand operand;
         operand.type = Type.MemoryAddress;
         operand.size = size;
@@ -403,6 +450,7 @@ struct X86InstructionOperand {
     static typeof(this) MemoryAddress(
         in Size size, in X86Register base, in int displacement = 0
     ) {
+        assert(size !is Size.None);
         X86InstructionOperand operand;
         operand.type = Type.MemoryAddress;
         operand.size = size;
@@ -423,6 +471,7 @@ struct X86InstructionOperand {
         in X86Register index, in uint scale,
         in int displacement = 0
     ) {
+        assert(size !is Size.None);
         assert((index & 0x7) != X86Register.rsp, "Invalid index register.");
         X86InstructionOperand operand;
         operand.type = Type.MemoryAddress;
@@ -445,6 +494,7 @@ struct X86InstructionOperand {
         in Size size, in X86Register index, in uint scale,
         in int displacement = 0
     ) {
+        assert(size !is Size.None);
         assert((index & 0x7) != X86Register.rsp, "Invalid index register.");
         X86InstructionOperand operand;
         operand.type = Type.MemoryAddress;
@@ -466,7 +516,7 @@ struct X86InstructionOperand {
     
     static typeof(this) Relative(in Size size, in long value) {
         X86InstructionOperand operand;
-        operand.type = Type.RelativeImmediate;
+        operand.type = Type.Relative;
         operand.size = size;
         operand.immediate = value;
         return operand;
@@ -510,8 +560,8 @@ struct X86InstructionOperand {
         return this.type is Type.Immediate;
     }
     
-    bool isRelativeImmediate() {
-        return this.type is Type.RelativeImmediate;
+    bool isRelative() {
+        return this.type is Type.Relative;
     }
     
     bool isRegisterSize(in uint size) {
@@ -532,12 +582,44 @@ struct X86InstructionOperand {
         );
     }
     
-    bool isImmediateSize(in uint size) {
-        return this.type is Type.Immediate && this.size == size;
+    bool isInferredSize(in Type type, in uint size, in bool signExtended) {
+        if(this.type !is type) {
+            return false;
+        }
+        else if(this.size !is Size.None) {
+            return this.size == size;
+        }
+        else if(size == 8) {
+            return (signExtended ?
+                this.immediate >= byte.min && this.immediate <= byte.max :
+                this.immediate >= byte.min && this.immediate <= ubyte.max
+            );
+        }
+        else if(size == 16) {
+            return (signExtended ?
+                this.immediate >= short.min && this.immediate <= short.max :
+                this.immediate >= short.min && this.immediate <= ushort.max
+            );
+        }
+        else if(size == 32) {
+            return (signExtended ?
+                this.immediate >= int.min && this.immediate <= int.max :
+                this.immediate >= int.min && this.immediate <= uint.max
+            );
+        }
+        else {
+            return true;
+        }
     }
     
-    bool isRelativeImmediateSize(in uint size) {
-        return this.type is Type.RelativeImmediate && this.size == size;
+    /// Returns true if the immediate is of the given size,
+    /// or if it has a size of "None" and a value within the appropriate range.
+    bool isImmediateSize(in uint size, in bool signExtended) {
+        return this.isInferredSize(Type.Immediate, size, signExtended);
+    }
+    
+    bool isRelativeSize(in uint size, in bool signExtended) {
+        return this.isInferredSize(Type.Relative, size, signExtended);
     }
 }
 
@@ -545,9 +627,11 @@ enum X86InstructionStatus: ubyte {
     /// Instruction is fine and valid
     Ok = 0,
     /// Instruction is not valid and can't be encoded
-    Invalid = 1,
+    Invalid,
     /// Instruction doesn't have appropriate operands
-    OperandError = 2,
+    OperandError,
+    /// Instruction isn't valid in the given mode (long/legacy)
+    ModeError,
 }
 
 static enum IsX86InstructionOperandType(T) = (
@@ -563,12 +647,15 @@ enum X86InstructionRMOperandType: ubyte {
 }
 
 struct X86Instruction {
+    extern(C): // Make sure this works with --betterC
+    
     alias AllOpcodes = X86AllOpcodes;
     alias DataSize = X86DataSize;
     alias DisplacementSize = X86DisplacementSize;
     alias ImmediateSize = X86ImmediateSize;
     alias MemoryAddressData = X86InstructionMemoryAddressData;
     alias MemoryOffsetData = X86InstructionMemoryOffsetData;
+    alias Mode = X86Mode;
     alias Operand = X86InstructionOperand;
     alias Opcode = X86Opcode;
     alias Register = X86Register;
@@ -578,6 +665,7 @@ struct X86Instruction {
     
     static enum typeof(this) Invalid = typeof(this)(Status.Invalid);
     static enum typeof(this) OperandError = typeof(this)(Status.OperandError);
+    static enum typeof(this) ModeError = typeof(this)(Status.ModeError);
     
     /// Pointer to the opcode item associated with this instruction
     const(Opcode)* opcode = null;
@@ -611,21 +699,55 @@ struct X86Instruction {
         this.status = status;
     }
     
-    @trusted this(T...)(in Opcode* opcode, in T operands) {
+    this(in Mode mode, in string name, Operand[] operands) {
+        assert(operands.length <= 4, "Too many operands.");
+        foreach(i, _; X86AllOpcodes) {
+            if(name == X86AllOpcodes[i].name &&
+                X86AllOpcodes[i].validInMode(mode) &&
+                X86OperandArrayMatch(&X86AllOpcodes[i], operands)
+            ) {
+                this.opcode = &X86AllOpcodes[i];
+                assert(operands.length == this.opcode.countOperands);
+                for(uint j = 0; j < operands.length; j++) {
+                    this.setOperand(mode, this.opcode.operands[j], operands[j]);
+                }
+                return;
+            }
+        }
+        this.status = Status.Invalid;
+    }
+    
+    @trusted this(T...)(in Opcode* opcode, in T operands) if(
+        T.length == 0 || !is(T[0]: Operand[])
+    ) {
         assert(operands.length == opcode.countOperands, "Wrong number of operands.");
         this.opcode = opcode;
-        foreach(i, _; operands) {
-            static assert(IsX86InstructionOperandType!(T[i]), "Wrong arugment type.");
+        static foreach(i, _; operands) {
+            static assert(IsX86InstructionOperandType!(T[i]), "Wrong argument type.");
             static if(is(T[i] == Operand)) {
-                this.setOperand(opcode.operands[i], operands[i]);
+                this.setOperand(mode, opcode.operands[i], operands[i]);
             }
             else {
-                this.setOperand(opcode.operands[i], Operand(operands[i]));
+                this.setOperand(mode, opcode.operands[i], Operand(operands[i]));
             }
         }
     }
     
-    static auto OpcodeTemplate(string name, T...)(in T operands) {
+    @trusted this(size_t N)(in Opcode* opcode, in Operand[N] operands) {
+        assert(operands.length == opcode.countOperands, "Wrong number of operands.");
+        this.opcode = opcode;
+        static foreach(i, _; operands) {
+            static assert(IsX86InstructionOperandType!(T[i]), "Wrong argument type.");
+            static if(is(T[i] == Operand)) {
+                this.setOperand(mode, opcode.operands[i], operands[i]);
+            }
+            else {
+                this.setOperand(mode, opcode.operands[i], Operand(operands[i]));
+            }
+        }
+    }
+    
+    static auto OpcodeTemplate(string name, T...)(in Mode mode, in T operands) {
         // Check preconditions
         static assert(operands.length <= 4, "Too many operands.");
         static foreach(i, _; operands) {
@@ -634,7 +756,9 @@ struct X86Instruction {
         // Find a matching opcode and return an instruction instance
         static enum Opcodes = X86FilterAllOpcodes(name, operands.length);
         static foreach(opcodeIndex; Opcodes) {
-            if(X86OperandListMatch(&X86AllOpcodes[opcodeIndex], operands)) {
+            if(X86AllOpcodes[opcodeIndex].validInMode(mode) &&
+                X86OperandListMatch(&X86AllOpcodes[opcodeIndex], operands)
+            ) {
                 return typeof(this)(&X86AllOpcodes[opcodeIndex], operands);
             }
         }
@@ -642,8 +766,10 @@ struct X86Instruction {
         return typeof(this).OperandError;
     }
     
-    void setOperand(in Opcode.OperandType operandType, in Operand operand) {
-        alias OperandType = Opcode.OperandType;
+    void setOperand(
+        in Mode mode, in Opcode.OperandType operandType, in Operand operand
+    ) {
+        alias OperandType = Opcode.OperandType;        
         /// Implicit operands do not need to be specifically recorded or encoded
         if(X86OpcodeOperandTypeIsImplicit(operandType)) {
             return;
@@ -656,9 +782,13 @@ struct X86Instruction {
         // Register r8/r16/r32/r64 operands
         else if(X86OpcodeOperandTypeIsReg(operandType)) {
             assert(this.register == 0, "Duplicate register operand.");
+            if(mode !is Mode.Long && X86RegisterLongModeOnly(operand.register)) {
+                this.status = Status.ModeError;
+            }
             this.register = operand.register;
         }
         /// Immediate value operands imm8/imm16/imm32/imm64
+        /// Also accounts for rel8/rel16/rel32/rel64
         else if(X86OpcodeOperandTypeIsImmediate(operandType)) {
             assert(this.immediate == 0, "Duplicate immediate operand.");
             this.immediate = operand.immediate;
@@ -684,10 +814,31 @@ struct X86Instruction {
             if(operand.type is Operand.Type.MemoryAddress) {
                 this.rmMemoryAddress = operand.memoryAddress;
                 this.rmOperandType = RMOperandType.MemoryAddress;
+                if(mode !is Mode.Long && ((
+                    operand.memoryAddress.mode is MemoryAddressData.Mode.rip_disp32
+                ) || (
+                    operand.memoryAddress.hasBase &&
+                    X86RegisterLongModeOnly(operand.memoryAddress.base)
+                ) || (
+                    operand.memoryAddress.hasIndex &&
+                    X86RegisterLongModeOnly(operand.memoryAddress.index)
+                ) )) {
+                    this.status = Status.ModeError;
+                }
+                else if(mode is Mode.Long && (
+                    operand.memoryAddress.mode is MemoryAddressData.Mode.disp32
+                )) {
+                    this.status = Status.ModeError;
+                }
             }
             else {
                 this.rmRegister = operand.register;
                 this.rmOperandType = RMOperandType.Register;
+                if(mode !is Mode.Long &&
+                    X86RegisterLongModeOnly(operand.register)
+                ) {
+                    this.status = Status.ModeError;
+                }
             }
         }
     }

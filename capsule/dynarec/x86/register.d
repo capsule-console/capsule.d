@@ -6,6 +6,8 @@ import capsule.dynarec.x86.size : X86DataSize;
 
 public pure nothrow @safe @nogc:
 
+extern(C): // Make sure this works with --betterC
+
 enum X86SegmentRegister: ubyte {
     /// Extra Segment (ES). Pointer to extra data ('E' stands for 'Extra').
     es = 0x0,
@@ -145,6 +147,12 @@ uint X86RegisterId(in X86Register register) {
 /// set, necessitating an REX prefix byte to encode it.
 bool X86RegisterIsExtended(in X86Register register) {
     return (register & 0x8) != 0;
+}
+
+/// Returns true for registers that are supported only in long mode,
+/// which includes 64-bit registers and extended registers.
+bool X86RegisterLongModeOnly(in X86Register register) {
+    return register < 16 || ((register & 0x8) != 0);
 }
 
 bool X86RegisterIsByteHigh(in X86Register register) {

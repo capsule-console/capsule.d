@@ -4,7 +4,9 @@ private:
 
 import capsule.dynarec.x86.register : X86Register;
 
-public:
+public pure nothrow @safe @nogc:
+
+extern(C): // Make sure this works with --betterC
 
 /// High 8 bits: Register ID (ebx, ecx, edx, or eax)
 /// Low 8 bits: Flag bit number
@@ -163,12 +165,12 @@ enum X86ExtendedFeatureFlag: ushort {
 
 X86Register getX86ExtendedFeatureFlagRegister(
     in X86ExtendedFeatureFlag feature
-) pure nothrow @safe @nogc {
+) {
     return cast(X86Register) (feature >> 8);
 }
 
 uint getX86ExtendedFeatureFlagMask(
     in X86ExtendedFeatureFlag feature
-) pure nothrow @safe @nogc {
+) {
     return 1 << (feature & 0x1f);
 }

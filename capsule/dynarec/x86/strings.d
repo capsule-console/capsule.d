@@ -91,60 +91,88 @@ string X86InstructionMemoryAddressToString(
 ) {
     alias MemoryMode = X86Instruction.MemoryAddressData.Mode;
     const string sizeString = X86DataSizeToString(size);
-    if(memoryAddress.mode is MemoryMode.base) {
+    static string signedDisplacementToString(in uint size, in int displacement) {
+        const sign = displacement < 0;
+        const absDisplacement = (sign ? -displacement : displacement);
+        return (sign ? " - " : " + ") ~ (
+            "0x" ~ X86IntToString(32, absDisplacement)
+        );
+    }
+    if(memoryAddress.mode is MemoryMode.base || (
+        memoryAddress.displacement == 0 && (
+            memoryAddress.mode is MemoryMode.base_disp8 ||
+            memoryAddress.mode is MemoryMode.base_disp32
+        )
+    )) {
         return (sizeString ~ " ptr [" ~ 
             X86RegisterToString(memoryAddress.base) ~
         "]");
     }
-    else if(memoryAddress.mode is MemoryMode.base_index) {
+    else if(memoryAddress.mode is MemoryMode.base_index || (
+        memoryAddress.displacement == 0 && (
+            memoryAddress.mode is MemoryMode.base_index_disp8 ||
+            memoryAddress.mode is MemoryMode.base_index_disp32
+        )
+    )) {
         return (sizeString ~ " ptr [" ~
             X86RegisterToString(memoryAddress.base) ~ " + " ~
-            X86RegisterToString(memoryAddress.index) ~
+            X86RegisterToString(memoryAddress.index) ~ (
+                memoryAddress.scale == 0 ? "" :
+                " * " ~ X86IntToString(4, memoryAddress.getScaleValue)
+            ) ~
         "]");
     }
     else if(memoryAddress.mode is MemoryMode.disp32) {
         return (sizeString ~ " ptr [" ~
-            X86IntToString(32, memoryAddress.displacement) ~ 
+            "0x" ~ X86IntToString(32, memoryAddress.displacement) ~ 
         "]");
     }
     else if(memoryAddress.mode is MemoryMode.base_disp32) {
         return (sizeString ~ " ptr [" ~
-            X86RegisterToString(memoryAddress.base) ~ " + " ~
-            X86IntToString(32, memoryAddress.displacement) ~ 
+            X86RegisterToString(memoryAddress.base) ~
+            signedDisplacementToString(32, memoryAddress.displacement) ~
         "]");
     }
     else if(memoryAddress.mode is MemoryMode.index_disp32) {
         return (sizeString ~ " ptr [" ~
-            X86RegisterToString(memoryAddress.index) ~ " * " ~
-            X86IntToString(4, memoryAddress.getScaleValue) ~ " + " ~
-            X86IntToString(32, memoryAddress.displacement) ~ 
+            X86RegisterToString(memoryAddress.index) ~ (
+                memoryAddress.scale == 0 ? "" :
+                " * " ~ X86IntToString(4, memoryAddress.getScaleValue)
+            ) ~ (
+                memoryAddress.displacement == 0 ? "" :
+                signedDisplacementToString(32, memoryAddress.displacement)
+            ) ~
         "]");
     }
     else if(memoryAddress.mode is MemoryMode.base_index_disp32) {
         return (sizeString ~ " ptr [" ~
             X86RegisterToString(memoryAddress.base) ~ " + " ~
-            X86RegisterToString(memoryAddress.index) ~ " * " ~
-            X86IntToString(4, memoryAddress.getScaleValue) ~ " + " ~
-            X86IntToString(32, memoryAddress.displacement) ~ 
+            X86RegisterToString(memoryAddress.index) ~ (
+                memoryAddress.scale == 0 ? "" :
+                " * " ~ X86IntToString(4, memoryAddress.getScaleValue)
+            ) ~
+            signedDisplacementToString(32, memoryAddress.displacement) ~
         "]");
     }
     else if(memoryAddress.mode is MemoryMode.base_disp8) {
         return (sizeString ~ " ptr [" ~
-            X86RegisterToString(memoryAddress.base) ~ " + " ~
-            X86IntToString(8, memoryAddress.displacement) ~ 
+            X86RegisterToString(memoryAddress.base) ~
+            signedDisplacementToString(8, memoryAddress.displacement) ~
         "]");
     }
     else if(memoryAddress.mode is MemoryMode.base_index_disp8) {
         return (sizeString ~ " ptr [" ~
             X86RegisterToString(memoryAddress.base) ~ " + " ~
-            X86RegisterToString(memoryAddress.index) ~ " * " ~
-            X86IntToString(4, memoryAddress.getScaleValue) ~ " + " ~
-            X86IntToString(8, memoryAddress.displacement) ~ 
+            X86RegisterToString(memoryAddress.index) ~ (
+                memoryAddress.scale == 0 ? "" :
+                " * " ~ X86IntToString(4, memoryAddress.getScaleValue)
+            ) ~
+            signedDisplacementToString(8, memoryAddress.displacement) ~
         "]");
     }
     else if(memoryAddress.mode is MemoryMode.rip_disp32) {
-        return (sizeString ~ " ptr [rip + " ~
-            X86IntToString(32, memoryAddress.displacement) ~ 
+        return (sizeString ~ " ptr [rip" ~
+            signedDisplacementToString(32, memoryAddress.displacement) ~
         "]");
     }
     else {
@@ -166,8 +194,8 @@ string X86InstructionOperandToString(in X86Instruction.Operand operand) {
     else if(operand.type is Operand.Type.Immediate) {
         return "0x" ~ X86IntToString(operand.size, operand.immediate);
     }
-    else if(operand.type is Operand.Type.RelativeImmediate) {
-        return "0x" ~ X86IntToString(operand.size, operand.immediate);
+    else if(operand.type is Operand.Type.Relative) {
+        return ". + 0x" ~ X86IntToString(operand.size, operand.immediate);
     }
     else if(operand.type is Operand.Type.MemoryAddress) {
         return X86InstructionMemoryAddressToString(
@@ -241,14 +269,17 @@ string X86InstructionOperandToString(
         case OperandType.imm16: goto case;
         case OperandType.imm32: goto case;
         case OperandType.imm64: goto case;
-        case OperandType.rel8: goto case;
-        case OperandType.rel16: goto case;
-        case OperandType.rel32: goto case;
-        case OperandType.rel64: goto case;
         case OperandType.far16: goto case;
         case OperandType.far32: goto case;
         case OperandType.far64:
             return "0x" ~ X86IntToString(
+                X86OpcodeOperandTypeSize(operandType), instruction.immediate
+            );
+        case OperandType.rel8: goto case;
+        case OperandType.rel16: goto case;
+        case OperandType.rel32: goto case;
+        case OperandType.rel64:
+            return ". + 0x" ~ X86IntToString(
                 X86OpcodeOperandTypeSize(operandType), instruction.immediate
             );
         case OperandType.farseg16:
@@ -270,6 +301,7 @@ string X86InstructionToString(in X86Instruction instruction) {
         case Status.Ok: break;
         case Status.Invalid: return "invalid";
         case Status.OperandError: return "wrong operands";
+        case Status.ModeError: return "mode error";
     }
     if(instruction.opcode is null) {
         return null;
@@ -284,7 +316,7 @@ string X86InstructionToString(in X86Instruction instruction) {
             text ~= operandString;
         }
     }
-    return instruction.opcode.name ~ " " ~ text;
+    return instruction.opcode.name ~ (text.length ? " " ~ text : "");
 }
 
 /// A list of strings to represent a type of expected operands for an opcode.

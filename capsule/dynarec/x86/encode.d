@@ -4,19 +4,14 @@ private:
 
 import capsule.dynarec.x86.instruction : X86Instruction;
 import capsule.dynarec.x86.instruction : X86InstructionMemoryAddressModeMod;
+import capsule.dynarec.x86.mode : X86Mode;
 import capsule.dynarec.x86.opcode : X86Opcode;
 import capsule.dynarec.x86.opcode : X86OpcodeEscape, X86OpcodeEscapeList;
 import capsule.dynarec.x86.register : X86Register, X86SegmentRegister;;
 import capsule.dynarec.x86.register : X86RegisterIsExtended, X86RegisterIsByteHigh;
 import capsule.dynarec.x86.size : X86DisplacementSize, X86ImmediateSize;
 
-public pure nothrow @safe @nogc:
-
-enum X86EncoderMode: ubyte {
-    None = 0,
-    Legacy,
-    Long,
-}
+public pure nothrow @safe @nogc extern(C):
 
 enum X86EncodeLockPrefix: ubyte {
     /// No lock prefix byte
@@ -78,7 +73,7 @@ struct X86EncodeInstruction {
     alias Instruction = X86Instruction;
     alias LockPrefix = X86EncodeLockPrefix;
     alias LockPrefixList = X86LockPrefixList;
-    alias Mode = X86EncoderMode;
+    alias Mode = X86Mode;
     alias SegmentOverridePrefix = X86SegmentOverridePrefix;
     alias Status = X86EncodeInstructionStatus;
     
@@ -266,7 +261,7 @@ struct X86EncodeInstruction {
 struct X86Encoder {
     alias Instruction = X86Instruction;
     alias LockPrefix = X86EncodeLockPrefix;
-    alias Mode = X86EncoderMode;
+    alias Mode = X86Mode;
     alias Opcode = X86Opcode;
     
     Mode mode;
